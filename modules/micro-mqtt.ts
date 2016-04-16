@@ -5,58 +5,52 @@ declare var require: (module: string) => any;
 Simple MQTT protocol wrapper for Espruino sockets.
 */
 
-/** 'private' costants */
+/** 'private' constants */
 var C = {
   PACKET_ID: 1 // Bad...fixed packet id
 };
 
-/** Control packet types */
-var TYPE = {
-  CONNECT: 1,
-  CONNACK: 2,
-  PUBLISH: 3,
-  PUBACK: 4,
-  PUBREC: 5,
-  PUBREL: 6,
-  PUBCOMP: 7,
-  SUBSCRIBE: 8,
-  SUBACK: 9,
-  UNSUBSCRIBE: 10,
-  UNSUBACK: 11,
-  PINGREQ: 12,
-  PINGRESP: 13,
-  DISCONNECT: 14
+// http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc353481061
+const enum ControlPacketType {
+  Connect = 1,
+  ConnAck = 2,
+  Publish = 3,
+  PubAck = 4,
+  PubRec = 5,
+  PubRel = 6,
+  PubComp = 7,
+  Subscribe = 8,
+  SubAck = 9,
+  Unsubscribe = 10,
+  UnsubAck = 11,
+  PingReq = 12,
+  PingResp = 13,
+  Disconnect = 14
 };
 
-/**
- Return Codes
- http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349256
- **/
-var RETURN_CODES = {
-  ACCEPTED: 0,
-  UNACCEPTABLE_PROTOCOL_VERSION: 1,
-  IDENTIFIER_REJECTED: 2,
-  SERVER_UNAVAILABLE: 3,
-  BAD_USER_NAME_OR_PASSWORD: 4,
-  NOT_AUTHORIZED: 5
+// http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349256
+const enum ConnectReturnCode {
+  Accepted = 0,
+  UnacceptableProtocolVersion = 1,
+  IdentifierRejected = 2,
+  ServerUnavailable = 3,
+  BadUserNameOrPassword = 4,
+  NotAuthorized = 5
 };
 
-export class MicroMqtt {
-  public version = "0.0.3";
+export class MicroMqttClient {
+  public version = "0.0.4";
   private port: number;
-  private client_id: string;
-  private keep_alive: number;
-  private clean_session: Boolean;
+  private clientId: string;
+  private keepAlive: number;
+  private cleanSession: Boolean;
   private username: string;
   private password: string;
-  private client: any;
-  private connected: Boolean;
-  private ping_interval: number;
-  private protocol_name: string;
-  private protocol_level: string;
-
-  private ctimo: number;
-  private pintr: number;
+  private net: any;
+  private connected = false;
+  private pingInterval: number;
+  private protocolName: string;
+  private protocolLevel: string;
 
   private emit: (event: string, ...args: any[]) => boolean;
 
@@ -70,148 +64,150 @@ export class MicroMqtt {
   };
 
   constructor(private server: string, options) {
+    console.log("MicroMqttClient " + this.version);
+
     this.server = server;
     var options = options || {};
     this.port = options.port || this.C.DEF_PORT;
-    this.client_id = options.client_id || mqttUid();
-    this.keep_alive = options.keep_alive || this.C.DEF_KEEP_ALIVE;
-    this.clean_session = options.clean_session || true;
+    this.clientId = options.clientId || mqttUid();
+    this.keepAlive = options.keepAlive || this.C.DEF_KEEP_ALIVE;
+    this.cleanSession = options.cleanSession || true;
     this.username = options.username;
     this.password = options.password;
-    this.client = undefined;
-    this.connected = false;
-    this.ping_interval =
-      this.keep_alive < this.C.PING_INTERVAL ? (this.keep_alive - 5) : this.C.PING_INTERVAL;
-    this.protocol_name = options.protocol_name || "MQTT";
-    this.protocol_level = createEscapedHex(options.protocol_level || this.C.PROTOCOL_LEVEL);
+    this.pingInterval =
+      this.keepAlive < this.C.PING_INTERVAL ? (this.keepAlive - 5) : this.C.PING_INTERVAL;
+    this.protocolName = options.protocolName || "MQTT";
+    this.protocolLevel = createEscapedHex(options.protocolLevel || this.C.PROTOCOL_LEVEL);
   }
 
-  /** Establish connection and set up keep_alive ping */
-  public connect = (client?) => {
-    var mqo = this;
-    var onConnect = function () {
+  /** Establish connection and set up keep alive ping */
+  public connect = (net?) => {
+    let connectionTimeOutId: number;
+    let pingIntervalId: number;
+
+    let onNetConnected = () => {
       console.log('Client connected');
-      client.write(mqo.mqttConnect(mqo.client_id));
+      net.write(this.mqttConnect(this.clientId));
 
       // Disconnect if no CONNACK is received
-      mqo.ctimo = setTimeout(function () {
-        mqo.disconnect();
-      }, mqo.C.CONNECT_TIMEOUT);
+      connectionTimeOutId = setTimeout(() => {
+        this.disconnect();
+      }, this.C.CONNECT_TIMEOUT);
 
       // Set up regular keep_alive ping
-      mqo.pintr = setInterval(function () {
+      pingIntervalId = setInterval(() => {
         // console.log("Pinging MQTT server");
-        mqo.ping();
-      }, mqo.ping_interval * 1000);
+        this.ping();
+      }, this.pingInterval * 1000);
 
       // Incoming data
-      client.on('data', function (data) {
-        var type = data.charCodeAt(0) >> 4;
-
-        if (type === TYPE.PUBLISH) {
+      net.on('data', (data) => {
+        let type: ControlPacketType = data.charCodeAt(0) >> 4;
+        
+        if (type === ControlPacketType.Publish) {
           var parsedData = parsePublish(data);
-          mqo.emit('publish', parsedData);
-          mqo.emit('message', parsedData.topic, parsedData.message);
+          this.emit('publish', parsedData);
+          this.emit('message', parsedData.topic, parsedData.message);
         }
-        else if (type === TYPE.PUBACK) {
+        else if (type === ControlPacketType.PubAck) {
           // implement puback
         }
-        else if (type === TYPE.SUBACK) {
+        else if (type === ControlPacketType.SubAck) {
           // implement suback
         }
-        else if (type === TYPE.UNSUBACK) {
+        else if (type === ControlPacketType.UnsubAck) {
           // implement unsuback
         }
-        else if (type === TYPE.PINGREQ) {
+        else if (type === ControlPacketType.PingReq) {
           // silently reply to pings
-          client.write(TYPE.PINGRESP + "\x00"); // reply to PINGREQ
+          net.write(ControlPacketType.PingResp + "\x00"); // reply to PINGREQ
         }
-        else if (type === TYPE.PINGRESP) {
-          mqo.emit('ping_reply');
+        else if (type === ControlPacketType.PingResp) {
+          this.emit('ping_reply');
         }
-        else if (type === TYPE.CONNACK) {
-          clearTimeout(mqo.ctimo);
+        else if (type === ControlPacketType.ConnAck) {
+          clearTimeout(connectionTimeOutId);
           var returnCode = data.charCodeAt(3);
-          if (returnCode === RETURN_CODES.ACCEPTED) {
-            mqo.connected = true;
+          if (returnCode === ConnectReturnCode.Accepted) {
+            this.connected = true;
             console.log("MQTT connection accepted");
-            mqo.emit('connected');
-            mqo.emit('connect');
+            this.emit('connected');
           }
           else {
             var mqttError = "Connection refused, ";
             switch (returnCode) {
-              case RETURN_CODES.UNACCEPTABLE_PROTOCOL_VERSION:
+              case ConnectReturnCode.UnacceptableProtocolVersion:
                 mqttError += "unacceptable protocol version.";
                 break;
-              case RETURN_CODES.IDENTIFIER_REJECTED:
+              case ConnectReturnCode.IdentifierRejected:
                 mqttError += "identifier rejected.";
                 break;
-              case RETURN_CODES.SERVER_UNAVAILABLE:
+              case ConnectReturnCode.ServerUnavailable:
                 mqttError += "server unavailable.";
                 break;
-              case RETURN_CODES.BAD_USER_NAME_OR_PASSWORD:
+              case ConnectReturnCode.BadUserNameOrPassword:
                 mqttError += "bad user name or password.";
                 break;
-              case RETURN_CODES.NOT_AUTHORIZED:
+              case ConnectReturnCode.NotAuthorized:
                 mqttError += "not authorized.";
                 break;
               default:
                 mqttError += "unknown return code: " + returnCode + ".";
             }
             console.log(mqttError);
-            mqo.emit('error', mqttError);
+            this.emit('error', mqttError);
           }
         }
         else {
           console.log("MQTT unsupported packet type: " + type);
-          console.log("[MQTT]" + data.split("").map(function (c) { return c.charCodeAt(0); }));
+          console.log("[MQTT]" + data.split("").map((c) => { return c.charCodeAt(0); }));
         }
       });
 
-      client.on('end', function () {
+      net.on('end', () => {
         console.log('MQTT client disconnected');
-        clearInterval(mqo.pintr);
-        mqo.emit('disconnected');
-        mqo.emit('close');
+        clearInterval(pingIntervalId);
+        this.emit('disconnected');
+        this.emit('close');
       });
 
-      mqo.client = client;
+      this.net = net;
     };
-    if (client) { onConnect(); }
+
+    if (net) { onNetConnected(); }
     else {
-      client = require("net").connect({ host: mqo.server, port: mqo.port }, onConnect);
+      net = require("net")
+        .connect({ host: this.server, port: this.port }, onNetConnected);
       // TODO: Reconnect on timeout
     }
   };
 
   /** Disconnect from server */
   public disconnect = () => {
-    this.client.write(fromCharCode(TYPE.DISCONNECT << 4) + "\x00");
-    this.client.end();
-    this.client = false;
+    this.net.write(fromCharCode(ControlPacketType.Disconnect << 4) + "\x00");
+    this.net.end();
+    this.net = false;
     this.connected = false;
   };
 
   /** Publish message using specified topic */
-  public publish = (topic, message, qos) => {
-    var _qos = qos || this.C.DEF_QOS;
-    this.client.write(mqttPublish(topic, message, _qos));
+  public publish = (topic, message, qos = this.C.DEF_QOS) => {
+    this.net.write(mqttPublish(topic, message, qos));
   };
 
   /** Subscribe to topic (filter) */
   public subscribe = (topic: string, qos = this.C.DEF_QOS) => {
-    this.client.write(mqttSubscribe(topic, qos));
+    this.net.write(mqttSubscribe(topic, qos));
   };
 
   /** Unsubscribe to topic (filter) */
   public unsubscribe = (topic) => {
-    this.client.write(mqttUnsubscribe(topic));
+    this.net.write(mqttUnsubscribe(topic));
   };
 
   /** Send ping request to server */
-  public ping = function () {
-    this.client.write(fromCharCode(TYPE.PINGREQ << 4) + "\x00");
+  private ping = () => {
+    this.net.write(fromCharCode(ControlPacketType.PingReq << 4) + "\x00");
   };
 
   /* Packet specific functions *******************/
@@ -219,7 +215,7 @@ export class MicroMqtt {
   /** Create connection flags 
   
   */
-  public createFlagsForConnection = (options) => {
+  private createFlagsForConnection = (options) => {
     var flags = 0;
     flags |= (this.username) ? 0x80 : 0;
     flags |= (this.username && this.password) ? 0x40 : 0;
@@ -232,16 +228,16 @@ export class MicroMqtt {
       connect flag. Wills are not
       currently supported.
   */
-  public mqttConnect = (clean) => {
-    var cmd = TYPE.CONNECT << 4;
+  private mqttConnect = (clean) => {
+    var cmd = ControlPacketType.Connect << 4;
     var flags = this.createFlagsForConnection({
       clean_session: clean
     });
 
-    var keep_alive = fromCharCode(this.keep_alive >> 8, this.keep_alive & 255);
+    var keep_alive = fromCharCode(this.keepAlive >> 8, this.keepAlive & 255);
 
     /* payload */
-    var payload = mqttStr(this.client_id);
+    var payload = mqttStr(this.clientId);
     if (this.username) {
       payload += mqttStr(this.username);
       if (this.password) {
@@ -250,8 +246,8 @@ export class MicroMqtt {
     }
 
     return mqttPacket(cmd,
-      mqttStr(this.protocol_name)/*protocol name*/ +
-      this.protocol_level /*protocol level*/ +
+      mqttStr(this.protocolName)/*protocol name*/ +
+      this.protocolLevel /*protocol level*/ +
       flags +
       keep_alive,
       payload);
@@ -307,20 +303,20 @@ function parsePublish(data) {
 }
 
 /** Generate random UID */
-var mqttUid = (function () {
+var mqttUid = (() => {
   function s4() {
     return Math.floor((1 + Math.random()) * 0x10000)
       .toString(16)
       .substring(1);
   }
-  return function () {
+  return () => {
     return s4() + s4() + s4();
   };
 })();
 
 /** PUBLISH control packet */
 function mqttPublish(topic, message, qos) {
-  var cmd = TYPE.PUBLISH << 4 | (qos << 1);
+  var cmd = ControlPacketType.Publish << 4 | (qos << 1);
   var pid = fromCharCode(C.PACKET_ID << 8, C.PACKET_ID & 255);
   // Packet id must be included for QOS > 0
   var variable = (qos === 0) ? mqttStr(topic) : mqttStr(topic) + pid;
@@ -329,7 +325,7 @@ function mqttPublish(topic, message, qos) {
 
 /** SUBSCRIBE control packet */
 function mqttSubscribe(topic, qos) {
-  var cmd = TYPE.SUBSCRIBE << 4 | 2;
+  var cmd = ControlPacketType.Subscribe << 4 | 2;
   var pid = fromCharCode(C.PACKET_ID << 8, C.PACKET_ID & 255);
   return mqttPacket(cmd,
     pid/*Packet id*/,
@@ -339,7 +335,7 @@ function mqttSubscribe(topic, qos) {
 
 /** UNSUBSCRIBE control packet */
 function mqttUnsubscribe(topic) {
-  var cmd = TYPE.UNSUBSCRIBE << 4 | 2;
+  var cmd = ControlPacketType.Unsubscribe << 4 | 2;
   var pid = fromCharCode(C.PACKET_ID << 8, C.PACKET_ID & 255);
   return mqttPacket(cmd,
     pid/*Packet id*/,
