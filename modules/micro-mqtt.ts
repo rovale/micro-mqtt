@@ -80,6 +80,30 @@ export class MicroMqttClient {
     this.protocolLevel = createEscapedHex(options.protocolLevel || this.C.PROTOCOL_LEVEL);
   }
 
+  private getConnectionError(returnCode: number) {
+    var error = "Connection refused, ";
+    switch (returnCode) {
+      case ConnectReturnCode.UnacceptableProtocolVersion:
+        error += "unacceptable protocol version.";
+        break;
+      case ConnectReturnCode.IdentifierRejected:
+        error += "identifier rejected.";
+        break;
+      case ConnectReturnCode.ServerUnavailable:
+        error += "server unavailable.";
+        break;
+      case ConnectReturnCode.BadUserNameOrPassword:
+        error += "bad user name or password.";
+        break;
+      case ConnectReturnCode.NotAuthorized:
+        error += "not authorized.";
+        break;
+      default:
+        error += "unknown return code: " + returnCode + ".";
+    }
+    return error;
+  }
+
   /** Establish connection and set up keep alive ping */
   public connect = (net?) => {
     let connectionTimeOutId: number;
@@ -103,64 +127,41 @@ export class MicroMqttClient {
       // Incoming data
       net.on('data', (data) => {
         let type: ControlPacketType = data.charCodeAt(0) >> 4;
-        
-        if (type === ControlPacketType.Publish) {
-          var parsedData = parsePublish(data);
-          this.emit('publish', parsedData);
-          this.emit('message', parsedData.topic, parsedData.message);
-        }
-        else if (type === ControlPacketType.PubAck) {
-          // implement puback
-        }
-        else if (type === ControlPacketType.SubAck) {
-          // implement suback
-        }
-        else if (type === ControlPacketType.UnsubAck) {
-          // implement unsuback
-        }
-        else if (type === ControlPacketType.PingReq) {
-          // silently reply to pings
-          net.write(ControlPacketType.PingResp + "\x00"); // reply to PINGREQ
-        }
-        else if (type === ControlPacketType.PingResp) {
-          this.emit('ping_reply');
-        }
-        else if (type === ControlPacketType.ConnAck) {
-          clearTimeout(connectionTimeOutId);
-          var returnCode = data.charCodeAt(3);
-          if (returnCode === ConnectReturnCode.Accepted) {
-            this.connected = true;
-            console.log("MQTT connection accepted");
-            this.emit('connected');
-          }
-          else {
-            var mqttError = "Connection refused, ";
-            switch (returnCode) {
-              case ConnectReturnCode.UnacceptableProtocolVersion:
-                mqttError += "unacceptable protocol version.";
-                break;
-              case ConnectReturnCode.IdentifierRejected:
-                mqttError += "identifier rejected.";
-                break;
-              case ConnectReturnCode.ServerUnavailable:
-                mqttError += "server unavailable.";
-                break;
-              case ConnectReturnCode.BadUserNameOrPassword:
-                mqttError += "bad user name or password.";
-                break;
-              case ConnectReturnCode.NotAuthorized:
-                mqttError += "not authorized.";
-                break;
-              default:
-                mqttError += "unknown return code: " + returnCode + ".";
+
+        switch (type) {
+          case ControlPacketType.Publish:
+            let parsedData = parsePublish(data);
+            this.emit('publish', parsedData);
+            this.emit('message', parsedData.topic, parsedData.message);
+            break;
+          case ControlPacketType.PubAck:
+          case ControlPacketType.SubAck:
+          case ControlPacketType.UnsubAck:
+            break;
+          case ControlPacketType.PingReq:
+            net.write(ControlPacketType.PingResp + "\x00"); // reply to PINGREQ
+            break
+          case ControlPacketType.PingResp:
+            this.emit('ping_reply');
+            break;
+          case ControlPacketType.ConnAck:
+            clearTimeout(connectionTimeOutId);
+            var returnCode = data.charCodeAt(3);
+            if (returnCode === ConnectReturnCode.Accepted) {
+              this.connected = true;
+              console.log("MQTT connection accepted");
+              this.emit('connected');
             }
-            console.log(mqttError);
-            this.emit('error', mqttError);
-          }
-        }
-        else {
-          console.log("MQTT unsupported packet type: " + type);
-          console.log("[MQTT]" + data.split("").map((c) => { return c.charCodeAt(0); }));
+            else {
+              let connectionError = this.getConnectionError(returnCode);
+              console.log(connectionError);
+              this.emit('error', connectionError);
+            }
+            break;
+          default:
+            console.log("MQTT unsupported packet type: " + type);
+            console.log("[MQTT]" + data.split("").map((c) => { return c.charCodeAt(0); }));
+            break;
         }
       });
 
@@ -184,7 +185,7 @@ export class MicroMqttClient {
 
   /** Disconnect from server */
   public disconnect = () => {
-    this.net.write(fromCharCode(ControlPacketType.Disconnect << 4) + "\x00");
+    this.net.write(String.fromCharCode(ControlPacketType.Disconnect << 4) + "\x00");
     this.net.end();
     this.net = false;
     this.connected = false;
@@ -207,7 +208,7 @@ export class MicroMqttClient {
 
   /** Send ping request to server */
   private ping = () => {
-    this.net.write(fromCharCode(ControlPacketType.PingReq << 4) + "\x00");
+    this.net.write(String.fromCharCode(ControlPacketType.PingReq << 4) + "\x00");
   };
 
   /* Packet specific functions *******************/
@@ -234,7 +235,7 @@ export class MicroMqttClient {
       clean_session: clean
     });
 
-    var keep_alive = fromCharCode(this.keepAlive >> 8, this.keepAlive & 255);
+    var keep_alive = String.fromCharCode(this.keepAlive >> 8, this.keepAlive & 255);
 
     /* payload */
     var payload = mqttStr(this.clientId);
@@ -256,11 +257,9 @@ export class MicroMqttClient {
 
 /* Utility functions ***************************/
 
-var fromCharCode = String.fromCharCode;
-
 /** MQTT string (length MSB, LSB + data) */
 function mqttStr(s) {
-  return fromCharCode(s.length >> 8, s.length & 255) + s;
+  return String.fromCharCode(s.length >> 8, s.length & 255) + s;
 };
 
 /** MQTT packet length formatter - algorithm from reference docs */
@@ -273,14 +272,14 @@ function mqttPacketLength(length) {
     if (length > 0) {
       encByte += 128;
     }
-    encLength += fromCharCode(encByte);
+    encLength += String.fromCharCode(encByte);
   } while (length > 0)
   return encLength;
 }
 
 /** MQTT standard packet formatter */
 function mqttPacket(cmd, variable, payload) {
-  return fromCharCode(cmd) + mqttPacketLength(variable.length + payload.length) + variable + payload;
+  return String.fromCharCode(cmd) + mqttPacketLength(variable.length + payload.length) + variable + payload;
 }
 
 /** PUBLISH packet parser - returns object with topic and message */
@@ -317,7 +316,7 @@ var mqttUid = (() => {
 /** PUBLISH control packet */
 function mqttPublish(topic, message, qos) {
   var cmd = ControlPacketType.Publish << 4 | (qos << 1);
-  var pid = fromCharCode(C.PACKET_ID << 8, C.PACKET_ID & 255);
+  var pid = String.fromCharCode(C.PACKET_ID << 8, C.PACKET_ID & 255);
   // Packet id must be included for QOS > 0
   var variable = (qos === 0) ? mqttStr(topic) : mqttStr(topic) + pid;
   return mqttPacket(cmd, variable, message);
@@ -326,17 +325,17 @@ function mqttPublish(topic, message, qos) {
 /** SUBSCRIBE control packet */
 function mqttSubscribe(topic, qos) {
   var cmd = ControlPacketType.Subscribe << 4 | 2;
-  var pid = fromCharCode(C.PACKET_ID << 8, C.PACKET_ID & 255);
+  var pid = String.fromCharCode(C.PACKET_ID << 8, C.PACKET_ID & 255);
   return mqttPacket(cmd,
     pid/*Packet id*/,
     mqttStr(topic) +
-    fromCharCode(qos)/*QOS*/);
+    String.fromCharCode(qos)/*QOS*/);
 }
 
 /** UNSUBSCRIBE control packet */
 function mqttUnsubscribe(topic) {
   var cmd = ControlPacketType.Unsubscribe << 4 | 2;
-  var pid = fromCharCode(C.PACKET_ID << 8, C.PACKET_ID & 255);
+  var pid = String.fromCharCode(C.PACKET_ID << 8, C.PACKET_ID & 255);
   return mqttPacket(cmd,
     pid/*Packet id*/,
     mqttStr(topic));
@@ -344,5 +343,5 @@ function mqttUnsubscribe(topic) {
 
 /** Create escaped hex value from number */
 function createEscapedHex(number) {
-  return fromCharCode(parseInt(number.toString(16), 16));
+  return String.fromCharCode(parseInt(number.toString(16), 16));
 }
