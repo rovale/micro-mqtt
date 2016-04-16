@@ -5,10 +5,12 @@ declare var require: (module: string) => any;
 Simple MQTT protocol wrapper for Espruino sockets.
 */
 
-/** 'private' constants */
-var C = {
-  PACKET_ID: 1 // Bad...fixed packet id
-};
+const FixedPackedId = 1; // Bad...fixed packet id
+const DefaultQosLevel = 0;
+const DefaultPort = 1883;
+const ConnectionTimeout = 5;
+const KeepAlive = 60;
+const PingInterval = 40;
 
 // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc353481061
 const enum ControlPacketType {
@@ -39,45 +41,27 @@ const enum ConnectReturnCode {
 };
 
 export class MicroMqttClient {
-  public version = "0.0.4";
+  public version = "0.0.5";
   private port: number;
   private clientId: string;
-  private keepAlive: number;
   private cleanSession: Boolean;
   private username: string;
   private password: string;
   private net: any;
   private connected = false;
-  private pingInterval: number;
-  private protocolName: string;
-  private protocolLevel: string;
 
   private emit: (event: string, ...args: any[]) => boolean;
-
-  private C = {
-    DEF_QOS: 0,    // Default QOS level
-    DEF_PORT: 1883, // MQTT default server port
-    DEF_KEEP_ALIVE: 60,   // Default keep_alive (s)
-    CONNECT_TIMEOUT: 5000, // Time (s) to wait for CONNACK 
-    PING_INTERVAL: 40,    // Server ping interval (s)
-    PROTOCOL_LEVEL: 4  // MQTT protocol level    
-  };
 
   constructor(private server: string, options) {
     console.log("MicroMqttClient " + this.version);
 
     this.server = server;
     var options = options || {};
-    this.port = options.port || this.C.DEF_PORT;
-    this.clientId = options.clientId || mqttUid();
-    this.keepAlive = options.keepAlive || this.C.DEF_KEEP_ALIVE;
+    this.port = options.port || DefaultPort;
+    this.clientId = options.clientId || generateClientId();
     this.cleanSession = options.cleanSession || true;
     this.username = options.username;
     this.password = options.password;
-    this.pingInterval =
-      this.keepAlive < this.C.PING_INTERVAL ? (this.keepAlive - 5) : this.C.PING_INTERVAL;
-    this.protocolName = options.protocolName || "MQTT";
-    this.protocolLevel = createEscapedHex(options.protocolLevel || this.C.PROTOCOL_LEVEL);
   }
 
   private getConnectionError(returnCode: number) {
@@ -116,13 +100,12 @@ export class MicroMqttClient {
       // Disconnect if no CONNACK is received
       connectionTimeOutId = setTimeout(() => {
         this.disconnect();
-      }, this.C.CONNECT_TIMEOUT);
+      }, ConnectionTimeout * 1000);
 
-      // Set up regular keep_alive ping
+      // Set up regular keep alive ping
       pingIntervalId = setInterval(() => {
-        // console.log("Pinging MQTT server");
         this.ping();
-      }, this.pingInterval * 1000);
+      }, PingInterval * 1000);
 
       // Incoming data
       net.on('data', (data) => {
@@ -192,12 +175,12 @@ export class MicroMqttClient {
   };
 
   /** Publish message using specified topic */
-  public publish = (topic, message, qos = this.C.DEF_QOS) => {
+  public publish = (topic, message, qos = DefaultQosLevel) => {
     this.net.write(mqttPublish(topic, message, qos));
   };
 
   /** Subscribe to topic (filter) */
-  public subscribe = (topic: string, qos = this.C.DEF_QOS) => {
+  public subscribe = (topic: string, qos = DefaultQosLevel) => {
     this.net.write(mqttSubscribe(topic, qos));
   };
 
@@ -216,11 +199,11 @@ export class MicroMqttClient {
   /** Create connection flags 
   
   */
-  private createFlagsForConnection = (options) => {
+  private createFlagsForConnection = () => {
     var flags = 0;
     flags |= (this.username) ? 0x80 : 0;
     flags |= (this.username && this.password) ? 0x40 : 0;
-    flags |= (options.clean_session) ? 0x02 : 0;
+    flags |= (this.cleanSession) ? 0x02 : 0;
     return createEscapedHex(flags);
   };
 
@@ -230,15 +213,15 @@ export class MicroMqttClient {
       currently supported.
   */
   private mqttConnect = (clean) => {
-    var cmd = ControlPacketType.Connect << 4;
-    var flags = this.createFlagsForConnection({
-      clean_session: clean
-    });
+    let cmd = ControlPacketType.Connect << 4;
+    let protocolName = mqttStr("MQTT");
+    let protocolLevel = createEscapedHex(4);
 
-    var keep_alive = String.fromCharCode(this.keepAlive >> 8, this.keepAlive & 255);
+    let flags = this.createFlagsForConnection();
 
-    /* payload */
-    var payload = mqttStr(this.clientId);
+    let keepAlive = String.fromCharCode(KeepAlive >> 8, KeepAlive & 255);
+
+    let payload = mqttStr(this.clientId);
     if (this.username) {
       payload += mqttStr(this.username);
       if (this.password) {
@@ -246,12 +229,11 @@ export class MicroMqttClient {
       }
     }
 
-    return mqttPacket(cmd,
-      mqttStr(this.protocolName)/*protocol name*/ +
-      this.protocolLevel /*protocol level*/ +
-      flags +
-      keep_alive,
-      payload);
+    return mqttPacket(
+      cmd,
+      protocolName + protocolLevel + flags + keepAlive,
+      payload
+    );
   };
 }
 
@@ -301,8 +283,7 @@ function parsePublish(data) {
   }
 }
 
-/** Generate random UID */
-var mqttUid = (() => {
+var generateClientId = (() => {
   function s4() {
     return Math.floor((1 + Math.random()) * 0x10000)
       .toString(16)
@@ -316,7 +297,7 @@ var mqttUid = (() => {
 /** PUBLISH control packet */
 function mqttPublish(topic, message, qos) {
   var cmd = ControlPacketType.Publish << 4 | (qos << 1);
-  var pid = String.fromCharCode(C.PACKET_ID << 8, C.PACKET_ID & 255);
+  var pid = String.fromCharCode(FixedPackedId << 8, FixedPackedId & 255);
   // Packet id must be included for QOS > 0
   var variable = (qos === 0) ? mqttStr(topic) : mqttStr(topic) + pid;
   return mqttPacket(cmd, variable, message);
@@ -325,7 +306,7 @@ function mqttPublish(topic, message, qos) {
 /** SUBSCRIBE control packet */
 function mqttSubscribe(topic, qos) {
   var cmd = ControlPacketType.Subscribe << 4 | 2;
-  var pid = String.fromCharCode(C.PACKET_ID << 8, C.PACKET_ID & 255);
+  var pid = String.fromCharCode(FixedPackedId << 8, FixedPackedId & 255);
   return mqttPacket(cmd,
     pid/*Packet id*/,
     mqttStr(topic) +
@@ -335,7 +316,7 @@ function mqttSubscribe(topic, qos) {
 /** UNSUBSCRIBE control packet */
 function mqttUnsubscribe(topic) {
   var cmd = ControlPacketType.Unsubscribe << 4 | 2;
-  var pid = String.fromCharCode(C.PACKET_ID << 8, C.PACKET_ID & 255);
+  var pid = String.fromCharCode(FixedPackedId << 8, FixedPackedId & 255);
   return mqttPacket(cmd,
     pid/*Packet id*/,
     mqttStr(topic));

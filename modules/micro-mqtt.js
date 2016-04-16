@@ -3,26 +3,20 @@
 /*
 Simple MQTT protocol wrapper for Espruino sockets.
 */
-/** 'private' constants */
-var C = {
-    PACKET_ID: 1 // Bad...fixed packet id
-};
+var FixedPackedId = 1; // Bad...fixed packet id
+var DefaultQosLevel = 0;
+var DefaultPort = 1883;
+var ConnectionTimeout = 5;
+var KeepAlive = 60;
+var PingInterval = 40;
 ;
 ;
 var MicroMqttClient = (function () {
     function MicroMqttClient(server, options) {
         var _this = this;
         this.server = server;
-        this.version = "0.0.4";
+        this.version = "0.0.5";
         this.connected = false;
-        this.C = {
-            DEF_QOS: 0,
-            DEF_PORT: 1883,
-            DEF_KEEP_ALIVE: 60,
-            CONNECT_TIMEOUT: 5000,
-            PING_INTERVAL: 40,
-            PROTOCOL_LEVEL: 4 // MQTT protocol level    
-        };
         /** Establish connection and set up keep alive ping */
         this.connect = function (net) {
             var connectionTimeOutId;
@@ -33,12 +27,11 @@ var MicroMqttClient = (function () {
                 // Disconnect if no CONNACK is received
                 connectionTimeOutId = setTimeout(function () {
                     _this.disconnect();
-                }, _this.C.CONNECT_TIMEOUT);
-                // Set up regular keep_alive ping
+                }, ConnectionTimeout * 1000);
+                // Set up regular keep alive ping
                 pingIntervalId = setInterval(function () {
-                    // console.log("Pinging MQTT server");
                     _this.ping();
-                }, _this.pingInterval * 1000);
+                }, PingInterval * 1000);
                 // Incoming data
                 net.on('data', function (data) {
                     var type = data.charCodeAt(0) >> 4;
@@ -103,12 +96,12 @@ var MicroMqttClient = (function () {
         };
         /** Publish message using specified topic */
         this.publish = function (topic, message, qos) {
-            if (qos === void 0) { qos = _this.C.DEF_QOS; }
+            if (qos === void 0) { qos = DefaultQosLevel; }
             _this.net.write(mqttPublish(topic, message, qos));
         };
         /** Subscribe to topic (filter) */
         this.subscribe = function (topic, qos) {
-            if (qos === void 0) { qos = _this.C.DEF_QOS; }
+            if (qos === void 0) { qos = DefaultQosLevel; }
             _this.net.write(mqttSubscribe(topic, qos));
         };
         /** Unsubscribe to topic (filter) */
@@ -123,11 +116,11 @@ var MicroMqttClient = (function () {
         /** Create connection flags
         
         */
-        this.createFlagsForConnection = function (options) {
+        this.createFlagsForConnection = function () {
             var flags = 0;
             flags |= (_this.username) ? 0x80 : 0;
             flags |= (_this.username && _this.password) ? 0x40 : 0;
-            flags |= (options.clean_session) ? 0x02 : 0;
+            flags |= (_this.cleanSession) ? 0x02 : 0;
             return createEscapedHex(flags);
         };
         /** CONNECT control packet
@@ -137,11 +130,10 @@ var MicroMqttClient = (function () {
         */
         this.mqttConnect = function (clean) {
             var cmd = 1 /* Connect */ << 4;
-            var flags = _this.createFlagsForConnection({
-                clean_session: clean
-            });
-            var keep_alive = String.fromCharCode(_this.keepAlive >> 8, _this.keepAlive & 255);
-            /* payload */
+            var protocolName = mqttStr("MQTT");
+            var protocolLevel = createEscapedHex(4);
+            var flags = _this.createFlagsForConnection();
+            var keepAlive = String.fromCharCode(KeepAlive >> 8, KeepAlive & 255);
             var payload = mqttStr(_this.clientId);
             if (_this.username) {
                 payload += mqttStr(_this.username);
@@ -149,24 +141,16 @@ var MicroMqttClient = (function () {
                     payload += mqttStr(_this.password);
                 }
             }
-            return mqttPacket(cmd, mqttStr(_this.protocolName) /*protocol name*/ +
-                _this.protocolLevel /*protocol level*/ +
-                flags +
-                keep_alive, payload);
+            return mqttPacket(cmd, protocolName + protocolLevel + flags + keepAlive, payload);
         };
         console.log("MicroMqttClient " + this.version);
         this.server = server;
         var options = options || {};
-        this.port = options.port || this.C.DEF_PORT;
-        this.clientId = options.clientId || mqttUid();
-        this.keepAlive = options.keepAlive || this.C.DEF_KEEP_ALIVE;
+        this.port = options.port || DefaultPort;
+        this.clientId = options.clientId || generateClientId();
         this.cleanSession = options.cleanSession || true;
         this.username = options.username;
         this.password = options.password;
-        this.pingInterval =
-            this.keepAlive < this.C.PING_INTERVAL ? (this.keepAlive - 5) : this.C.PING_INTERVAL;
-        this.protocolName = options.protocolName || "MQTT";
-        this.protocolLevel = createEscapedHex(options.protocolLevel || this.C.PROTOCOL_LEVEL);
     }
     MicroMqttClient.prototype.getConnectionError = function (returnCode) {
         var error = "Connection refused, ";
@@ -236,8 +220,7 @@ function parsePublish(data) {
         return undefined;
     }
 }
-/** Generate random UID */
-var mqttUid = (function () {
+var generateClientId = (function () {
     function s4() {
         return Math.floor((1 + Math.random()) * 0x10000)
             .toString(16)
@@ -250,7 +233,7 @@ var mqttUid = (function () {
 /** PUBLISH control packet */
 function mqttPublish(topic, message, qos) {
     var cmd = 3 /* Publish */ << 4 | (qos << 1);
-    var pid = String.fromCharCode(C.PACKET_ID << 8, C.PACKET_ID & 255);
+    var pid = String.fromCharCode(FixedPackedId << 8, FixedPackedId & 255);
     // Packet id must be included for QOS > 0
     var variable = (qos === 0) ? mqttStr(topic) : mqttStr(topic) + pid;
     return mqttPacket(cmd, variable, message);
@@ -258,14 +241,14 @@ function mqttPublish(topic, message, qos) {
 /** SUBSCRIBE control packet */
 function mqttSubscribe(topic, qos) {
     var cmd = 8 /* Subscribe */ << 4 | 2;
-    var pid = String.fromCharCode(C.PACKET_ID << 8, C.PACKET_ID & 255);
+    var pid = String.fromCharCode(FixedPackedId << 8, FixedPackedId & 255);
     return mqttPacket(cmd, pid /*Packet id*/, mqttStr(topic) +
         String.fromCharCode(qos) /*QOS*/);
 }
 /** UNSUBSCRIBE control packet */
 function mqttUnsubscribe(topic) {
     var cmd = 10 /* Unsubscribe */ << 4 | 2;
-    var pid = String.fromCharCode(C.PACKET_ID << 8, C.PACKET_ID & 255);
+    var pid = String.fromCharCode(FixedPackedId << 8, FixedPackedId & 255);
     return mqttPacket(cmd, pid /*Packet id*/, mqttStr(topic));
 }
 /** Create escaped hex value from number */
