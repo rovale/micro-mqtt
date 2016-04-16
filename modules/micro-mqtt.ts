@@ -1,5 +1,4 @@
 declare var require: (module: string) => any;
-declare var exports: any;
 
 /* Copyright (c) 2014 Lars Toft Jacobsen (boxed.dk), Gordon Williams. See the file LICENSE for copying permission. */
 /*
@@ -8,8 +7,7 @@ Simple MQTT protocol wrapper for Espruino sockets.
 
 /** 'private' costants */
 var C = {
-  PACKET_ID: 1, // Bad...fixed packet id
-  PROTOCOL_LEVEL: 4  // MQTT protocol level
+  PACKET_ID: 1 // Bad...fixed packet id
 };
 
 /** Control packet types */
@@ -43,26 +41,32 @@ var RETURN_CODES = {
   NOT_AUTHORIZED: 5
 };
 
-class MicroMqtt {
-  public version = "0.0.1";
+export class MicroMqtt {
+  public version = "0.0.3";
   private port: number;
   private client_id: string;
   private keep_alive: number;
   private clean_session: Boolean;
   private username: string;
   private password: string;
-  private client: Boolean;
+  private client: any;
   private connected: Boolean;
   private ping_interval: number;
   private protocol_name: string;
   private protocol_level: string;
+
+  private ctimo: number;
+  private pintr: number;
+
+  private emit: (event: string, ...args: any[]) => boolean;
 
   private C = {
     DEF_QOS: 0,    // Default QOS level
     DEF_PORT: 1883, // MQTT default server port
     DEF_KEEP_ALIVE: 60,   // Default keep_alive (s)
     CONNECT_TIMEOUT: 5000, // Time (s) to wait for CONNACK 
-    PING_INTERVAL: 40    // Server ping interval (s)
+    PING_INTERVAL: 40,    // Server ping interval (s)
+    PROTOCOL_LEVEL: 4  // MQTT protocol level    
   };
 
   constructor(private server: string, options) {
@@ -74,16 +78,16 @@ class MicroMqtt {
     this.clean_session = options.clean_session || true;
     this.username = options.username;
     this.password = options.password;
-    this.client = false;
+    this.client = undefined;
     this.connected = false;
     this.ping_interval =
       this.keep_alive < this.C.PING_INTERVAL ? (this.keep_alive - 5) : this.C.PING_INTERVAL;
     this.protocol_name = options.protocol_name || "MQTT";
-    this.protocol_level = createEscapedHex(options.protocol_level || C.PROTOCOL_LEVEL);
+    this.protocol_level = createEscapedHex(options.protocol_level || this.C.PROTOCOL_LEVEL);
   }
 
   /** Establish connection and set up keep_alive ping */
-  public connect = function (client?) {
+  public connect = (client?) => {
     var mqo = this;
     var onConnect = function () {
       console.log('Client connected');
@@ -182,7 +186,7 @@ class MicroMqtt {
   };
 
   /** Disconnect from server */
-  public disconnect = function (topic, message) {
+  public disconnect = () => {
     this.client.write(fromCharCode(TYPE.DISCONNECT << 4) + "\x00");
     this.client.end();
     this.client = false;
@@ -190,48 +194,18 @@ class MicroMqtt {
   };
 
   /** Publish message using specified topic */
-  public publish = function (topic, message, qos) {
+  public publish = (topic, message, qos) => {
     var _qos = qos || this.C.DEF_QOS;
     this.client.write(mqttPublish(topic, message, _qos));
   };
 
   /** Subscribe to topic (filter) */
-  public subscribe = function (topics, opts, callback) {
-    if (!opts) { opts = { qos: this.C.DEF_QOS }; }
-    if ('number' === typeof opts) { opts = { qos: opts }; }
-
-    var subs = [];
-    if ('string' === typeof topics) {
-      topics = [topics];
-    }
-    if (Array.isArray(topics)) {
-      topics.forEach(function (topic) {
-        subs.push({
-          topic: topic,
-          qos: opts.qos
-        });
-      });
-    } else {
-      Object
-        .keys(topics)
-        .forEach(function (k) {
-          subs.push({
-            topic: k,
-            qos: topics[k]
-          });
-        });
-    }
-
-    subs.forEach(function (sub) {
-      // TODO: Multiple topics in single subscribe packet
-      this.client.write(mqttSubscribe(sub.topic, sub.qos));
-    }.bind(this));
-
-    if ('function' === typeof callback) { callback(); }
+  public subscribe = (topic: string, qos = this.C.DEF_QOS) => {
+    this.client.write(mqttSubscribe(topic, qos));
   };
 
   /** Unsubscribe to topic (filter) */
-  public unsubscribe = function (topic) {
+  public unsubscribe = (topic) => {
     this.client.write(mqttUnsubscribe(topic));
   };
 
@@ -245,7 +219,7 @@ class MicroMqtt {
   /** Create connection flags 
   
   */
-  public createFlagsForConnection = function (options) {
+  public createFlagsForConnection = (options) => {
     var flags = 0;
     flags |= (this.username) ? 0x80 : 0;
     flags |= (this.username && this.password) ? 0x40 : 0;
@@ -258,7 +232,7 @@ class MicroMqtt {
       connect flag. Wills are not
       currently supported.
   */
-  public mqttConnect = function (clean) {
+  public mqttConnect = (clean) => {
     var cmd = TYPE.CONNECT << 4;
     var flags = this.createFlagsForConnection({
       clean_session: clean
@@ -376,16 +350,3 @@ function mqttUnsubscribe(topic) {
 function createEscapedHex(number) {
   return fromCharCode(parseInt(number.toString(16), 16));
 }
-
-/* Exports *************************************/
-
-/** This is 'exported' so it can be used with `require('micro-mqtt').create(server, options)` */
-exports.create = function (server, options) {
-  return new MicroMqtt(server, options);
-};
-
-exports.connect = function (options) {
-  var microMqtt = new MicroMqtt(options.host, options);
-  microMqtt.connect();
-  return microMqtt;
-};
