@@ -1,8 +1,10 @@
 declare var require: (module: string) => any;
 
-/* Copyright (c) 2014 Lars Toft Jacobsen (boxed.dk), Gordon Williams. See the file LICENSE for copying permission. */
 /*
-Simple MQTT protocol wrapper for Espruino sockets.
+A MQTT client for Espruino.
+
+Based on the Espruino MQTT.js module by Lars Toft Jacobsen (boxed.dk), Gordon Williams.
+See the file LICENSE for copying permission.
 */
 
 const FixedPackedId = 1; // Bad...fixed packet id
@@ -47,7 +49,10 @@ export class MicroMqttClient {
   private cleanSession: boolean;
   private username: string;
   private password: string;
-  private networkConnection: any;
+
+  private network: any;
+  private networkSocket: any;
+
   private connected = false;
 
   private emit: (event: string, ...args: any[]) => boolean;
@@ -65,18 +70,17 @@ export class MicroMqttClient {
     this.cleanSession = options.cleanSession || true;
     this.username = options.username;
     this.password = options.password;
+    this.network = options.network || require("net");
   }
 
-  private static generateClientId = (() => {
+  private static generateClientId = () => {
     function s4() {
       return Math.floor((1 + Math.random()) * 0x10000)
         .toString(16)
         .substring(1);
     }
-    return () => {
-      return s4() + s4() + s4();
-    };
-  })();
+    return s4() + s4() + s4();
+  }
 
   private static getConnectionError(returnCode: number) {
     var error = "Connection refused, ";
@@ -103,23 +107,22 @@ export class MicroMqttClient {
   }
 
   public connect = () => {
-    this.networkConnection =
-      require("net").connect({ host: this.server, port: this.port }, this.onNetworkConnected)
+    this.network.connect({ host: this.server, port: this.port }, (socket) => this.onNetworkConnected(socket))
     // TODO: Reconnect on timeout
   };
 
-  private onNetworkConnected = () => {
+  private onNetworkConnected = (socket) => {
     console.log('Network connected');
+    this.networkSocket = socket;
 
-    this.networkConnection.write(MqttProtocol.createConnectPacket(this.clientId, this.username, this.password, this.cleanSession));
+    this.networkSocket.write(MqttProtocol.createConnectPacket(this.clientId, this.username, this.password, this.cleanSession));
     // Disconnect if no CONNACK is received
     this.connectionTimeOutId = setTimeout(() => {
       this.disconnect();
     }, ConnectionTimeout * 1000);
 
-    this.networkConnection.on('data', (data) => this.onNetworkData(data));
-
-    this.networkConnection.on('end', this.onNetworkEnd);
+    this.networkSocket.on('data', (data) => this.onNetworkData(data));
+    this.networkSocket.on('end', this.onNetworkEnd);
   };
 
   // Incoming data
@@ -137,7 +140,7 @@ export class MicroMqttClient {
         console.log(type);
         break;
       case ControlPacketType.PingReq:
-        this.networkConnection.write(ControlPacketType.PingResp + "\x00"); // reply to PINGREQ
+        this.networkSocket.write(ControlPacketType.PingResp + "\x00"); // reply to PINGREQ
         break
       case ControlPacketType.PingResp:
         console.log("ping response");
@@ -168,41 +171,41 @@ export class MicroMqttClient {
         break;
     }
   }
-  
+
   private onNetworkEnd = () => {
-      console.log('MQTT client disconnected');
-      clearInterval(this.pingIntervalId);
-      this.emit('disconnected');
-      this.emit('close');    
+    console.log('MQTT client disconnected');
+    clearInterval(this.pingIntervalId);
+    this.networkSocket = undefined;
+    this.emit('disconnected');
+    this.emit('close');
   }
 
   /** Disconnect from server */
   public disconnect = () => {
-    this.networkConnection.write(String.fromCharCode(ControlPacketType.Disconnect << 4) + "\x00");
-    this.networkConnection.end();
-    this.networkConnection = false;
+    this.networkSocket.write(String.fromCharCode(ControlPacketType.Disconnect << 4) + "\x00");
+    this.networkSocket.end();
     this.connected = false;
   };
 
   /** Publish message using specified topic */
   public publish = (topic, message, qos = DefaultQosLevel) => {
-    this.networkConnection.write(MqttProtocol.createPublishPacket(topic, message, qos));
+    this.networkSocket.write(MqttProtocol.createPublishPacket(topic, message, qos));
   };
 
   /** Subscribe to topic (filter) */
   public subscribe = (topic: string, qos = DefaultQosLevel) => {
-    this.networkConnection.write(MqttProtocol.createSubscribePacket(topic, qos));
+    this.networkSocket.write(MqttProtocol.createSubscribePacket(topic, qos));
   };
 
   /** Unsubscribe to topic (filter) */
   public unsubscribe = (topic) => {
-    this.networkConnection.write(MqttProtocol.createUnsubscribePacket(topic));
+    this.networkSocket.write(MqttProtocol.createUnsubscribePacket(topic));
   };
 
   /** Send ping request to server */
   private ping = () => {
     console.log("ping")
-    this.networkConnection.write(String.fromCharCode(ControlPacketType.PingReq << 4) + "\x00");
+    this.networkSocket.write(String.fromCharCode(ControlPacketType.PingReq << 4) + "\x00");
   };
 }
 

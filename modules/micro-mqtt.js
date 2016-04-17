@@ -1,7 +1,9 @@
 "use strict";
-/* Copyright (c) 2014 Lars Toft Jacobsen (boxed.dk), Gordon Williams. See the file LICENSE for copying permission. */
 /*
-Simple MQTT protocol wrapper for Espruino sockets.
+A MQTT client for Espruino.
+
+Based on the Espruino MQTT.js module by Lars Toft Jacobsen (boxed.dk), Gordon Williams.
+See the file LICENSE for copying permission.
 */
 var FixedPackedId = 1; // Bad...fixed packet id
 var DefaultQosLevel = 0;
@@ -18,19 +20,19 @@ var MicroMqttClient = (function () {
         this.version = "0.0.5";
         this.connected = false;
         this.connect = function () {
-            _this.networkConnection =
-                require("net").connect({ host: _this.server, port: _this.port }, _this.onNetworkConnected);
+            _this.network.connect({ host: _this.server, port: _this.port }, function (socket) { return _this.onNetworkConnected(socket); });
             // TODO: Reconnect on timeout
         };
-        this.onNetworkConnected = function () {
+        this.onNetworkConnected = function (socket) {
             console.log('Network connected');
-            _this.networkConnection.write(MqttProtocol.createConnectPacket(_this.clientId, _this.username, _this.password, _this.cleanSession));
+            _this.networkSocket = socket;
+            _this.networkSocket.write(MqttProtocol.createConnectPacket(_this.clientId, _this.username, _this.password, _this.cleanSession));
             // Disconnect if no CONNACK is received
             _this.connectionTimeOutId = setTimeout(function () {
                 _this.disconnect();
             }, ConnectionTimeout * 1000);
-            _this.networkConnection.on('data', function (data) { return _this.onNetworkData(data); });
-            _this.networkConnection.on('end', _this.onNetworkEnd);
+            _this.networkSocket.on('data', function (data) { return _this.onNetworkData(data); });
+            _this.networkSocket.on('end', _this.onNetworkEnd);
         };
         // Incoming data
         this.onNetworkData = function (data) {
@@ -46,7 +48,7 @@ var MicroMqttClient = (function () {
                     console.log(type);
                     break;
                 case 12 /* PingReq */:
-                    _this.networkConnection.write(13 /* PingResp */ + "\x00"); // reply to PINGREQ
+                    _this.networkSocket.write(13 /* PingResp */ + "\x00"); // reply to PINGREQ
                     break;
                 case 13 /* PingResp */:
                     console.log("ping response");
@@ -79,34 +81,34 @@ var MicroMqttClient = (function () {
         this.onNetworkEnd = function () {
             console.log('MQTT client disconnected');
             clearInterval(_this.pingIntervalId);
+            _this.networkSocket = undefined;
             _this.emit('disconnected');
             _this.emit('close');
         };
         /** Disconnect from server */
         this.disconnect = function () {
-            _this.networkConnection.write(String.fromCharCode(14 /* Disconnect */ << 4) + "\x00");
-            _this.networkConnection.end();
-            _this.networkConnection = false;
+            _this.networkSocket.write(String.fromCharCode(14 /* Disconnect */ << 4) + "\x00");
+            _this.networkSocket.end();
             _this.connected = false;
         };
         /** Publish message using specified topic */
         this.publish = function (topic, message, qos) {
             if (qos === void 0) { qos = DefaultQosLevel; }
-            _this.networkConnection.write(MqttProtocol.createPublishPacket(topic, message, qos));
+            _this.networkSocket.write(MqttProtocol.createPublishPacket(topic, message, qos));
         };
         /** Subscribe to topic (filter) */
         this.subscribe = function (topic, qos) {
             if (qos === void 0) { qos = DefaultQosLevel; }
-            _this.networkConnection.write(MqttProtocol.createSubscribePacket(topic, qos));
+            _this.networkSocket.write(MqttProtocol.createSubscribePacket(topic, qos));
         };
         /** Unsubscribe to topic (filter) */
         this.unsubscribe = function (topic) {
-            _this.networkConnection.write(MqttProtocol.createUnsubscribePacket(topic));
+            _this.networkSocket.write(MqttProtocol.createUnsubscribePacket(topic));
         };
         /** Send ping request to server */
         this.ping = function () {
             console.log("ping");
-            _this.networkConnection.write(String.fromCharCode(12 /* PingReq */ << 4) + "\x00");
+            _this.networkSocket.write(String.fromCharCode(12 /* PingReq */ << 4) + "\x00");
         };
         console.log("MicroMqttClient " + this.version);
         this.server = server;
@@ -116,6 +118,7 @@ var MicroMqttClient = (function () {
         this.cleanSession = options.cleanSession || true;
         this.username = options.username;
         this.password = options.password;
+        this.network = options.network || require("net");
     }
     MicroMqttClient.getConnectionError = function (returnCode) {
         var error = "Connection refused, ";
@@ -140,16 +143,14 @@ var MicroMqttClient = (function () {
         }
         return error;
     };
-    MicroMqttClient.generateClientId = (function () {
+    MicroMqttClient.generateClientId = function () {
         function s4() {
             return Math.floor((1 + Math.random()) * 0x10000)
                 .toString(16)
                 .substring(1);
         }
-        return function () {
-            return s4() + s4() + s4();
-        };
-    })();
+        return s4() + s4() + s4();
+    };
     return MicroMqttClient;
 }());
 exports.MicroMqttClient = MicroMqttClient;
