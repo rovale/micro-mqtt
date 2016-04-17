@@ -43,6 +43,7 @@ const enum ConnectReturnCode {
 };
 
 interface ConnectionOptions {
+  host: string;
   port?: number;
   username?: string;
   password?: string;
@@ -50,10 +51,25 @@ interface ConnectionOptions {
   cleanSession?: boolean;
 }
 
+interface NetworkConnectOptions {
+  host: string;
+  port: number;  
+}
+
+interface NetworkSocket {
+  write : (data: string) => void;
+  on: (event: string, listener: Function) => void;
+  end: () => void;
+}
+
+interface Network {
+  connect: (options : NetworkConnectOptions, callback : (socket : NetworkSocket) => void ) => void;
+}
+
 export class MicroMqttClient {
   public version = "0.0.6";
 
-  private networkSocket: any;
+  private networkSocket: NetworkSocket;
   private connected = false;
 
   private emit: (event: string, ...args: any[]) => boolean;
@@ -61,7 +77,7 @@ export class MicroMqttClient {
   private connectionTimeOutId: number;
   private pingIntervalId: number;
 
-  constructor(private server: string, private options: ConnectionOptions = {}, private network = require("net")) {
+  constructor(private options: ConnectionOptions, private network : Network = require("net")) {
     console.log("MicroMqttClient " + this.version);
 
     options.port = options.port || DefaultPort;
@@ -103,11 +119,11 @@ export class MicroMqttClient {
   }
 
   public connect = () => {
-    this.network.connect({ host: this.server, port: this.options.port }, (socket) => this.onNetworkConnected(socket))
+    this.network.connect({ host: this.options.host, port: this.options.port }, (socket) => this.onNetworkConnected(socket))
     // TODO: Reconnect on timeout
   };
 
-  private onNetworkConnected = (socket) => {
+  private onNetworkConnected = (socket : NetworkSocket) => {
     console.log('Network connected');
     this.networkSocket = socket;
 

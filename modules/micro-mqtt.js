@@ -14,17 +14,15 @@ var PingInterval = 40;
 ;
 ;
 var MicroMqttClient = (function () {
-    function MicroMqttClient(server, options, network) {
+    function MicroMqttClient(options, network) {
         var _this = this;
-        if (options === void 0) { options = {}; }
         if (network === void 0) { network = require("net"); }
-        this.server = server;
         this.options = options;
         this.network = network;
         this.version = "0.0.6";
         this.connected = false;
         this.connect = function () {
-            _this.network.connect({ host: _this.server, port: _this.options.port }, function (socket) { return _this.onNetworkConnected(socket); });
+            _this.network.connect({ host: _this.options.host, port: _this.options.port }, function (socket) { return _this.onNetworkConnected(socket); });
             // TODO: Reconnect on timeout
         };
         this.onNetworkConnected = function (socket) {
