@@ -237,3 +237,4 @@ var MqttProtocol = (function () {
     };
     return MqttProtocol;
 }());
+//# sourceMappingURL=micro-mqtt.js.map

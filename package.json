@@ -1,0 +1,31 @@
+{
+  "name": "micro-mqtt",
+  "version": "0.0.6",
+  "description": "A MQTT client for Espruino.",
+  "main": "./modules/micro-mqtt.ts",
+  "scripts": {
+    "postinstall": "./node_modules/.bin/typings install",
+    "start": "tsc --watch --pretty",
+    "prepublish": "tsc",
+    "pretest": "tsc",    
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rovale/micro-mqtt.git"
+  },
+  "keywords": [
+    "mqtt",
+    "espruino"
+  ],
+  "author": "R. van Leuwen",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/rovale/micro-mqtt/issues"
+  },
+  "homepage": "https://github.com/rovale/micro-mqtt#readme",
+  "devDependencies": {
+    "mocha": "^2.4.5",
+    "typings": "^0.7.12"
+  }
+}

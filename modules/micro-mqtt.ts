@@ -42,7 +42,7 @@ const enum ConnectReturnCode {
   NotAuthorized = 5
 };
 
-interface ConnectionOptions {
+export interface ConnectionOptions {
   host: string;
   port?: number;
   username?: string;
@@ -62,7 +62,7 @@ interface NetworkSocket {
   end: () => void;
 }
 
-interface Network {
+export interface Network {
   connect: (options : NetworkConnectOptions, callback : (socket : NetworkSocket) => void ) => void;
 }
 
@@ -72,7 +72,7 @@ export class MicroMqttClient {
   private networkSocket: NetworkSocket;
   private connected = false;
 
-  private emit: (event: string, ...args: any[]) => boolean;
+  protected emit: (event: string, ...args: any[]) => boolean;
 
   private connectionTimeOutId: number;
   private pingIntervalId: number;

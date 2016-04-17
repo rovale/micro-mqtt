@@ -1,0 +1,9 @@
+{
+    "compilerOptions": {
+        "sourceMap": true
+    },
+    "exclude": [
+        "node_modules",
+        "typings"
+    ]
+}
