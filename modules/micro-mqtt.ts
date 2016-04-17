@@ -67,7 +67,7 @@ interface Network {
 }
 
 export class MicroMqttClient {
-  public version = "0.0.6";
+  public version = '0.0.6';
 
   private networkSocket: NetworkSocket;
   private connected = false;
@@ -77,9 +77,7 @@ export class MicroMqttClient {
   private connectionTimeOutId: number;
   private pingIntervalId: number;
 
-  constructor(private options: ConnectionOptions, private network : Network = require("net")) {
-    console.log("MicroMqttClient " + this.version);
-
+  constructor(private options: ConnectionOptions, private network : Network = require('net')) {
     options.port = options.port || DefaultPort;
     options.clientId = options.clientId || MicroMqttClient.generateClientId();
     options.cleanSession = options.cleanSession || true;    
@@ -95,36 +93,37 @@ export class MicroMqttClient {
   }
 
   private static getConnectionError(returnCode: number) {
-    let error = "Connection refused, ";
+    let error = 'Connection refused, ';
     switch (returnCode) {
       case ConnectReturnCode.UnacceptableProtocolVersion:
-        error += "unacceptable protocol version.";
+        error += 'unacceptable protocol version.';
         break;
       case ConnectReturnCode.IdentifierRejected:
-        error += "identifier rejected.";
+        error += 'identifier rejected.';
         break;
       case ConnectReturnCode.ServerUnavailable:
-        error += "server unavailable.";
+        error += 'server unavailable.';
         break;
       case ConnectReturnCode.BadUserNameOrPassword:
-        error += "bad user name or password.";
+        error += 'bad user name or password.';
         break;
       case ConnectReturnCode.NotAuthorized:
-        error += "not authorized.";
+        error += 'not authorized.';
         break;
       default:
-        error += "unknown return code: " + returnCode + ".";
+        error += 'unknown return code: ' + returnCode + '.';
     }
     return error;
   }
 
   public connect = () => {
+    this.emit('info', `Connecting MicroMqttClient ${this.version} to ${this.options.host}:${this.options.port}`);    
     this.network.connect({ host: this.options.host, port: this.options.port }, (socket) => this.onNetworkConnected(socket))
     // TODO: Reconnect on timeout
   };
 
   private onNetworkConnected = (socket : NetworkSocket) => {
-    console.log('Network connected');
+    this.emit('info', 'Network connection established');
     this.networkSocket = socket;
 
     this.networkSocket.write(MqttProtocol.createConnectPacket(this.options));
@@ -141,6 +140,8 @@ export class MicroMqttClient {
   private onNetworkData = (data) => {
     let type: ControlPacketType = data.charCodeAt(0) >> 4;
 
+    this.emit('debug', `Rcvd: ${type}: "${data}"`);
+
     switch (type) {
       case ControlPacketType.Publish:
         let parsedData = MqttProtocol.parsePublish(data);
@@ -149,21 +150,17 @@ export class MicroMqttClient {
       case ControlPacketType.PubAck:
       case ControlPacketType.SubAck:
       case ControlPacketType.UnsubAck:
-        console.log(type);
+      case ControlPacketType.PingResp:
         break;
       case ControlPacketType.PingReq:
-        this.networkSocket.write(ControlPacketType.PingResp + "\x00"); // reply to PINGREQ
+        this.networkSocket.write(ControlPacketType.PingResp + '\x00'); // reply to PINGREQ
         break
-      case ControlPacketType.PingResp:
-        console.log("ping response");
-        this.emit('ping_reply');
-        break;
       case ControlPacketType.ConnAck:
         clearTimeout(this.connectionTimeOutId);
         let returnCode = data.charCodeAt(3);
         if (returnCode === ConnectReturnCode.Accepted) {
           this.connected = true;
-          console.log("MQTT connection accepted");
+          this.emit('info', 'MQTT connection accepted');
           this.emit('connected');
 
           // Set up regular keep alive ping
@@ -173,19 +170,18 @@ export class MicroMqttClient {
         }
         else {
           let connectionError = MicroMqttClient.getConnectionError(returnCode);
-          console.log(connectionError);
           this.emit('error', connectionError);
         }
         break;
       default:
-        console.log("MQTT unsupported packet type: " + type);
-        console.log("[MQTT]" + data.split("").map((c) => { return c.charCodeAt(0); }));
+        this.emit('error', 'MQTT unsupported packet type: ' + type);
+        this.emit('error', '[MQTT]' + data.split('').map((c) => { return c.charCodeAt(0); }));
         break;
     }
   }
 
   private onNetworkEnd = () => {
-    console.log('MQTT client disconnected');
+    this.emit('info', 'MQTT client disconnected');
     clearInterval(this.pingIntervalId);
     this.networkSocket = undefined;
     this.emit('disconnected');
@@ -194,7 +190,7 @@ export class MicroMqttClient {
 
   /** Disconnect from server */
   public disconnect = () => {
-    this.networkSocket.write(String.fromCharCode(ControlPacketType.Disconnect << 4) + "\x00");
+    this.networkSocket.write(String.fromCharCode(ControlPacketType.Disconnect << 4) + '\x00');
     this.networkSocket.end();
     this.connected = false;
   };
@@ -216,8 +212,8 @@ export class MicroMqttClient {
 
   /** Send ping request to server */
   private ping = () => {
-    console.log("ping")
-    this.networkSocket.write(String.fromCharCode(ControlPacketType.PingReq << 4) + "\x00");
+    this.networkSocket.write(String.fromCharCode(ControlPacketType.PingReq << 4) + '\x00');
+    this.emit('debug', 'Sent: Ping request')
   };
 }
 
@@ -280,7 +276,7 @@ class MqttProtocol {
 
   public static createConnectPacket(options: ConnectionOptions) {
     let cmd = ControlPacketType.Connect << 4;
-    let protocolName = this.mqttStr("MQTT");
+    let protocolName = this.mqttStr('MQTT');
     let protocolLevel = this.escapeHex(4);
 
     let flags = this.createConnectionFlags(options);

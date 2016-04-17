@@ -16,17 +16,18 @@ var PingInterval = 40;
 var MicroMqttClient = (function () {
     function MicroMqttClient(options, network) {
         var _this = this;
-        if (network === void 0) { network = require("net"); }
+        if (network === void 0) { network = require('net'); }
         this.options = options;
         this.network = network;
-        this.version = "0.0.6";
+        this.version = '0.0.6';
         this.connected = false;
         this.connect = function () {
+            _this.emit('info', "Connecting MicroMqttClient " + _this.version + " to " + _this.options.host + ":" + _this.options.port);
             _this.network.connect({ host: _this.options.host, port: _this.options.port }, function (socket) { return _this.onNetworkConnected(socket); });
             // TODO: Reconnect on timeout
         };
         this.onNetworkConnected = function (socket) {
-            console.log('Network connected');
+            _this.emit('info', 'Network connection established');
             _this.networkSocket = socket;
             _this.networkSocket.write(MqttProtocol.createConnectPacket(_this.options));
             // Disconnect if no CONNACK is received
@@ -39,6 +40,7 @@ var MicroMqttClient = (function () {
         // Incoming data
         this.onNetworkData = function (data) {
             var type = data.charCodeAt(0) >> 4;
+            _this.emit('debug', "Rcvd: " + type + ": \"" + data + "\"");
             switch (type) {
                 case 3 /* Publish */:
                     var parsedData = MqttProtocol.parsePublish(data);
@@ -47,21 +49,17 @@ var MicroMqttClient = (function () {
                 case 4 /* PubAck */:
                 case 9 /* SubAck */:
                 case 11 /* UnsubAck */:
-                    console.log(type);
+                case 13 /* PingResp */:
                     break;
                 case 12 /* PingReq */:
-                    _this.networkSocket.write(13 /* PingResp */ + "\x00"); // reply to PINGREQ
-                    break;
-                case 13 /* PingResp */:
-                    console.log("ping response");
-                    _this.emit('ping_reply');
+                    _this.networkSocket.write(13 /* PingResp */ + '\x00'); // reply to PINGREQ
                     break;
                 case 2 /* ConnAck */:
                     clearTimeout(_this.connectionTimeOutId);
                     var returnCode = data.charCodeAt(3);
                     if (returnCode === 0 /* Accepted */) {
                         _this.connected = true;
-                        console.log("MQTT connection accepted");
+                        _this.emit('info', 'MQTT connection accepted');
                         _this.emit('connected');
                         // Set up regular keep alive ping
                         _this.pingIntervalId = setInterval(function () {
@@ -70,18 +68,17 @@ var MicroMqttClient = (function () {
                     }
                     else {
                         var connectionError = MicroMqttClient.getConnectionError(returnCode);
-                        console.log(connectionError);
                         _this.emit('error', connectionError);
                     }
                     break;
                 default:
-                    console.log("MQTT unsupported packet type: " + type);
-                    console.log("[MQTT]" + data.split("").map(function (c) { return c.charCodeAt(0); }));
+                    _this.emit('error', 'MQTT unsupported packet type: ' + type);
+                    _this.emit('error', '[MQTT]' + data.split('').map(function (c) { return c.charCodeAt(0); }));
                     break;
             }
         };
         this.onNetworkEnd = function () {
-            console.log('MQTT client disconnected');
+            _this.emit('info', 'MQTT client disconnected');
             clearInterval(_this.pingIntervalId);
             _this.networkSocket = undefined;
             _this.emit('disconnected');
@@ -89,7 +86,7 @@ var MicroMqttClient = (function () {
         };
         /** Disconnect from server */
         this.disconnect = function () {
-            _this.networkSocket.write(String.fromCharCode(14 /* Disconnect */ << 4) + "\x00");
+            _this.networkSocket.write(String.fromCharCode(14 /* Disconnect */ << 4) + '\x00');
             _this.networkSocket.end();
             _this.connected = false;
         };
@@ -109,34 +106,33 @@ var MicroMqttClient = (function () {
         };
         /** Send ping request to server */
         this.ping = function () {
-            console.log("ping");
-            _this.networkSocket.write(String.fromCharCode(12 /* PingReq */ << 4) + "\x00");
+            _this.networkSocket.write(String.fromCharCode(12 /* PingReq */ << 4) + '\x00');
+            _this.emit('debug', 'Sent: Ping request');
         };
-        console.log("MicroMqttClient " + this.version);
         options.port = options.port || DefaultPort;
         options.clientId = options.clientId || MicroMqttClient.generateClientId();
         options.cleanSession = options.cleanSession || true;
     }
     MicroMqttClient.getConnectionError = function (returnCode) {
-        var error = "Connection refused, ";
+        var error = 'Connection refused, ';
         switch (returnCode) {
             case 1 /* UnacceptableProtocolVersion */:
-                error += "unacceptable protocol version.";
+                error += 'unacceptable protocol version.';
                 break;
             case 2 /* IdentifierRejected */:
-                error += "identifier rejected.";
+                error += 'identifier rejected.';
                 break;
             case 3 /* ServerUnavailable */:
-                error += "server unavailable.";
+                error += 'server unavailable.';
                 break;
             case 4 /* BadUserNameOrPassword */:
-                error += "bad user name or password.";
+                error += 'bad user name or password.';
                 break;
             case 5 /* NotAuthorized */:
-                error += "not authorized.";
+                error += 'not authorized.';
                 break;
             default:
-                error += "unknown return code: " + returnCode + ".";
+                error += 'unknown return code: ' + returnCode + '.';
         }
         return error;
     };
@@ -208,7 +204,7 @@ var MqttProtocol = (function () {
     ;
     MqttProtocol.createConnectPacket = function (options) {
         var cmd = 1 /* Connect */ << 4;
-        var protocolName = this.mqttStr("MQTT");
+        var protocolName = this.mqttStr('MQTT');
         var protocolLevel = this.escapeHex(4);
         var flags = this.createConnectionFlags(options);
         var keepAlive = String.fromCharCode(KeepAlive >> 8, KeepAlive & 255);
