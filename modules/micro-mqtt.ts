@@ -44,7 +44,7 @@ export class MicroMqttClient {
   public version = "0.0.5";
   private port: number;
   private clientId: string;
-  private cleanSession: Boolean;
+  private cleanSession: boolean;
   private username: string;
   private password: string;
   private net: any;
@@ -58,13 +58,24 @@ export class MicroMqttClient {
     this.server = server;
     var options = options || {};
     this.port = options.port || DefaultPort;
-    this.clientId = options.clientId || generateClientId();
+    this.clientId = options.clientId || MicroMqttClient.generateClientId();
     this.cleanSession = options.cleanSession || true;
     this.username = options.username;
     this.password = options.password;
   }
 
-  private getConnectionError(returnCode: number) {
+  private static generateClientId = (() => {
+    function s4() {
+      return Math.floor((1 + Math.random()) * 0x10000)
+        .toString(16)
+        .substring(1);
+    }
+    return () => {
+      return s4() + s4() + s4();
+    };
+  })();
+
+  private static getConnectionError(returnCode: number) {
     var error = "Connection refused, ";
     switch (returnCode) {
       case ConnectReturnCode.UnacceptableProtocolVersion:
@@ -95,7 +106,7 @@ export class MicroMqttClient {
 
     let onNetConnected = () => {
       console.log('Client connected');
-      net.write(this.mqttConnect(this.clientId));
+      net.write(MqttProtocol.createConnectPacket(this.clientId, this.username, this.password, this.cleanSession));
 
       // Disconnect if no CONNACK is received
       connectionTimeOutId = setTimeout(() => {
@@ -113,13 +124,14 @@ export class MicroMqttClient {
 
         switch (type) {
           case ControlPacketType.Publish:
-            let parsedData = parsePublish(data);
+            let parsedData = MqttProtocol.parsePublish(data);
             this.emit('publish', parsedData);
             this.emit('message', parsedData.topic, parsedData.message);
             break;
           case ControlPacketType.PubAck:
           case ControlPacketType.SubAck:
           case ControlPacketType.UnsubAck:
+            console.log(type);
             break;
           case ControlPacketType.PingReq:
             net.write(ControlPacketType.PingResp + "\x00"); // reply to PINGREQ
@@ -176,153 +188,129 @@ export class MicroMqttClient {
 
   /** Publish message using specified topic */
   public publish = (topic, message, qos = DefaultQosLevel) => {
-    this.net.write(mqttPublish(topic, message, qos));
+    this.net.write(MqttProtocol.createPublishPacket(topic, message, qos));
   };
 
   /** Subscribe to topic (filter) */
   public subscribe = (topic: string, qos = DefaultQosLevel) => {
-    this.net.write(mqttSubscribe(topic, qos));
+    this.net.write(MqttProtocol.createSubscribePacket(topic, qos));
   };
 
   /** Unsubscribe to topic (filter) */
   public unsubscribe = (topic) => {
-    this.net.write(mqttUnsubscribe(topic));
+    this.net.write(MqttProtocol.createUnsubscribePacket(topic));
   };
 
   /** Send ping request to server */
   private ping = () => {
     this.net.write(String.fromCharCode(ControlPacketType.PingReq << 4) + "\x00");
   };
+}
 
-  /* Packet specific functions *******************/
+class MqttProtocol {
+  /* Utility functions ***************************/
+  /** Create escaped hex value from number */
+  private static escapeHex(number) {
+    return String.fromCharCode(parseInt(number.toString(16), 16));
+  }
 
-  /** Create connection flags 
-  
-  */
-  private createFlagsForConnection = () => {
-    var flags = 0;
-    flags |= (this.username) ? 0x80 : 0;
-    flags |= (this.username && this.password) ? 0x40 : 0;
-    flags |= (this.cleanSession) ? 0x02 : 0;
-    return createEscapedHex(flags);
+  /** MQTT string (length MSB, LSB + data) */
+  private static mqttStr(s) {
+    return String.fromCharCode(s.length >> 8, s.length & 255) + s;
   };
 
-  /** CONNECT control packet 
-      Clean Session and Userid/Password are currently only supported
-      connect flag. Wills are not
-      currently supported.
-  */
-  private mqttConnect = (clean) => {
-    let cmd = ControlPacketType.Connect << 4;
-    let protocolName = mqttStr("MQTT");
-    let protocolLevel = createEscapedHex(4);
+  /** MQTT packet length formatter - algorithm from reference docs */
+  private static mqttPacketLength(length) {
+    var encLength = '';
+    do {
+      var encByte = length & 127;
+      length = length >> 7;
+      // if there are more data to encode, set the top bit of this byte
+      if (length > 0) {
+        encByte += 128;
+      }
+      encLength += String.fromCharCode(encByte);
+    } while (length > 0)
+    return encLength;
+  }
 
-    let flags = this.createFlagsForConnection();
+  /** MQTT standard packet formatter */
+  private static createPacket(cmd, variable, payload) {
+    return String.fromCharCode(cmd) + this.mqttPacketLength(variable.length + payload.length) + variable + payload;
+  }
+
+  /** PUBLISH packet parser - returns object with topic and message */
+  public static parsePublish(data) {
+    if (data.length > 5 && typeof data !== undefined) {
+      var cmd = data.charCodeAt(0);
+      var rem_len = data.charCodeAt(1);
+      var var_len = data.charCodeAt(2) << 8 | data.charCodeAt(3);
+      return {
+        topic: data.substr(4, var_len),
+        message: data.substr(4 + var_len, rem_len - var_len),
+        dup: (cmd & 0b00001000) >> 3,
+        qos: (cmd & 0b00000110) >> 1,
+        retain: cmd & 0b00000001
+      };
+    }
+    else {
+      return undefined;
+    }
+  }
+
+  private static createConnectionFlags(username: string, password: string, cleanSession: boolean) {
+    var flags = 0;
+    flags |= (username) ? 0x80 : 0;
+    flags |= (username && password) ? 0x40 : 0;
+    flags |= (cleanSession) ? 0x02 : 0;
+    return this.escapeHex(flags);
+  };
+
+  public static createConnectPacket(clientId: string, username: string, password: string, cleanSession: boolean) {
+    let cmd = ControlPacketType.Connect << 4;
+    let protocolName = this.mqttStr("MQTT");
+    let protocolLevel = this.escapeHex(4);
+
+    let flags = this.createConnectionFlags(username, password, cleanSession);
 
     let keepAlive = String.fromCharCode(KeepAlive >> 8, KeepAlive & 255);
 
-    let payload = mqttStr(this.clientId);
-    if (this.username) {
-      payload += mqttStr(this.username);
-      if (this.password) {
-        payload += mqttStr(this.password);
+    let payload = this.mqttStr(clientId);
+    if (username) {
+      payload += this.mqttStr(username);
+      if (password) {
+        payload += this.mqttStr(password);
       }
     }
 
-    return mqttPacket(
+    return this.createPacket(
       cmd,
       protocolName + protocolLevel + flags + keepAlive,
       payload
     );
   };
-}
 
-/* Utility functions ***************************/
-
-/** MQTT string (length MSB, LSB + data) */
-function mqttStr(s) {
-  return String.fromCharCode(s.length >> 8, s.length & 255) + s;
-};
-
-/** MQTT packet length formatter - algorithm from reference docs */
-function mqttPacketLength(length) {
-  var encLength = '';
-  do {
-    var encByte = length & 127;
-    length = length >> 7;
-    // if there are more data to encode, set the top bit of this byte
-    if (length > 0) {
-      encByte += 128;
-    }
-    encLength += String.fromCharCode(encByte);
-  } while (length > 0)
-  return encLength;
-}
-
-/** MQTT standard packet formatter */
-function mqttPacket(cmd, variable, payload) {
-  return String.fromCharCode(cmd) + mqttPacketLength(variable.length + payload.length) + variable + payload;
-}
-
-/** PUBLISH packet parser - returns object with topic and message */
-function parsePublish(data) {
-  if (data.length > 5 && typeof data !== undefined) {
-    var cmd = data.charCodeAt(0);
-    var rem_len = data.charCodeAt(1);
-    var var_len = data.charCodeAt(2) << 8 | data.charCodeAt(3);
-    return {
-      topic: data.substr(4, var_len),
-      message: data.substr(4 + var_len, rem_len - var_len),
-      dup: (cmd & 0b00001000) >> 3,
-      qos: (cmd & 0b00000110) >> 1,
-      retain: cmd & 0b00000001
-    };
+  public static createPublishPacket(topic, message, qos) {
+    var cmd = ControlPacketType.Publish << 4 | (qos << 1);
+    var pid = String.fromCharCode(FixedPackedId << 8, FixedPackedId & 255);
+    var variable = (qos === 0) ? this.mqttStr(topic) : this.mqttStr(topic) + pid;
+    return this.createPacket(cmd, variable, message);
   }
-  else {
-    return undefined;
+
+  public static createSubscribePacket(topic, qos) {
+    var cmd = ControlPacketType.Subscribe << 4 | 2;
+    var pid = String.fromCharCode(FixedPackedId << 8, FixedPackedId & 255);
+    return this.createPacket(cmd,
+      pid,
+      this.mqttStr(topic) +
+      String.fromCharCode(qos));
   }
-}
 
-var generateClientId = (() => {
-  function s4() {
-    return Math.floor((1 + Math.random()) * 0x10000)
-      .toString(16)
-      .substring(1);
+  public static createUnsubscribePacket(topic) {
+    var cmd = ControlPacketType.Unsubscribe << 4 | 2;
+    var pid = String.fromCharCode(FixedPackedId << 8, FixedPackedId & 255);
+    return this.createPacket(cmd,
+      pid,
+      this.mqttStr(topic));
   }
-  return () => {
-    return s4() + s4() + s4();
-  };
-})();
-
-/** PUBLISH control packet */
-function mqttPublish(topic, message, qos) {
-  var cmd = ControlPacketType.Publish << 4 | (qos << 1);
-  var pid = String.fromCharCode(FixedPackedId << 8, FixedPackedId & 255);
-  // Packet id must be included for QOS > 0
-  var variable = (qos === 0) ? mqttStr(topic) : mqttStr(topic) + pid;
-  return mqttPacket(cmd, variable, message);
-}
-
-/** SUBSCRIBE control packet */
-function mqttSubscribe(topic, qos) {
-  var cmd = ControlPacketType.Subscribe << 4 | 2;
-  var pid = String.fromCharCode(FixedPackedId << 8, FixedPackedId & 255);
-  return mqttPacket(cmd,
-    pid/*Packet id*/,
-    mqttStr(topic) +
-    String.fromCharCode(qos)/*QOS*/);
-}
-
-/** UNSUBSCRIBE control packet */
-function mqttUnsubscribe(topic) {
-  var cmd = ControlPacketType.Unsubscribe << 4 | 2;
-  var pid = String.fromCharCode(FixedPackedId << 8, FixedPackedId & 255);
-  return mqttPacket(cmd,
-    pid/*Packet id*/,
-    mqttStr(topic));
-}
-
-/** Create escaped hex value from number */
-function createEscapedHex(number) {
-  return String.fromCharCode(parseInt(number.toString(16), 16));
 }
