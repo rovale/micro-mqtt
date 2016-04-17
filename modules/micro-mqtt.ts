@@ -1,4 +1,4 @@
-declare var require: (module: string) => any;
+declare let require: (module: string) => any;
 
 /*
 A MQTT client for Espruino.
@@ -42,17 +42,18 @@ const enum ConnectReturnCode {
   NotAuthorized = 5
 };
 
+interface ConnectionOptions {
+  port?: number;
+  username?: string;
+  password?: string;
+  clientId?: string;
+  cleanSession?: boolean;
+}
+
 export class MicroMqttClient {
-  public version = "0.0.5";
-  private port: number;
-  private clientId: string;
-  private cleanSession: boolean;
-  private username: string;
-  private password: string;
+  public version = "0.0.6";
 
-  private network: any;
   private networkSocket: any;
-
   private connected = false;
 
   private emit: (event: string, ...args: any[]) => boolean;
@@ -60,17 +61,12 @@ export class MicroMqttClient {
   private connectionTimeOutId: number;
   private pingIntervalId: number;
 
-  constructor(private server: string, options) {
+  constructor(private server: string, private options: ConnectionOptions = {}, private network = require("net")) {
     console.log("MicroMqttClient " + this.version);
 
-    this.server = server;
-    var options = options || {};
-    this.port = options.port || DefaultPort;
-    this.clientId = options.clientId || MicroMqttClient.generateClientId();
-    this.cleanSession = options.cleanSession || true;
-    this.username = options.username;
-    this.password = options.password;
-    this.network = options.network || require("net");
+    options.port = options.port || DefaultPort;
+    options.clientId = options.clientId || MicroMqttClient.generateClientId();
+    options.cleanSession = options.cleanSession || true;    
   }
 
   private static generateClientId = () => {
@@ -83,7 +79,7 @@ export class MicroMqttClient {
   }
 
   private static getConnectionError(returnCode: number) {
-    var error = "Connection refused, ";
+    let error = "Connection refused, ";
     switch (returnCode) {
       case ConnectReturnCode.UnacceptableProtocolVersion:
         error += "unacceptable protocol version.";
@@ -107,7 +103,7 @@ export class MicroMqttClient {
   }
 
   public connect = () => {
-    this.network.connect({ host: this.server, port: this.port }, (socket) => this.onNetworkConnected(socket))
+    this.network.connect({ host: this.server, port: this.options.port }, (socket) => this.onNetworkConnected(socket))
     // TODO: Reconnect on timeout
   };
 
@@ -115,7 +111,7 @@ export class MicroMqttClient {
     console.log('Network connected');
     this.networkSocket = socket;
 
-    this.networkSocket.write(MqttProtocol.createConnectPacket(this.clientId, this.username, this.password, this.cleanSession));
+    this.networkSocket.write(MqttProtocol.createConnectPacket(this.options));
     // Disconnect if no CONNACK is received
     this.connectionTimeOutId = setTimeout(() => {
       this.disconnect();
@@ -148,7 +144,7 @@ export class MicroMqttClient {
         break;
       case ControlPacketType.ConnAck:
         clearTimeout(this.connectionTimeOutId);
-        var returnCode = data.charCodeAt(3);
+        let returnCode = data.charCodeAt(3);
         if (returnCode === ConnectReturnCode.Accepted) {
           this.connected = true;
           console.log("MQTT connection accepted");
@@ -221,9 +217,9 @@ class MqttProtocol {
 
   /** MQTT packet length formatter - algorithm from reference docs */
   private static mqttPacketLength(length) {
-    var encLength = '';
+    let encLength = '';
     do {
-      var encByte = length & 127;
+      let encByte = length & 127;
       length = length >> 7;
       // if there are more data to encode, set the top bit of this byte
       if (length > 0) {
@@ -242,9 +238,9 @@ class MqttProtocol {
   /** PUBLISH packet parser - returns object with topic and message */
   public static parsePublish(data) {
     if (data.length > 5 && typeof data !== undefined) {
-      var cmd = data.charCodeAt(0);
-      var rem_len = data.charCodeAt(1);
-      var var_len = data.charCodeAt(2) << 8 | data.charCodeAt(3);
+      let cmd = data.charCodeAt(0);
+      let rem_len = data.charCodeAt(1);
+      let var_len = data.charCodeAt(2) << 8 | data.charCodeAt(3);
       return {
         topic: data.substr(4, var_len),
         message: data.substr(4 + var_len, rem_len - var_len),
@@ -258,28 +254,28 @@ class MqttProtocol {
     }
   }
 
-  private static createConnectionFlags(username: string, password: string, cleanSession: boolean) {
-    var flags = 0;
-    flags |= (username) ? 0x80 : 0;
-    flags |= (username && password) ? 0x40 : 0;
-    flags |= (cleanSession) ? 0x02 : 0;
+  private static createConnectionFlags(options: ConnectionOptions) {
+    let flags = 0;
+    flags |= (options.username) ? 0x80 : 0;
+    flags |= (options.username && options.password) ? 0x40 : 0;
+    flags |= (options.cleanSession) ? 0x02 : 0;
     return this.escapeHex(flags);
   };
 
-  public static createConnectPacket(clientId: string, username: string, password: string, cleanSession: boolean) {
+  public static createConnectPacket(options: ConnectionOptions) {
     let cmd = ControlPacketType.Connect << 4;
     let protocolName = this.mqttStr("MQTT");
     let protocolLevel = this.escapeHex(4);
 
-    let flags = this.createConnectionFlags(username, password, cleanSession);
+    let flags = this.createConnectionFlags(options);
 
     let keepAlive = String.fromCharCode(KeepAlive >> 8, KeepAlive & 255);
 
-    let payload = this.mqttStr(clientId);
-    if (username) {
-      payload += this.mqttStr(username);
-      if (password) {
-        payload += this.mqttStr(password);
+    let payload = this.mqttStr(options.clientId);
+    if (options.username) {
+      payload += this.mqttStr(options.username);
+      if (options.password) {
+        payload += this.mqttStr(options.password);
       }
     }
 
@@ -291,15 +287,15 @@ class MqttProtocol {
   };
 
   public static createPublishPacket(topic, message, qos) {
-    var cmd = ControlPacketType.Publish << 4 | (qos << 1);
-    var pid = String.fromCharCode(FixedPackedId << 8, FixedPackedId & 255);
-    var variable = (qos === 0) ? this.mqttStr(topic) : this.mqttStr(topic) + pid;
+    let cmd = ControlPacketType.Publish << 4 | (qos << 1);
+    let pid = String.fromCharCode(FixedPackedId << 8, FixedPackedId & 255);
+    let variable = (qos === 0) ? this.mqttStr(topic) : this.mqttStr(topic) + pid;
     return this.createPacket(cmd, variable, message);
   }
 
   public static createSubscribePacket(topic, qos) {
-    var cmd = ControlPacketType.Subscribe << 4 | 2;
-    var pid = String.fromCharCode(FixedPackedId << 8, FixedPackedId & 255);
+    let cmd = ControlPacketType.Subscribe << 4 | 2;
+    let pid = String.fromCharCode(FixedPackedId << 8, FixedPackedId & 255);
     return this.createPacket(cmd,
       pid,
       this.mqttStr(topic) +
@@ -307,8 +303,8 @@ class MqttProtocol {
   }
 
   public static createUnsubscribePacket(topic) {
-    var cmd = ControlPacketType.Unsubscribe << 4 | 2;
-    var pid = String.fromCharCode(FixedPackedId << 8, FixedPackedId & 255);
+    let cmd = ControlPacketType.Unsubscribe << 4 | 2;
+    let pid = String.fromCharCode(FixedPackedId << 8, FixedPackedId & 255);
     return this.createPacket(cmd,
       pid,
       this.mqttStr(topic));

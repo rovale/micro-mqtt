@@ -14,19 +14,23 @@ var PingInterval = 40;
 ;
 ;
 var MicroMqttClient = (function () {
-    function MicroMqttClient(server, options) {
+    function MicroMqttClient(server, options, network) {
         var _this = this;
+        if (options === void 0) { options = {}; }
+        if (network === void 0) { network = require("net"); }
         this.server = server;
-        this.version = "0.0.5";
+        this.options = options;
+        this.network = network;
+        this.version = "0.0.6";
         this.connected = false;
         this.connect = function () {
-            _this.network.connect({ host: _this.server, port: _this.port }, function (socket) { return _this.onNetworkConnected(socket); });
+            _this.network.connect({ host: _this.server, port: _this.options.port }, function (socket) { return _this.onNetworkConnected(socket); });
             // TODO: Reconnect on timeout
         };
         this.onNetworkConnected = function (socket) {
             console.log('Network connected');
             _this.networkSocket = socket;
-            _this.networkSocket.write(MqttProtocol.createConnectPacket(_this.clientId, _this.username, _this.password, _this.cleanSession));
+            _this.networkSocket.write(MqttProtocol.createConnectPacket(_this.options));
             // Disconnect if no CONNACK is received
             _this.connectionTimeOutId = setTimeout(function () {
                 _this.disconnect();
@@ -111,14 +115,9 @@ var MicroMqttClient = (function () {
             _this.networkSocket.write(String.fromCharCode(12 /* PingReq */ << 4) + "\x00");
         };
         console.log("MicroMqttClient " + this.version);
-        this.server = server;
-        var options = options || {};
-        this.port = options.port || DefaultPort;
-        this.clientId = options.clientId || MicroMqttClient.generateClientId();
-        this.cleanSession = options.cleanSession || true;
-        this.username = options.username;
-        this.password = options.password;
-        this.network = options.network || require("net");
+        options.port = options.port || DefaultPort;
+        options.clientId = options.clientId || MicroMqttClient.generateClientId();
+        options.cleanSession = options.cleanSession || true;
     }
     MicroMqttClient.getConnectionError = function (returnCode) {
         var error = "Connection refused, ";
@@ -201,25 +200,25 @@ var MqttProtocol = (function () {
             return undefined;
         }
     };
-    MqttProtocol.createConnectionFlags = function (username, password, cleanSession) {
+    MqttProtocol.createConnectionFlags = function (options) {
         var flags = 0;
-        flags |= (username) ? 0x80 : 0;
-        flags |= (username && password) ? 0x40 : 0;
-        flags |= (cleanSession) ? 0x02 : 0;
+        flags |= (options.username) ? 0x80 : 0;
+        flags |= (options.username && options.password) ? 0x40 : 0;
+        flags |= (options.cleanSession) ? 0x02 : 0;
         return this.escapeHex(flags);
     };
     ;
-    MqttProtocol.createConnectPacket = function (clientId, username, password, cleanSession) {
+    MqttProtocol.createConnectPacket = function (options) {
         var cmd = 1 /* Connect */ << 4;
         var protocolName = this.mqttStr("MQTT");
         var protocolLevel = this.escapeHex(4);
-        var flags = this.createConnectionFlags(username, password, cleanSession);
+        var flags = this.createConnectionFlags(options);
         var keepAlive = String.fromCharCode(KeepAlive >> 8, KeepAlive & 255);
-        var payload = this.mqttStr(clientId);
-        if (username) {
-            payload += this.mqttStr(username);
-            if (password) {
-                payload += this.mqttStr(password);
+        var payload = this.mqttStr(options.clientId);
+        if (options.username) {
+            payload += this.mqttStr(options.username);
+            if (options.password) {
+                payload += this.mqttStr(options.password);
             }
         }
         return this.createPacket(cmd, protocolName + protocolLevel + flags + keepAlive, payload);
