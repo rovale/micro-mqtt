@@ -1,4 +1,3 @@
-/// <reference path="../node_modules/typemoq/typemoq.node.d.ts" />
 /// <reference path="../typings/main.d.ts" />
 import { MicroMqttClient, ConnectionOptions,
   Network, NetworkConnectOptions, NetworkSocket } from '../modules/micro-mqtt';
