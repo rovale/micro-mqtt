@@ -33,7 +33,7 @@ describe('MicroMqttClient', () => {
       subject.emittedEvents.should.have.length(1);
       subject.emittedEvents[0].event.should.equal('info');
       subject.emittedEvents[0].args.should.have.length(1);
-      subject.emittedEvents[0].args[0].should.equal(`Connecting MicroMqttClient ${subject.version} to host:1883`);
+      subject.emittedEvents[0].args[0].should.equal(`XXX Connecting MicroMqttClient ${subject.version} to host:1883`);
     });
   });
 });
