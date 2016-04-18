@@ -51,19 +51,19 @@ export interface ConnectionOptions {
   cleanSession?: boolean;
 }
 
-interface NetworkConnectOptions {
+export interface NetworkConnectOptions {
   host: string;
   port: number;  
 }
 
-interface NetworkSocket {
+export interface NetworkSocket {
   write : (data: string) => void;
   on: (event: string, listener: Function) => void;
   end: () => void;
 }
 
 export interface Network {
-  connect: (options : NetworkConnectOptions, callback : (socket : NetworkSocket) => void ) => void;
+  connect: (options: NetworkConnectOptions, callback: (socket: NetworkSocket) => void ) => void;
 }
 
 export class MicroMqttClient {
@@ -77,7 +77,7 @@ export class MicroMqttClient {
   private connectionTimeOutId: number;
   private pingIntervalId: number;
 
-  constructor(private options: ConnectionOptions, private network : Network = require('net')) {
+  constructor(private options: ConnectionOptions, private network: Network = require('net')) {
     options.port = options.port || DefaultPort;
     options.clientId = options.clientId || MicroMqttClient.generateClientId();
     options.cleanSession = options.cleanSession || true;    
@@ -122,7 +122,7 @@ export class MicroMqttClient {
     // TODO: Reconnect on timeout
   };
 
-  private onNetworkConnected = (socket : NetworkSocket) => {
+  private onNetworkConnected = (socket: NetworkSocket) => {
     this.emit('info', 'Network connection established');
     this.networkSocket = socket;
 
