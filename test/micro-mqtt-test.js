@@ -30,14 +30,13 @@ describe('MicroMqttClient', function () {
     beforeEach(function () {
         subject = new MicroMqttClientTestSubclass({ host: "host" });
     });
-    describe('connect', function () {
-        it('should not throw any exception', function () {
+    describe('When connecting', function () {
+        it('it should emit some information', function () {
             subject.connect();
             subject.emittedEvents.should.have.length(1);
-            console.log(subject.emittedEvents[0].event);
-            subject.emittedEvents[0].event.should.be('info');
+            subject.emittedEvents[0].event.should.equal('info');
             subject.emittedEvents[0].args.should.have.length(1);
-            console.log(subject.emittedEvents);
+            subject.emittedEvents[0].args[0].should.equal("Connecting MicroMqttClient " + subject.version + " to host:1883");
         });
     });
 });
