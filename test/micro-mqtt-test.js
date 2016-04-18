@@ -1,20 +1,25 @@
-/// <reference path="../typings/main.d.ts" />
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
+/// <reference path="../typings/main.d.ts" />
+var chai_1 = require('chai');
 var micro_mqtt_1 = require('../modules/micro-mqtt');
+chai_1.should();
 var MicroMqttClientTestSubclass = (function (_super) {
     __extends(MicroMqttClientTestSubclass, _super);
     function MicroMqttClientTestSubclass(options, network) {
+        var _this = this;
         _super.call(this, options, network);
+        this.emittedEvents = [];
         this.emit = function (event) {
             var args = [];
             for (var _i = 1; _i < arguments.length; _i++) {
                 args[_i - 1] = arguments[_i];
             }
+            _this.emittedEvents.push({ event: event, args: args });
             return true;
         };
     }
@@ -28,6 +33,11 @@ describe('MicroMqttClient', function () {
     describe('connect', function () {
         it('should not throw any exception', function () {
             subject.connect();
+            subject.emittedEvents.should.have.length(1);
+            console.log(subject.emittedEvents[0].event);
+            subject.emittedEvents[0].event.should.be('info');
+            subject.emittedEvents[0].args.should.have.length(1);
+            console.log(subject.emittedEvents);
         });
     });
 });
