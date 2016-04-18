@@ -53,7 +53,7 @@ export interface ConnectionOptions {
 
 export interface NetworkConnectOptions {
   host: string;
-  port: number;  
+  port: number;
 }
 
 export interface NetworkSocket {
