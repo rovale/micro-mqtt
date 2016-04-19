@@ -9,8 +9,8 @@ A MQTT client for Espruino.
 ##TODO list
 - [x] Convert to TypeScript and restructure
 - [x] Enable unit testing
-- [ ] Code coverage > 80%
-- [ ] Improve assertions on packet content
+- [ ] **Code coverage > 80%**
+- [ ] **Improve assertions on packet content**
 - [ ] Handle receiving multiple control packets at once
 - [ ] Handle not being able to establish connection to host
 - [ ] Implement Last Will and Testament

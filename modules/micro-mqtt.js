@@ -11,8 +11,6 @@ var DefaultPort = 1883;
 var ConnectionTimeout = 5;
 var KeepAlive = 60;
 var PingInterval = 40;
-;
-;
 var MicroMqttClient = (function () {
     function MicroMqttClient(options, network) {
         var _this = this;

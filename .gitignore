@@ -1,5 +1,7 @@
 /node_modules
-/projects
-/snippets
 /typings
 /coverage
+/.idea
+
+/projects
+/snippets

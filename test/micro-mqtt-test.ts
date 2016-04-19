@@ -5,6 +5,32 @@ import { MicroMqttClient, ConnectionOptions,
 import { should } from 'chai';
 should();
 
+function extracted(bytes) {
+  let chars = [];
+  for (let i = 0, n = bytes.length; i < n;) {
+      chars.push(((bytes[i++] & 0xff) << 8) | (bytes[i++] & 0xff));
+    }
+  return String.fromCharCode.apply(null, chars);
+}
+function pack(...bytes) {
+  return extracted(bytes);
+}
+
+function unpack(str) {
+  let bytes = [];
+  for (let i = 0, n = str.length; i < n; i++) {
+    let char = str.charCodeAt(i);
+    bytes.push(char >>> 8, char & 0xFF);
+  }
+  return bytes;  
+}
+
+function log(...bytes){
+  let s = "";
+  bytes.forEach((b) => s+=b + ',');
+  console.log(s);
+}
+
 interface EmittedEvent {
   event: string;
   args: any[];
@@ -14,7 +40,7 @@ class MicroMqttClientTestSubclass extends MicroMqttClient {
   public emittedEvents: EmittedEvent[] = [];
 
   constructor(options: ConnectionOptions, network?: Network) {
-    super(options, network)
+    super(options, network);
     this.emit = (event: string, ...args: any[]) => {
       this.emittedEvents.push({ event: event, args: args });
       return true
@@ -106,7 +132,8 @@ describe('MicroMqttClient', () => {
 
     it('it should send a connect packet', () => {
       networkSocket.written.should.have.length(1);
-      networkSocket.written[0].should.equal('\u0010\u0017\u0000\u0004MQTT\u0004\u0002\u0000<\u0000\u000bsome-client');
+      let expectedPacket = pack(0,16,0,23,0,0,0,4) + "MQTT" + pack(0,4,0,2,0,0,0,60,0,0,0,11) + "some-client";     
+      networkSocket.written[0].should.equal(expectedPacket);
       networkSocket.written[0].should.contain('MQTT');
       networkSocket.written[0].should.contain('some-client');
     });
@@ -122,9 +149,7 @@ describe('MicroMqttClient', () => {
     });
 
     it('it should include that info in the connect packet', () => {
-      console.log(networkSocket.written[0]);    
       networkSocket.written.should.have.length(1);
-     
       networkSocket.written[0].should.contain("some-username")
       networkSocket.written[0].should.contain("some-password")
     });

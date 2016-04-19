@@ -20,9 +20,9 @@ const enum ControlPacketType {
   ConnAck = 2,
   Publish = 3,
   PubAck = 4,
-  PubRec = 5,
-  PubRel = 6,
-  PubComp = 7,
+  //PubRec = 5,
+  //PubRel = 6,
+  //PubComp = 7,
   Subscribe = 8,
   SubAck = 9,
   Unsubscribe = 10,
@@ -30,7 +30,7 @@ const enum ControlPacketType {
   PingReq = 12,
   PingResp = 13,
   Disconnect = 14
-};
+}
 
 // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349256
 const enum ConnectReturnCode {
@@ -40,7 +40,7 @@ const enum ConnectReturnCode {
   ServerUnavailable = 3,
   BadUserNameOrPassword = 4,
   NotAuthorized = 5
-};
+}
 
 export interface ConnectionOptions {
   host: string;
@@ -90,7 +90,7 @@ export class MicroMqttClient {
         .substring(1);
     }
     return s4() + s4() + s4();
-  }
+  };
 
   private static getConnectionError(returnCode: number) {
     let error = 'Connection refused, ';
@@ -118,7 +118,7 @@ export class MicroMqttClient {
 
   public connect = () => {
     this.emit('info', `Connecting MicroMqttClient ${this.version} to ${this.options.host}:${this.options.port}`);    
-    this.network.connect({ host: this.options.host, port: this.options.port }, (socket) => this.onNetworkConnected(socket))
+    this.network.connect({ host: this.options.host, port: this.options.port }, (socket) => this.onNetworkConnected(socket));
     // TODO: Reconnect on timeout
   };
 
@@ -154,7 +154,7 @@ export class MicroMqttClient {
         break;
       case ControlPacketType.PingReq:
         this.networkSocket.write(ControlPacketType.PingResp + '\x00'); // reply to PINGREQ
-        break
+        break;
       case ControlPacketType.ConnAck:
         clearTimeout(this.connectionTimeOutId);
         let returnCode = data.charCodeAt(3);
@@ -178,7 +178,7 @@ export class MicroMqttClient {
         this.emit('error', '[MQTT]' + data.split('').map((c) => { return c.charCodeAt(0); }));
         break;
     }
-  }
+  };
 
   private onNetworkEnd = () => {
     this.emit('info', 'MQTT client disconnected');
@@ -186,7 +186,7 @@ export class MicroMqttClient {
     this.networkSocket = undefined;
     this.emit('disconnected');
     this.emit('close');
-  }
+  };
 
   /** Disconnect from server */
   public disconnect = () => {
@@ -238,7 +238,7 @@ class MqttProtocol {
         encByte += 128;
       }
       encLength += String.fromCharCode(encByte);
-    } while (length > 0)
+    } while (length > 0);
     return encLength;
   }
 
