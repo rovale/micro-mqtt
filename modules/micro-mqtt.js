@@ -148,17 +148,10 @@ exports.MicroMqttClient = MicroMqttClient;
 var MqttProtocol = (function () {
     function MqttProtocol() {
     }
-    MqttProtocol.escapeHex = function (number) {
-        return String.fromCharCode(parseInt(number.toString(16), 16));
-    };
-    /** MQTT string (length MSB, LSB + data) */
-    MqttProtocol.mqttStr = function (s) {
-        return String.fromCharCode(s.length >> 8, s.length & 255) + s;
-    };
-    ;
-    /** MQTT packet length formatter - algorithm from reference docs */
-    MqttProtocol.mqttPacketLength = function (length) {
-        var encLength = '';
+    //Remaining Length
+    //http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718023  
+    MqttProtocol.remainingLenght = function (length) {
+        var encBytes = [];
         do {
             var encByte = length & 127;
             length = length >> 7;
@@ -166,13 +159,9 @@ var MqttProtocol = (function () {
             if (length > 0) {
                 encByte += 128;
             }
-            encLength += String.fromCharCode(encByte);
+            encBytes.push(encByte);
         } while (length > 0);
-        return encLength;
-    };
-    /** MQTT standard packet formatter */
-    MqttProtocol.createPacket = function (cmd, variable, payload) {
-        return String.fromCharCode(cmd) + this.mqttPacketLength(variable.length + payload.length) + variable + payload;
+        return encBytes;
     };
     /** PUBLISH packet parser - returns object with topic and message */
     MqttProtocol.parsePublish = function (data) {
@@ -197,14 +186,28 @@ var MqttProtocol = (function () {
         flags |= (options.username) ? 0x80 : 0;
         flags |= (options.username && options.password) ? 0x40 : 0;
         flags |= (options.cleanSession) ? 0x02 : 0;
-        return this.escapeHex(flags);
+        return flags;
     };
     ;
+    /** MQTT string (length MSB, LSB + data) */
+    MqttProtocol.mqttStr = function (s) {
+        return String.fromCharCode(s.length >> 8, s.length & 255) + s;
+    };
+    ;
+    //Structure of an MQTT Control Packet
+    //http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800392
+    MqttProtocol.createPacket = function (fixed1, variable, payload) {
+        var fixed2 = this.remainingLenght(variable.length + payload.length);
+        return String.fromCharCode(fixed1) +
+            String.fromCharCode.apply(String, fixed2) +
+            variable +
+            payload;
+    };
     MqttProtocol.createConnectPacket = function (options) {
         var cmd = 1 /* Connect */ << 4;
         var protocolName = this.mqttStr('MQTT');
-        var protocolLevel = this.escapeHex(4);
-        var flags = this.createConnectionFlags(options);
+        var protocolLevel = String.fromCharCode(4);
+        var flags = String.fromCharCode(this.createConnectionFlags(options));
         var keepAlive = String.fromCharCode(KeepAlive >> 8, KeepAlive & 255);
         var payload = this.mqttStr(options.clientId);
         if (options.username) {
@@ -235,4 +238,5 @@ var MqttProtocol = (function () {
     };
     return MqttProtocol;
 }());
+exports.MqttProtocol = MqttProtocol;
 //# sourceMappingURL=micro-mqtt.js.map

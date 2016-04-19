@@ -2,33 +2,13 @@
 import { MicroMqttClient, ConnectionOptions,
   Network, NetworkConnectOptions, NetworkSocket } from '../modules/micro-mqtt';
 
+import { MqttProtocol } from '../modules/micro-mqtt';
+
 import { should } from 'chai';
 should();
 
-function extracted(bytes) {
-  let chars = [];
-  for (let i = 0, n = bytes.length; i < n;) {
-      chars.push(((bytes[i++] & 0xff) << 8) | (bytes[i++] & 0xff));
-    }
+function pack(...chars) {
   return String.fromCharCode.apply(null, chars);
-}
-function pack(...bytes) {
-  return extracted(bytes);
-}
-
-function unpack(str) {
-  let bytes = [];
-  for (let i = 0, n = str.length; i < n; i++) {
-    let char = str.charCodeAt(i);
-    bytes.push(char >>> 8, char & 0xFF);
-  }
-  return bytes;  
-}
-
-function log(...bytes){
-  let s = "";
-  bytes.forEach((b) => s+=b + ',');
-  console.log(s);
 }
 
 interface EmittedEvent {
@@ -132,7 +112,7 @@ describe('MicroMqttClient', () => {
 
     it('it should send a connect packet', () => {
       networkSocket.written.should.have.length(1);
-      let expectedPacket = pack(0,16,0,23,0,0,0,4) + "MQTT" + pack(0,4,0,2,0,0,0,60,0,0,0,11) + "some-client";     
+      let expectedPacket = pack(16, 23, 0, 4) + "MQTT" + pack(4, 2, 0, 60, 0, 11) + "some-client";
       networkSocket.written[0].should.equal(expectedPacket);
       networkSocket.written[0].should.contain('MQTT');
       networkSocket.written[0].should.contain('some-client');
@@ -154,4 +134,29 @@ describe('MicroMqttClient', () => {
       networkSocket.written[0].should.contain("some-password")
     });
   });
+});
+
+describe('MqttProtocol', () =>{
+  describe('When calculating the remaining lenght of a package', () => {
+
+    it('it should return 1 byte for the values 0 to 127', () => {
+      MqttProtocol.remainingLenght(0).should.deep.equal([0]);
+      MqttProtocol.remainingLenght(127).should.deep.equal([127]);
+    });
+    
+    it('it should return 2 bytes for the values 128 to 16383', () => {
+      MqttProtocol.remainingLenght(128).should.deep.equal([128,1]);
+      MqttProtocol.remainingLenght(16383).should.deep.equal([255,127]);
+    });
+
+    it('it should return 3 bytes for the values 16384 to 2097151', () => {
+      MqttProtocol.remainingLenght(16384).should.deep.equal([128,128,1]);
+      MqttProtocol.remainingLenght(2097151).should.deep.equal([255,255,127]);
+    });
+
+    it('it should return 4 bytes for the values 2097152 to 268435455', () => {
+      MqttProtocol.remainingLenght(2097152).should.deep.equal([128,128,128,1]);
+      MqttProtocol.remainingLenght(268435455).should.deep.equal([255,255,255,127]);
+    });        
+  });  
 });

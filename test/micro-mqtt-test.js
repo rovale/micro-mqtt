@@ -6,35 +6,15 @@ var __extends = (this && this.__extends) || function (d, b) {
 };
 /// <reference path="../typings/main.d.ts" />
 var micro_mqtt_1 = require('../modules/micro-mqtt');
+var micro_mqtt_2 = require('../modules/micro-mqtt');
 var chai_1 = require('chai');
 chai_1.should();
 function pack() {
-    var bytes = [];
-    for (var _i = 0; _i < arguments.length; _i++) {
-        bytes[_i - 0] = arguments[_i];
-    }
     var chars = [];
-    for (var i = 0, n = bytes.length; i < n;) {
-        chars.push(((bytes[i++] & 0xff) << 8) | (bytes[i++] & 0xff));
+    for (var _i = 0; _i < arguments.length; _i++) {
+        chars[_i - 0] = arguments[_i];
     }
     return String.fromCharCode.apply(null, chars);
-}
-function unpack(str) {
-    var bytes = [];
-    for (var i = 0, n = str.length; i < n; i++) {
-        var char = str.charCodeAt(i);
-        bytes.push(char >>> 8, char & 0xFF);
-    }
-    return bytes;
-}
-function log() {
-    var bytes = [];
-    for (var _i = 0; _i < arguments.length; _i++) {
-        bytes[_i - 0] = arguments[_i];
-    }
-    var s = "";
-    bytes.forEach(function (b) { return s += b + ','; });
-    console.log(s);
 }
 var MicroMqttClientTestSubclass = (function (_super) {
     __extends(MicroMqttClientTestSubclass, _super);
@@ -126,7 +106,7 @@ describe('MicroMqttClient', function () {
         });
         it('it should send a connect packet', function () {
             networkSocket.written.should.have.length(1);
-            var expectedPacket = pack(0, 16, 0, 23, 0, 0, 0, 4) + "MQTT" + pack(0, 4, 0, 2, 0, 0, 0, 60, 0, 0, 0, 11) + "some-client";
+            var expectedPacket = pack(16, 23, 0, 4) + "MQTT" + pack(4, 2, 0, 60, 0, 11) + "some-client";
             networkSocket.written[0].should.equal(expectedPacket);
             networkSocket.written[0].should.contain('MQTT');
             networkSocket.written[0].should.contain('some-client');
@@ -144,6 +124,26 @@ describe('MicroMqttClient', function () {
             networkSocket.written.should.have.length(1);
             networkSocket.written[0].should.contain("some-username");
             networkSocket.written[0].should.contain("some-password");
+        });
+    });
+});
+describe('MqttProtocol', function () {
+    describe('When calculating the remaining lenght of a package', function () {
+        it('it should return 1 byte for the values 0 to 127', function () {
+            micro_mqtt_2.MqttProtocol.remainingLenght(0).should.deep.equal([0]);
+            micro_mqtt_2.MqttProtocol.remainingLenght(127).should.deep.equal([127]);
+        });
+        it('it should return 2 bytes for the values 128 to 16383', function () {
+            micro_mqtt_2.MqttProtocol.remainingLenght(128).should.deep.equal([128, 1]);
+            micro_mqtt_2.MqttProtocol.remainingLenght(16383).should.deep.equal([255, 127]);
+        });
+        it('it should return 3 bytes for the values 16384 to 2097151', function () {
+            micro_mqtt_2.MqttProtocol.remainingLenght(16384).should.deep.equal([128, 128, 1]);
+            micro_mqtt_2.MqttProtocol.remainingLenght(2097151).should.deep.equal([255, 255, 127]);
+        });
+        it('it should return 4 bytes for the values 2097152 to 268435455', function () {
+            micro_mqtt_2.MqttProtocol.remainingLenght(2097152).should.deep.equal([128, 128, 128, 1]);
+            micro_mqtt_2.MqttProtocol.remainingLenght(268435455).should.deep.equal([255, 255, 255, 127]);
         });
     });
 });

@@ -14,6 +14,7 @@ const ConnectionTimeout = 5;
 const KeepAlive = 60;
 const PingInterval = 40;
 
+// MQTT Control Packet type
 // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc353481061
 const enum ControlPacketType {
   Connect = 1,
@@ -32,6 +33,7 @@ const enum ControlPacketType {
   Disconnect = 14
 }
 
+// Connect Return code
 // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349256
 const enum ConnectReturnCode {
   Accepted = 0,
@@ -217,34 +219,21 @@ export class MicroMqttClient {
   };
 }
 
-class MqttProtocol {
-  private static escapeHex(number) {
-    return String.fromCharCode(parseInt(number.toString(16), 16));
-  }
-
-  /** MQTT string (length MSB, LSB + data) */
-  private static mqttStr(s) {
-    return String.fromCharCode(s.length >> 8, s.length & 255) + s;
-  };
-
-  /** MQTT packet length formatter - algorithm from reference docs */
-  private static mqttPacketLength(length) {
-    let encLength = '';
+export class MqttProtocol {
+  //Remaining Length
+  //http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718023  
+  public static remainingLenght(length) {
+    let encBytes: number[] = [];
     do {
-      let encByte = length & 127;
+      let encByte = length & 0b01111111;
       length = length >> 7;
       // if there are more data to encode, set the top bit of this byte
       if (length > 0) {
-        encByte += 128;
+        encByte += 0b10000000;
       }
-      encLength += String.fromCharCode(encByte);
+      encBytes.push(encByte);
     } while (length > 0);
-    return encLength;
-  }
-
-  /** MQTT standard packet formatter */
-  private static createPacket(cmd, variable, payload) {
-    return String.fromCharCode(cmd) + this.mqttPacketLength(variable.length + payload.length) + variable + payload;
+    return encBytes;
   }
 
   /** PUBLISH packet parser - returns object with topic and message */
@@ -271,15 +260,31 @@ class MqttProtocol {
     flags |= (options.username) ? 0x80 : 0;
     flags |= (options.username && options.password) ? 0x40 : 0;
     flags |= (options.cleanSession) ? 0x02 : 0;
-    return this.escapeHex(flags);
+    return flags;
   };
+
+  /** MQTT string (length MSB, LSB + data) */
+  private static mqttStr(s) {
+    return String.fromCharCode(s.length >> 8, s.length & 255) + s;
+  };
+
+  //Structure of an MQTT Control Packet
+  //http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800392
+  private static createPacket(fixed1: number, variable, payload) {
+    let fixed2 = this.remainingLenght(variable.length + payload.length);
+    
+    return  String.fromCharCode(fixed1) +
+            String.fromCharCode(...fixed2) +
+            variable +
+            payload;
+  }
 
   public static createConnectPacket(options: ConnectionOptions) {
     let cmd = ControlPacketType.Connect << 4;
-    let protocolName = this.mqttStr('MQTT');
-    let protocolLevel = this.escapeHex(4);
 
-    let flags = this.createConnectionFlags(options);
+    let protocolName = this.mqttStr('MQTT');
+    let protocolLevel = String.fromCharCode(4);
+    let flags = String.fromCharCode(this.createConnectionFlags(options));
 
     let keepAlive = String.fromCharCode(KeepAlive >> 8, KeepAlive & 255);
 
