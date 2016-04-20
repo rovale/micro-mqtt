@@ -3,12 +3,17 @@
   "version": "0.0.6",
   "description": "A MQTT client for Espruino.",
   "main": "./modules/micro-mqtt.ts",
+  "bin": {
+    "istanbul": "./node_modules/.bin/istanbul",
+    "tsc": "./node_modules/.bin/tsc",
+    "typings": "./node_modules/.bin/typings"
+  },
   "scripts": {
-    "postinstall": "./node_modules/.bin/typings install",
+    "postinstall": "typings install",
     "start": "tsc --watch --pretty",
     "prepublish": "tsc",
     "pretest": "tsc",
-    "test": "node ./node_modules/istanbul/lib/cli.js cover ./node_modules/mocha/bin/_mocha -- -R spec ./test/*.js"
+    "test": "istanbul cover ./node_modules/mocha/bin/_mocha -- -R spec ./test/*.js"
   },
   "repository": {
     "type": "git",
@@ -30,6 +35,6 @@
     "istanbul": "^0.4.3",
     "mocha": "^2.4.5",
     "typescript": "^1.8.10",
-    "typings": "^0.7.12"
+    "typings": "^0.8.1"
   }
 }
