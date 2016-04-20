@@ -7,4 +7,5 @@ interface ConnectionOptions {
   cleanSession?: boolean;
 }
 
+
 export default ConnectionOptions;

@@ -4,8 +4,7 @@
 [![devDependency Status](https://david-dm.org/rovale/micro-mqtt/dev-status.svg)](https://david-dm.org/rovale/micro-mqtt#info=devDependencies)
 # micro-mqtt
 
-A MQTT client for Espruino.
-
+A MQTT client for [Espruino](http://www.espruino.com/).
 ## TODO list
 - [x] Convert to TypeScript and restructure
 - [x] Enable unit testing
@@ -20,4 +19,4 @@ A MQTT client for Espruino.
 - [ ] Reconnect on lost connection
 - [ ] Optimize memory usage and size
 
-Based on the Espruino MQTT.js module by Lars Toft Jacobsen (boxed.dk), Gordon Williams. License: MIT.
+Based on the [Espruino MQTT.js module](https://github.com/espruino/EspruinoDocs/blob/master/modules/MQTT.md) by Lars Toft Jacobsen (boxed.dk), Gordon Williams. License: MIT.
