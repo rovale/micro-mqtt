@@ -14,6 +14,9 @@ A MQTT client for Espruino.
 - [ ] Handle receiving multiple control packets at once
 - [ ] Handle not being able to establish connection to host
 - [ ] Implement Last Will and Testament
+- [ ] Remove cleanSession options &
+- [ ] Remove generated client id
+- [ ] Create a build
 - [ ] Reconnect on lost connection
 - [ ] Optimize memory usage and size
 

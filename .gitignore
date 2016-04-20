@@ -2,6 +2,7 @@
 /typings
 /coverage
 /.idea
-
+/src/**/*.js
+/src/**/*.js.map
 /projects
 /snippets

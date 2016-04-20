@@ -10,10 +10,10 @@
   },
   "scripts": {
     "postinstall": "typings install",
-    "start": "tsc --watch --pretty",
+    "start": "tsc --watch",
     "prepublish": "tsc",
     "pretest": "tsc",
-    "test": "istanbul cover ./node_modules/mocha/bin/_mocha -- -R spec ./test/*.js"
+    "test": "istanbul cover ./node_modules/mocha/bin/_mocha -- -R spec ./src/test/*.js"
   },
   "repository": {
     "type": "git",
