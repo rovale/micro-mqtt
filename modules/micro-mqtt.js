@@ -14,35 +14,35 @@ var PingInterval = 40;
 var MicroMqttClient = (function () {
     function MicroMqttClient(options, network) {
         var _this = this;
-        if (network === void 0) { network = require('net'); }
+        if (network === void 0) { network = require("net"); }
         this.options = options;
         this.network = network;
-        this.version = '0.0.6';
+        this.version = "0.0.6";
         this.connected = false;
         this.connect = function () {
-            _this.emit('info', "Connecting MicroMqttClient " + _this.version + " to " + _this.options.host + ":" + _this.options.port);
+            _this.emit("info", "Connecting MicroMqttClient " + _this.version + " to " + _this.options.host + ":" + _this.options.port);
             _this.network.connect({ host: _this.options.host, port: _this.options.port }, function (socket) { return _this.onNetworkConnected(socket); });
             // TODO: Reconnect on timeout
         };
         this.onNetworkConnected = function (socket) {
-            _this.emit('info', 'Network connection established');
+            _this.emit("info", "Network connection established");
             _this.networkSocket = socket;
             _this.networkSocket.write(MqttProtocol.createConnectPacket(_this.options));
             // Disconnect if no CONNACK is received
             _this.connectionTimeOutId = setTimeout(function () {
                 _this.disconnect();
             }, ConnectionTimeout * 1000);
-            _this.networkSocket.on('data', function (data) { return _this.onNetworkData(data); });
-            _this.networkSocket.on('end', _this.onNetworkEnd);
+            _this.networkSocket.on("data", function (data) { return _this.onNetworkData(data); });
+            _this.networkSocket.on("end", _this.onNetworkEnd);
         };
         // Incoming data
         this.onNetworkData = function (data) {
             var type = data.charCodeAt(0) >> 4;
-            _this.emit('debug', "Rcvd: " + type + ": \"" + data + "\"");
+            _this.emit("debug", "Rcvd: " + type + ": \"" + data + "\"");
             switch (type) {
                 case 3 /* Publish */:
                     var parsedData = MqttProtocol.parsePublish(data);
-                    _this.emit('publish', parsedData);
+                    _this.emit("publish", parsedData);
                     break;
                 case 4 /* PubAck */:
                 case 9 /* SubAck */:
@@ -50,15 +50,15 @@ var MicroMqttClient = (function () {
                 case 13 /* PingResp */:
                     break;
                 case 12 /* PingReq */:
-                    _this.networkSocket.write(13 /* PingResp */ + '\x00'); // reply to PINGREQ
+                    _this.networkSocket.write(13 /* PingResp */ + "\x00"); // reply to PINGREQ
                     break;
                 case 2 /* ConnAck */:
                     clearTimeout(_this.connectionTimeOutId);
                     var returnCode = data.charCodeAt(3);
                     if (returnCode === 0 /* Accepted */) {
                         _this.connected = true;
-                        _this.emit('info', 'MQTT connection accepted');
-                        _this.emit('connected');
+                        _this.emit("info", "MQTT connection accepted");
+                        _this.emit("connected");
                         // Set up regular keep alive ping
                         _this.pingIntervalId = setInterval(function () {
                             _this.ping();
@@ -66,25 +66,25 @@ var MicroMqttClient = (function () {
                     }
                     else {
                         var connectionError = MicroMqttClient.getConnectionError(returnCode);
-                        _this.emit('error', connectionError);
+                        _this.emit("error", connectionError);
                     }
                     break;
                 default:
-                    _this.emit('error', 'MQTT unsupported packet type: ' + type);
-                    _this.emit('error', '[MQTT]' + data.split('').map(function (c) { return c.charCodeAt(0); }));
+                    _this.emit("error", "MQTT unsupported packet type: " + type);
+                    _this.emit("error", "[MQTT]" + data.split("").map(function (c) { return c.charCodeAt(0); }));
                     break;
             }
         };
         this.onNetworkEnd = function () {
-            _this.emit('info', 'MQTT client disconnected');
+            _this.emit("info", "MQTT client disconnected");
             clearInterval(_this.pingIntervalId);
             _this.networkSocket = undefined;
-            _this.emit('disconnected');
-            _this.emit('close');
+            _this.emit("disconnected");
+            _this.emit("close");
         };
         /** Disconnect from server */
         this.disconnect = function () {
-            _this.networkSocket.write(String.fromCharCode(14 /* Disconnect */ << 4) + '\x00');
+            _this.networkSocket.write(String.fromCharCode(14 /* Disconnect */ << 4) + "\x00");
             _this.networkSocket.end();
             _this.connected = false;
         };
@@ -104,33 +104,33 @@ var MicroMqttClient = (function () {
         };
         /** Send ping request to server */
         this.ping = function () {
-            _this.networkSocket.write(String.fromCharCode(12 /* PingReq */ << 4) + '\x00');
-            _this.emit('debug', 'Sent: Ping request');
+            _this.networkSocket.write(String.fromCharCode(12 /* PingReq */ << 4) + "\x00");
+            _this.emit("debug", "Sent: Ping request");
         };
         options.port = options.port || DefaultPort;
         options.clientId = options.clientId || MicroMqttClient.generateClientId();
         options.cleanSession = options.cleanSession || true;
     }
     MicroMqttClient.getConnectionError = function (returnCode) {
-        var error = 'Connection refused, ';
+        var error = "Connection refused, ";
         switch (returnCode) {
             case 1 /* UnacceptableProtocolVersion */:
-                error += 'unacceptable protocol version.';
+                error += "unacceptable protocol version.";
                 break;
             case 2 /* IdentifierRejected */:
-                error += 'identifier rejected.';
+                error += "identifier rejected.";
                 break;
             case 3 /* ServerUnavailable */:
-                error += 'server unavailable.';
+                error += "server unavailable.";
                 break;
             case 4 /* BadUserNameOrPassword */:
-                error += 'bad user name or password.';
+                error += "bad user name or password.";
                 break;
             case 5 /* NotAuthorized */:
-                error += 'not authorized.';
+                error += "not authorized.";
                 break;
             default:
-                error += 'unknown return code: ' + returnCode + '.';
+                error += "unknown return code: " + returnCode + ".";
         }
         return error;
     };
@@ -148,8 +148,8 @@ exports.MicroMqttClient = MicroMqttClient;
 var MqttProtocol = (function () {
     function MqttProtocol() {
     }
-    //Remaining Length
-    //http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718023  
+    // Remaining Length
+    // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718023
     MqttProtocol.remainingLenght = function (length) {
         var encBytes = [];
         do {
@@ -189,13 +189,14 @@ var MqttProtocol = (function () {
         return flags;
     };
     ;
-    /** MQTT string (length MSB, LSB + data) */
-    MqttProtocol.mqttStr = function (s) {
+    // Structure of UTF-8 encoded strings
+    // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Figure_1.1_Structure
+    MqttProtocol.createString = function (s) {
         return String.fromCharCode(s.length >> 8, s.length & 255) + s;
     };
     ;
-    //Structure of an MQTT Control Packet
-    //http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800392
+    // Structure of an MQTT Control Packet
+    // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800392
     MqttProtocol.createPacket = function (fixed1, variable, payload) {
         var fixed2 = this.remainingLenght(variable.length + payload.length);
         return String.fromCharCode(fixed1) +
@@ -205,15 +206,15 @@ var MqttProtocol = (function () {
     };
     MqttProtocol.createConnectPacket = function (options) {
         var cmd = 1 /* Connect */ << 4;
-        var protocolName = this.mqttStr('MQTT');
+        var protocolName = this.createString("MQTT");
         var protocolLevel = String.fromCharCode(4);
         var flags = String.fromCharCode(this.createConnectionFlags(options));
         var keepAlive = String.fromCharCode(KeepAlive >> 8, KeepAlive & 255);
-        var payload = this.mqttStr(options.clientId);
+        var payload = this.createString(options.clientId);
         if (options.username) {
-            payload += this.mqttStr(options.username);
+            payload += this.createString(options.username);
             if (options.password) {
-                payload += this.mqttStr(options.password);
+                payload += this.createString(options.password);
             }
         }
         return this.createPacket(cmd, protocolName + protocolLevel + flags + keepAlive, payload);
@@ -222,19 +223,19 @@ var MqttProtocol = (function () {
     MqttProtocol.createPublishPacket = function (topic, message, qos) {
         var cmd = 3 /* Publish */ << 4 | (qos << 1);
         var pid = String.fromCharCode(FixedPackedId << 8, FixedPackedId & 255);
-        var variable = (qos === 0) ? this.mqttStr(topic) : this.mqttStr(topic) + pid;
+        var variable = (qos === 0) ? this.createString(topic) : this.createString(topic) + pid;
         return this.createPacket(cmd, variable, message);
     };
     MqttProtocol.createSubscribePacket = function (topic, qos) {
         var cmd = 8 /* Subscribe */ << 4 | 2;
         var pid = String.fromCharCode(FixedPackedId << 8, FixedPackedId & 255);
-        return this.createPacket(cmd, pid, this.mqttStr(topic) +
+        return this.createPacket(cmd, pid, this.createString(topic) +
             String.fromCharCode(qos));
     };
     MqttProtocol.createUnsubscribePacket = function (topic) {
         var cmd = 10 /* Unsubscribe */ << 4 | 2;
         var pid = String.fromCharCode(FixedPackedId << 8, FixedPackedId & 255);
-        return this.createPacket(cmd, pid, this.mqttStr(topic));
+        return this.createPacket(cmd, pid, this.createString(topic));
     };
     return MqttProtocol;
 }());

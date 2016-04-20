@@ -6,7 +6,7 @@
 
 A MQTT client for Espruino.
 
-##TODO list
+## TODO list
 - [x] Convert to TypeScript and restructure
 - [x] Enable unit testing
 - [ ] **Code coverage > 80%**
@@ -15,6 +15,6 @@ A MQTT client for Espruino.
 - [ ] Handle not being able to establish connection to host
 - [ ] Implement Last Will and Testament
 - [ ] Reconnect on lost connection
-- [ ] Optimize memory usage and size 
+- [ ] Optimize memory usage and size
 
 Based on the Espruino MQTT.js module by Lars Toft Jacobsen (boxed.dk), Gordon Williams. License: MIT.
