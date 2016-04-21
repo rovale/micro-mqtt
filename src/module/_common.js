@@ -1,1 +1,3 @@
-//# sourceMappingURL=_common.js.map
+/**
+ * Available for the Espruino.
+ */

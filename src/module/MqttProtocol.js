@@ -1,11 +1,17 @@
+/**
+ * The specifics of the MQTT protocol.
+ */
 "use strict";
-var FixedPackedId = 1; // Bad...fixed packet id
-var KeepAlive = 60;
+// FIXME: The packet id is fixed.
+var fixedPackedId = 1;
+var keepAlive = 60;
 var MqttProtocol = (function () {
     function MqttProtocol() {
     }
-    // Remaining Length
-    // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718023
+    /**
+     * Remaining Length
+     * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718023
+     */
     MqttProtocol.remainingLenght = function (length) {
         var encBytes = [];
         do {
@@ -23,19 +29,17 @@ var MqttProtocol = (function () {
     MqttProtocol.parsePublish = function (data) {
         if (data.length > 5 && typeof data !== undefined) {
             var cmd = data.charCodeAt(0);
-            var rem_len = data.charCodeAt(1);
-            var var_len = data.charCodeAt(2) << 8 | data.charCodeAt(3);
+            var remainingLength = data.charCodeAt(1);
+            var variableLength = data.charCodeAt(2) << 8 | data.charCodeAt(3);
             return {
-                topic: data.substr(4, var_len),
-                message: data.substr(4 + var_len, rem_len - var_len),
+                topic: data.substr(4, variableLength),
+                message: data.substr(4 + variableLength, remainingLength - variableLength),
                 dup: (cmd & 8) >> 3,
                 qos: (cmd & 6) >> 1,
                 retain: cmd & 1
             };
         }
-        else {
-            return undefined;
-        }
+        return undefined;
     };
     MqttProtocol.createConnectionFlags = function (options) {
         var flags = 0;
@@ -45,14 +49,18 @@ var MqttProtocol = (function () {
         return flags;
     };
     ;
-    // Structure of UTF-8 encoded strings
-    // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Figure_1.1_Structure
+    /**
+     * Structure of UTF-8 encoded strings
+     * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Figure_1.1_Structure
+     */
     MqttProtocol.createString = function (s) {
         return String.fromCharCode(s.length >> 8, s.length & 255) + s;
     };
     ;
-    // Structure of an MQTT Control Packet
-    // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800392
+    /**
+     * Structure of an MQTT Control Packet
+     * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800392
+     */
     MqttProtocol.createPacket = function (fixed1, variable, payload) {
         var fixed2 = this.remainingLenght(variable.length + payload.length);
         return String.fromCharCode(fixed1) +
@@ -62,10 +70,10 @@ var MqttProtocol = (function () {
     };
     MqttProtocol.createConnectPacket = function (options) {
         var cmd = 1 /* Connect */ << 4;
-        var protocolName = this.createString("MQTT");
+        var protocolName = this.createString('MQTT');
         var protocolLevel = String.fromCharCode(4);
         var flags = String.fromCharCode(this.createConnectionFlags(options));
-        var keepAlive = String.fromCharCode(KeepAlive >> 8, KeepAlive & 255);
+        var keepAliveHeader = String.fromCharCode(keepAlive >> 8, keepAlive & 255);
         var payload = this.createString(options.clientId);
         if (options.username) {
             payload += this.createString(options.username);
@@ -73,28 +81,27 @@ var MqttProtocol = (function () {
                 payload += this.createString(options.password);
             }
         }
-        return this.createPacket(cmd, protocolName + protocolLevel + flags + keepAlive, payload);
+        return this.createPacket(cmd, protocolName + protocolLevel + flags + keepAliveHeader, payload);
     };
     ;
     MqttProtocol.createPublishPacket = function (topic, message, qos) {
         var cmd = 3 /* Publish */ << 4 | (qos << 1);
-        var pid = String.fromCharCode(FixedPackedId << 8, FixedPackedId & 255);
+        var pid = String.fromCharCode(fixedPackedId << 8, fixedPackedId & 255);
         var variable = (qos === 0) ? this.createString(topic) : this.createString(topic) + pid;
         return this.createPacket(cmd, variable, message);
     };
     MqttProtocol.createSubscribePacket = function (topic, qos) {
         var cmd = 8 /* Subscribe */ << 4 | 2;
-        var pid = String.fromCharCode(FixedPackedId << 8, FixedPackedId & 255);
+        var pid = String.fromCharCode(fixedPackedId << 8, fixedPackedId & 255);
         return this.createPacket(cmd, pid, this.createString(topic) +
             String.fromCharCode(qos));
     };
     MqttProtocol.createUnsubscribePacket = function (topic) {
         var cmd = 10 /* Unsubscribe */ << 4 | 2;
-        var pid = String.fromCharCode(FixedPackedId << 8, FixedPackedId & 255);
+        var pid = String.fromCharCode(fixedPackedId << 8, fixedPackedId & 255);
         return this.createPacket(cmd, pid, this.createString(topic));
     };
     return MqttProtocol;
 }());
 exports.__esModule = true;
 exports["default"] = MqttProtocol;
-//# sourceMappingURL=MqttProtocol.js.map

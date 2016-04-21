@@ -6,6 +6,7 @@
   "bin": {
     "istanbul": "./node_modules/.bin/istanbul",
     "tsc": "./node_modules/.bin/tsc",
+    "tslint": "./node_modules/.bin/tslint",
     "typings": "./node_modules/.bin/typings"
   },
   "scripts": {
@@ -13,7 +14,8 @@
     "start": "tsc --watch",
     "prepublish": "tsc",
     "pretest": "tsc",
-    "test": "istanbul cover ./node_modules/mocha/bin/_mocha -- -R spec ./src/test/*.js"
+    "test": "istanbul cover ./node_modules/mocha/bin/_mocha -- -R spec ./src/test/*.js",
+    "tslint": "tslint ./src/**/*.ts"
   },
   "repository": {
     "type": "git",
@@ -34,6 +36,8 @@
     "coveralls": "^2.11.9",
     "istanbul": "^0.4.3",
     "mocha": "^2.4.5",
+    "tslint": "^3.7.4",
+    "tslint-microsoft-contrib": "^2.0.2",
     "typescript": "^1.8.10",
     "typings": "^0.8.1"
   }
