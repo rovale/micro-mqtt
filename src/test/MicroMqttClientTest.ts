@@ -2,9 +2,9 @@
  * Tests for the MQTT client.
  */
 /// <reference path='_common.ts' />
-import { MicroMqttClient } from '../module/MicroMqttClient';
+import { MicroMqttClient } from '../module/micro-mqtt';
 import ConnectionOptions from '../module/ConnectionOptions';
-import { Network, NetworkConnectOptions, NetworkSocket } from '../module/MicroMqttClient';
+import { Network, NetworkConnectOptions, NetworkSocket } from '../module/micro-mqtt';
 
 function pack(...chars: number[]) {
     return String.fromCharCode.apply(null, chars);

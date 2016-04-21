@@ -2,7 +2,7 @@
  * Tests for the MQTT protocol.
  */
 /// <reference path='_common.ts' />
-import MqttProtocol from '../module/MqttProtocol';
+import { MqttProtocol } from '../module/micro-mqtt';
 
 describe('MqttProtocol', () => {
     describe('When calculating the remaining lenght of a package', () => {

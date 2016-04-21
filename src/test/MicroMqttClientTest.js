@@ -8,7 +8,7 @@ var __extends = (this && this.__extends) || function (d, b) {
  * Tests for the MQTT client.
  */
 /// <reference path='_common.ts' />
-var MicroMqttClient_1 = require('../module/MicroMqttClient');
+var micro_mqtt_1 = require('../module/micro-mqtt');
 function pack() {
     var chars = [];
     for (var _i = 0; _i < arguments.length; _i++) {
@@ -35,7 +35,7 @@ var MicroMqttClientTestSubclass = (function (_super) {
         return this.emittedEvents.filter(function (e) { return e.event === 'info'; });
     };
     return MicroMqttClientTestSubclass;
-}(MicroMqttClient_1.MicroMqttClient));
+}(micro_mqtt_1.MicroMqttClient));
 var TestNetwork = (function () {
     function TestNetwork() {
         this.connectIsCalled = false;
