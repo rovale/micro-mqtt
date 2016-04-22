@@ -32,9 +32,9 @@ A MQTT client for [Espruino](http://www.espruino.com/).
     - Atom works by default.
     - tslint.json initially taken from https://github.com/Microsoft/tslint-microsoft-contrib/blob/2.0.2/tslint.json
     - TODO
-        - [ ] File an issue for no-document-write, it fails when enabled.
-        - [ ] Figure out cause of misplaced 'else' warning.
-            - [ ] Add tslint to test if this is resolved.
+        - [x] File an [issue](https://github.com/Microsoft/tslint-microsoft-contrib/issues/109) for no-document-write, it fails when enabled.
+        - [x] Figure out cause of misplaced 'else' warning. (Got it, it should be on one line '} else {'! K, I do have a C# background :-)
+            - [x] Add tslint to test if this is resolved.
 
 Based on the [Espruino MQTT.js module](https://github.com/espruino/EspruinoDocs/blob/master/modules/MQTT.md) by Lars Toft Jacobsen (boxed.dk), Gordon Williams. License: MIT.
 

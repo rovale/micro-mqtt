@@ -144,8 +144,7 @@ export class MicroMqttClient {
                     this.pingIntervalId = setInterval(() => {
                         this.ping();
                     }, pingInterval * 1000);
-                }
-                else {
+                } else {
                     let connectionError = MicroMqttClient.getConnectionError(returnCode);
                     this.emit('error', connectionError);
                 }
