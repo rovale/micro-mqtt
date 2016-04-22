@@ -1,6 +1,5 @@
+/.idea
+/bin/modules/*.js
+/coverage
 /node_modules
 /typings
-/coverage
-/.idea
-/projects
-/snippets

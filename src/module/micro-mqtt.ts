@@ -39,7 +39,7 @@ export interface Network {
  * The MQTT client.
  */
 export class MicroMqttClient {
-    public version = '0.0.6';
+    public version = '0.0.7';
 
     private options: ConnectionOptions;
     private network: Network;

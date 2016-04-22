@@ -10,7 +10,7 @@ var MicroMqttClient = (function () {
     function MicroMqttClient(options, network) {
         var _this = this;
         if (network === void 0) { network = require('net'); }
-        this.version = '0.0.6';
+        this.version = '0.0.7';
         this.connected = false;
         this.connect = function () {
             _this.emit('info', "Connecting MicroMqttClient " + _this.version + " to " + _this.options.host + ":" + _this.options.port);
