@@ -6,19 +6,19 @@
 
 A MQTT client for [Espruino](http://www.espruino.com/).
 ## TODO list
-- [x] Convert to TypeScript and restructure
-- [x] Enable unit testing
-- [x] Enable tslint with suitable settings
-- [ ] **Code coverage > 80%**
-- [ ] **Improve assertions on packet content**
-- [ ] Handle receiving multiple control packets at once
-- [ ] Handle not being able to establish connection to host
-- [ ] Implement Last Will and Testament
+- [x] Convert to TypeScript and restructure.
+- [x] Enable unit testing.
+- [x] Enable tslint with suitable settings.
+- [x] Create an [Espruino Web IDE](https://github.com/espruino/EspruinoWebIDE) project.
+- [X] Improve assertions on packet content.
+- [ ] **Code coverage > 80%.**
+- [ ] Handle receiving multiple control packets at once.
+- [ ] Handle not being able to establish connection to host.
+- [ ] Implement Last Will and Testament.
 - [ ] Remove cleanSession options &
-- [ ] Remove generated client id
-- [ ] Create a build
-- [ ] Reconnect on lost connection
-- [ ] Optimize memory usage and size
+- [ ] Remove generated client id.
+- [ ] Reconnect on lost connection.
+- [ ] Optimize memory usage and size.
 
 ## Technial notes
 - About code coverage
@@ -33,7 +33,7 @@ A MQTT client for [Espruino](http://www.espruino.com/).
     - tslint.json initially taken from https://github.com/Microsoft/tslint-microsoft-contrib/blob/2.0.2/tslint.json
     - TODO
         - [x] File an [issue](https://github.com/Microsoft/tslint-microsoft-contrib/issues/109) for no-document-write, it fails when enabled.
-        - [x] Figure out cause of misplaced 'else' warning. (Got it, it should be on one line '} else {'! K, I do have a C# background :-)
+        - [x] Figure out cause of misplaced 'else' warning. (Got it, my C# background bit me :-)
             - [x] Add tslint to test if this is resolved.
 
 Based on the [Espruino MQTT.js module](https://github.com/espruino/EspruinoDocs/blob/master/modules/MQTT.md) by Lars Toft Jacobsen (boxed.dk), Gordon Williams. License: MIT.

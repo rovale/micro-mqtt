@@ -14,7 +14,54 @@ function pack() {
     for (var _i = 0; _i < arguments.length; _i++) {
         chars[_i - 0] = arguments[_i];
     }
-    return String.fromCharCode.apply(null, chars);
+    return String.fromCharCode.apply(String, chars);
+}
+function isOfControlPacketType(packet, packetType) {
+    return (packet.charCodeAt(0) >> 4).should.equal(packetType);
+}
+function hasRemainingLength(packet, length) {
+    length.should.be.lessThan(127, 'When needed extend the assertions to support longer remaining length');
+    return packet.charCodeAt(1).should.equal(length);
+}
+function hasMqttProtocol(packet) {
+    packet.charCodeAt(2).should.equal(0, 'String length MSB of the protocol name should be 0');
+    packet.charCodeAt(3).should.equal(4, 'String length LSB of the protocol name should be 4');
+    return String.fromCharCode(packet.charCodeAt(4), packet.charCodeAt(5), packet.charCodeAt(6), packet.charCodeAt(7))
+        .should.equal('MQTT');
+}
+function hasProtocolLevel4(packet) {
+    return packet.charCodeAt(8).should.equal(4);
+}
+function hasConnectFlags(packet, flags) {
+    return packet.charCodeAt(9).should.equal(flags);
+}
+function hasKeepAliveOf60Seconds(packet) {
+    packet.charCodeAt(10).should.equal(0);
+    return packet.charCodeAt(11).should.equal(60);
+}
+function hasPayloadStartingAt(packet, start) {
+    var elements = [];
+    for (var _i = 2; _i < arguments.length; _i++) {
+        elements[_i - 2] = arguments[_i];
+    }
+    // console.log(elements);
+    if (elements.length === 0) {
+        return packet.length.should.equal(start, 'Expected no more data in the payload');
+    }
+    var element = elements[0];
+    var length = element.length;
+    length.should.be.lessThan(255, 'When needed extend the assertions to support longer lengths');
+    packet.charCodeAt(start).should.equal(0, "String length MSB of " + element + " should be 0");
+    packet.charCodeAt(start + 1).should.equal(length, "String length LSB of " + element + " should be " + length);
+    packet.substr(start + 2, length).should.equal(element);
+    return hasPayloadStartingAt.apply(void 0, [packet, start + 1 + length + 1].concat(elements.splice(1)));
+}
+function hasPayload(packet) {
+    var elements = [];
+    for (var _i = 1; _i < arguments.length; _i++) {
+        elements[_i - 1] = arguments[_i];
+    }
+    return hasPayloadStartingAt.apply(void 0, [packet, 12].concat(elements));
 }
 var MicroMqttClientTestSubclass = (function (_super) {
     __extends(MicroMqttClientTestSubclass, _super);
@@ -107,9 +154,31 @@ describe('MicroMqttClient', function () {
         it('it should send a connect packet', function () {
             networkSocket.written.should.have.length(1);
             var expectedPacket = pack(16, 23, 0, 4) + 'MQTT' + pack(4, 2, 0, 60, 0, 11) + 'some-client';
-            networkSocket.written[0].should.equal(expectedPacket);
-            networkSocket.written[0].should.contain('MQTT');
-            networkSocket.written[0].should.contain('some-client');
+            var packet = networkSocket.written[0];
+            packet.should.satisfy(function (p) { return isOfControlPacketType(p, 1 /* Connect */); });
+            packet.should.satisfy(function (p) { return hasRemainingLength(p, (expectedPacket.length - 2)); });
+            packet.should.satisfy(hasMqttProtocol);
+            packet.should.satisfy(hasProtocolLevel4);
+            packet.should.satisfy(function (p) { return hasConnectFlags(p, 2 /* CleanSession */); });
+            packet.should.satisfy(hasKeepAliveOf60Seconds);
+            packet.should.satisfy(function (p) { return hasPayload(p, 'some-client'); });
+            packet.should.equal(expectedPacket);
+            packet.should.contain('some-client');
+        });
+    });
+    describe('When connecting with a username', function () {
+        beforeEach(function () {
+            network = new TestNetwork();
+            subject = new MicroMqttClientTestSubclass({ host: 'host', clientId: 'some-client', username: 'some-username' }, network);
+            networkSocket = new TestNetworkSocket();
+            subject.connect();
+            network.callback(networkSocket);
+        });
+        it('it should include that info in the connect packet', function () {
+            networkSocket.written.should.have.length(1);
+            var packet = networkSocket.written[0];
+            packet.should.satisfy(function (p) { return hasConnectFlags(p, 128 /* UserName */ | 2 /* CleanSession */); });
+            packet.should.satisfy(function (p) { return hasPayload(p, 'some-client', 'some-username'); });
         });
     });
     describe('When connecting with a username and password', function () {
@@ -122,8 +191,9 @@ describe('MicroMqttClient', function () {
         });
         it('it should include that info in the connect packet', function () {
             networkSocket.written.should.have.length(1);
-            networkSocket.written[0].should.contain('some-username');
-            networkSocket.written[0].should.contain('some-password');
+            var packet = networkSocket.written[0];
+            packet.should.satisfy(function (p) { return hasConnectFlags(p, 128 /* UserName */ | 64 /* Password */ | 2 /* CleanSession */); });
+            packet.should.satisfy(function (p) { return hasPayload(p, 'some-client', 'some-username', 'some-password'); });
         });
     });
 });

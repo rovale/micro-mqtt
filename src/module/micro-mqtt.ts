@@ -8,6 +8,20 @@ const defaultPort = 1883;
 const defaultQosLevel = 0;
 
 /**
+ * Connect flags
+ * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349229
+ */
+export const enum ConnectFlags {
+    UserName        = 0b10000000,
+    Password        = 0b01000000,
+    WillRetain      = 0b00100000,
+    WillQoS2        = 0b00010000,
+    WillQoS1        = 0b00001000,
+    Will            = 0b00000100,
+    CleanSession    = 0b00000010
+}
+
+/**
  * Connect Return code
  * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349256
  */
@@ -115,13 +129,13 @@ export class MicroMqttClient {
     };
 
     private onNetworkData = (data: string) => {
-        let controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
+        const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
 
         this.emit('debug', `Rcvd: ${controlPacketType}: '${data}'`);
 
         switch (controlPacketType) {
             case ControlPacketType.Publish:
-                let parsedData = MqttProtocol.parsePublish(data);
+                const parsedData = MqttProtocol.parsePublish(data);
                 this.emit('publish', parsedData);
                 break;
             case ControlPacketType.PubAck:
@@ -134,7 +148,7 @@ export class MicroMqttClient {
                 break;
             case ControlPacketType.ConnAck:
                 clearTimeout(this.connectionTimeOutId);
-                let returnCode = data.charCodeAt(3);
+                const returnCode = data.charCodeAt(3);
                 if (returnCode === ConnectReturnCode.Accepted) {
                     this.connected = true;
                     this.emit('info', 'MQTT connection accepted');
@@ -145,7 +159,7 @@ export class MicroMqttClient {
                         this.ping();
                     }, pingInterval * 1000);
                 } else {
-                    let connectionError = MicroMqttClient.getConnectionError(returnCode);
+                    const connectionError = MicroMqttClient.getConnectionError(returnCode);
                     this.emit('error', connectionError);
                 }
                 break;
@@ -206,8 +220,8 @@ export class MqttProtocol {
      * Remaining Length
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718023
      */
-    public static remainingLenght(length: number) {
-        let encBytes: number[] = [];
+    public static remainingLength(length: number) {
+        const encBytes: number[] = [];
         do {
             let encByte = length & 0b01111111;
             length = length >> 7;
@@ -223,9 +237,9 @@ export class MqttProtocol {
     /** PUBLISH packet parser - returns object with topic and message */
     public static parsePublish(data: string) {
         if (data.length > 5 && typeof data !== undefined) {
-            let cmd = data.charCodeAt(0);
-            let remainingLength = data.charCodeAt(1);
-            let variableLength = data.charCodeAt(2) << 8 | data.charCodeAt(3);
+            const cmd = data.charCodeAt(0);
+            const remainingLength = data.charCodeAt(1);
+            const variableLength = data.charCodeAt(2) << 8 | data.charCodeAt(3);
             return {
                 topic: data.substr(4, variableLength),
                 message: data.substr(4 + variableLength, remainingLength - variableLength),
@@ -237,20 +251,37 @@ export class MqttProtocol {
         return undefined;
     }
 
+    /**
+     * Connect flags
+     * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349229
+     */
     private static createConnectionFlags(options: ConnectionOptions) {
         let flags = 0;
-        flags |= (options.username) ? 0x80 : 0;
-        flags |= (options.username && options.password) ? 0x40 : 0;
-        flags |= (options.cleanSession) ? 0x02 : 0;
+        flags |= (options.username) ? ConnectFlags.UserName : 0;
+        flags |= (options.username && options.password) ? ConnectFlags.Password : 0;
+        flags |= (options.cleanSession) ? ConnectFlags.CleanSession : 0;
         return flags;
     };
+
+    /** Returns the MSB and LSB. */
+    private static getBytes(int16: number) {
+        return [int16 >> 8, int16 & 255];
+    }
+
+    /**
+     * Keep alive
+     * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349237
+     */
+    private static keepAliveBytes() {
+        return MqttProtocol.getBytes(keepAlive);
+    }
 
     /** 
      * Structure of UTF-8 encoded strings
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Figure_1.1_Structure
      */
     private static createString(s: string) {
-        return String.fromCharCode(s.length >> 8, s.length & 255) + s;
+        return String.fromCharCode(...MqttProtocol.getBytes(s.length)) + s;
     };
 
     /** 
@@ -258,7 +289,7 @@ export class MqttProtocol {
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800392
      */
     private static createPacket(fixed1: number, variable: string, payload: string) {
-        let fixed2 = this.remainingLenght(variable.length + payload.length);
+        const fixed2 = this.remainingLength(variable.length + payload.length);
 
         return String.fromCharCode(fixed1) +
             String.fromCharCode(...fixed2) +
@@ -266,14 +297,18 @@ export class MqttProtocol {
             payload;
     }
 
+    /**
+     * CONNECT – Client requests a connection to a Server
+     * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718028
+     */
     public static createConnectPacket(options: ConnectionOptions) {
-        let cmd = ControlPacketType.Connect << 4;
+        const cmd = ControlPacketType.Connect << 4;
 
-        let protocolName = this.createString('MQTT');
-        let protocolLevel = String.fromCharCode(4);
-        let flags = String.fromCharCode(this.createConnectionFlags(options));
+        const protocolName = this.createString('MQTT');
+        const protocolLevel = String.fromCharCode(4);
+        const flags = String.fromCharCode(this.createConnectionFlags(options));
 
-        let keepAliveHeader : string = String.fromCharCode(keepAlive >> 8, keepAlive & 255);
+        const keepAlive: string = String.fromCharCode(...MqttProtocol.keepAliveBytes());
 
         let payload = this.createString(options.clientId);
         if (options.username) {
@@ -285,21 +320,21 @@ export class MqttProtocol {
 
         return this.createPacket(
             cmd,
-            protocolName + protocolLevel + flags + keepAliveHeader,
+            protocolName + protocolLevel + flags + keepAlive,
             payload
         );
     };
 
     public static createPublishPacket(topic: string, message: string, qos: number) {
-        let cmd = ControlPacketType.Publish << 4 | (qos << 1);
-        let pid = String.fromCharCode(fixedPackedId << 8, fixedPackedId & 255);
-        let variable = (qos === 0) ? this.createString(topic) : this.createString(topic) + pid;
+        const cmd = ControlPacketType.Publish << 4 | (qos << 1);
+        const pid = String.fromCharCode(fixedPackedId << 8, fixedPackedId & 255);
+        const variable = (qos === 0) ? this.createString(topic) : this.createString(topic) + pid;
         return this.createPacket(cmd, variable, message);
     }
 
     public static createSubscribePacket(topic: string, qos: number) {
-        let cmd = ControlPacketType.Subscribe << 4 | 2;
-        let pid = String.fromCharCode(fixedPackedId << 8, fixedPackedId & 255);
+        const cmd = ControlPacketType.Subscribe << 4 | 2;
+        const pid = String.fromCharCode(fixedPackedId << 8, fixedPackedId & 255);
         return this.createPacket(cmd,
             pid,
             this.createString(topic) +
@@ -307,8 +342,8 @@ export class MqttProtocol {
     }
 
     public static createUnsubscribePacket(topic: string) {
-        let cmd = ControlPacketType.Unsubscribe << 4 | 2;
-        let pid = String.fromCharCode(fixedPackedId << 8, fixedPackedId & 255);
+        const cmd = ControlPacketType.Unsubscribe << 4 | 2;
+        const pid = String.fromCharCode(fixedPackedId << 8, fixedPackedId & 255);
         return this.createPacket(cmd,
             pid,
             this.createString(topic));

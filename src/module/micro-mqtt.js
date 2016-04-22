@@ -152,7 +152,7 @@ var MqttProtocol = (function () {
      * Remaining Length
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718023
      */
-    MqttProtocol.remainingLenght = function (length) {
+    MqttProtocol.remainingLength = function (length) {
         var encBytes = [];
         do {
             var encByte = length & 127;
@@ -181,20 +181,35 @@ var MqttProtocol = (function () {
         }
         return undefined;
     };
+    /**
+     * Connect flags
+     * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349229
+     */
     MqttProtocol.createConnectionFlags = function (options) {
         var flags = 0;
-        flags |= (options.username) ? 0x80 : 0;
-        flags |= (options.username && options.password) ? 0x40 : 0;
-        flags |= (options.cleanSession) ? 0x02 : 0;
+        flags |= (options.username) ? 128 /* UserName */ : 0;
+        flags |= (options.username && options.password) ? 64 /* Password */ : 0;
+        flags |= (options.cleanSession) ? 2 /* CleanSession */ : 0;
         return flags;
     };
     ;
+    /** Returns the MSB and LSB. */
+    MqttProtocol.getBytes = function (int16) {
+        return [int16 >> 8, int16 & 255];
+    };
+    /**
+     * Keep alive
+     * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349237
+     */
+    MqttProtocol.keepAliveBytes = function () {
+        return MqttProtocol.getBytes(keepAlive);
+    };
     /**
      * Structure of UTF-8 encoded strings
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Figure_1.1_Structure
      */
     MqttProtocol.createString = function (s) {
-        return String.fromCharCode(s.length >> 8, s.length & 255) + s;
+        return String.fromCharCode.apply(String, MqttProtocol.getBytes(s.length)) + s;
     };
     ;
     /**
@@ -202,18 +217,22 @@ var MqttProtocol = (function () {
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800392
      */
     MqttProtocol.createPacket = function (fixed1, variable, payload) {
-        var fixed2 = this.remainingLenght(variable.length + payload.length);
+        var fixed2 = this.remainingLength(variable.length + payload.length);
         return String.fromCharCode(fixed1) +
             String.fromCharCode.apply(String, fixed2) +
             variable +
             payload;
     };
+    /**
+     * CONNECT – Client requests a connection to a Server
+     * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718028
+     */
     MqttProtocol.createConnectPacket = function (options) {
         var cmd = 1 /* Connect */ << 4;
         var protocolName = this.createString('MQTT');
         var protocolLevel = String.fromCharCode(4);
         var flags = String.fromCharCode(this.createConnectionFlags(options));
-        var keepAliveHeader = String.fromCharCode(keepAlive >> 8, keepAlive & 255);
+        var keepAlive = String.fromCharCode.apply(String, MqttProtocol.keepAliveBytes());
         var payload = this.createString(options.clientId);
         if (options.username) {
             payload += this.createString(options.username);
@@ -221,7 +240,7 @@ var MqttProtocol = (function () {
                 payload += this.createString(options.password);
             }
         }
-        return this.createPacket(cmd, protocolName + protocolLevel + flags + keepAliveHeader, payload);
+        return this.createPacket(cmd, protocolName + protocolLevel + flags + keepAlive, payload);
     };
     ;
     MqttProtocol.createPublishPacket = function (topic, message, qos) {

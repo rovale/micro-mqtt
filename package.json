@@ -13,7 +13,7 @@
     "postinstall": "typings install",
     "build": "tsc && ncp ./src/module/micro-mqtt.js ./bin/modules/micro-mqtt.js",
     "tslint": "tslint ./src/**/*.ts",
-    "pretest": "npm run build && npm run tslint",
+    "pretest": "rimraf ./coverage && npm run build && npm run tslint",
     "test": "istanbul cover ./node_modules/mocha/bin/_mocha -- -R spec ./src/test/*.js"
   },
   "repository": {
@@ -36,6 +36,7 @@
     "istanbul": "^0.4.3",
     "mocha": "^2.4.5",
     "ncp": "^2.0.0",
+    "rimraf": "^2.5.2",
     "tslint": "^3.7.4",
     "tslint-microsoft-contrib": "2.0.2",
     "typescript": "^1.8.10",
