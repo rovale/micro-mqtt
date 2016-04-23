@@ -6,61 +6,8 @@ import { MicroMqttClient } from '../module/micro-mqtt';
 import ConnectionOptions from '../module/ConnectionOptions';
 import { Network, NetworkConnectOptions, NetworkSocket } from '../module/micro-mqtt';
 import { ConnectFlags } from '../module/micro-mqtt';
+import ControlPacketVerifier from './ControlPacketVerifier';
 import ControlPacketType from '../module/ControlPacketType';
-
-function pack(...chars: number[]) {
-    return String.fromCharCode(...chars);
-}
-
-function isOfControlPacketType(packet: string, packetType: ControlPacketType) {
-    return (packet.charCodeAt(0) >> 4).should.equal(packetType);
-}
-
-function hasRemainingLength(packet: string, length: number) {
-    length.should.be.lessThan(127, 'When needed extend the assertions to support longer remaining length');
-    return packet.charCodeAt(1).should.equal(length);
-}
-
-function hasMqttProtocol(packet: string) {
-    packet.charCodeAt(2).should.equal(0, 'String length MSB of the protocol name should be 0');
-    packet.charCodeAt(3).should.equal(4, 'String length LSB of the protocol name should be 4');
-
-    return String.fromCharCode(packet.charCodeAt(4), packet.charCodeAt(5), packet.charCodeAt(6), packet.charCodeAt(7))
-        .should.equal('MQTT');
-}
-
-function hasProtocolLevel4(packet: string) {
-    return packet.charCodeAt(8).should.equal(4);
-}
-
-function hasConnectFlags(packet: string, flags: number) {
-    return packet.charCodeAt(9).should.equal(flags);
-}
-
-function hasKeepAliveOf60Seconds(packet: string) {
-    packet.charCodeAt(10).should.equal(0);
-    return packet.charCodeAt(11).should.equal(60);
-}
-
-function hasPayloadStartingAt(packet: string, start: number, ...elements: string[]) : Chai.Assertion {
-    // console.log(elements);
-    if (elements.length === 0) {
-        return packet.length.should.equal(start, 'Expected no more data in the payload');
-    }
-
-    const element = elements[0];
-    const length = element.length;
-    length.should.be.lessThan(255, 'When needed extend the assertions to support longer lengths');
-    packet.charCodeAt(start).should.equal(0, `String length MSB of ${element} should be 0`);
-    packet.charCodeAt(start + 1).should.equal(length, `String length LSB of ${element} should be ${length}`);
-    packet.substr(start + 2, length).should.equal(element);
-
-    return hasPayloadStartingAt(packet, start + 1 + length + 1, ...elements.splice(1));
-}
-
-function hasPayload(packet: string, ...elements: string[]) {
-    return hasPayloadStartingAt(packet, 12, ...elements);
-}
 
 interface EmittedEvent {
     event: string;
@@ -163,19 +110,15 @@ describe('MicroMqttClient', () => {
 
         it('it should send a connect packet', () => {
             networkSocket.written.should.have.length(1);
-            const expectedPacket = pack(16, 23, 0, 4) + 'MQTT' + pack(4, 2, 0, 60, 0, 11) + 'some-client';
-            const packet = networkSocket.written[0];
+            const packet = new ControlPacketVerifier(networkSocket.written[0]);
 
-            packet.should.satisfy((p: string) => isOfControlPacketType(p, ControlPacketType.Connect));
-            packet.should.satisfy((p: string) => hasRemainingLength(p, (expectedPacket.length - 2)));
-            packet.should.satisfy(hasMqttProtocol);
-            packet.should.satisfy(hasProtocolLevel4);
-            packet.should.satisfy((p: string) => hasConnectFlags(p, ConnectFlags.CleanSession));
-            packet.should.satisfy(hasKeepAliveOf60Seconds);
-            packet.should.satisfy((p: string) => hasPayload(p, 'some-client'));
-
-            packet.should.equal(expectedPacket);
-            packet.should.contain('some-client');
+            packet.shouldBeOfType(ControlPacketType.Connect);
+            packet.shouldHaveRemainingLength();
+            packet.shouldHaveMqttProtocol();
+            packet.shouldHaveProtocolLevel4();
+            packet.shouldHaveConnectFlags(ConnectFlags.CleanSession);
+            packet.shouldHaveKeepAliveOf60Seconds();
+            packet.shouldHavePayload('some-client');
         });
     });
 
@@ -191,9 +134,9 @@ describe('MicroMqttClient', () => {
 
         it('it should include that info in the connect packet', () => {
             networkSocket.written.should.have.length(1);
-            const packet = networkSocket.written[0];
-            packet.should.satisfy((p: string) => hasConnectFlags(p, ConnectFlags.UserName | ConnectFlags.CleanSession));
-            packet.should.satisfy((p: string) => hasPayload(p, 'some-client', 'some-username'));
+            const packet = new ControlPacketVerifier(networkSocket.written[0]);
+            packet.shouldHaveConnectFlags(ConnectFlags.UserName | ConnectFlags.CleanSession);
+            packet.shouldHavePayload('some-client', 'some-username');
         });
     });
 
@@ -209,10 +152,9 @@ describe('MicroMqttClient', () => {
 
         it('it should include that info in the connect packet', () => {
             networkSocket.written.should.have.length(1);
-            const packet = networkSocket.written[0];
-            packet.should.satisfy((p: string) => hasConnectFlags(p,
-                ConnectFlags.UserName | ConnectFlags.Password | ConnectFlags.CleanSession));
-            packet.should.satisfy((p: string) => hasPayload(p, 'some-client', 'some-username', 'some-password'));
+            const packet = new ControlPacketVerifier(networkSocket.written[0]);
+            packet.shouldHaveConnectFlags(ConnectFlags.UserName | ConnectFlags.Password | ConnectFlags.CleanSession);
+            packet.shouldHavePayload('some-client', 'some-username', 'some-password');
         });
     });
 });
