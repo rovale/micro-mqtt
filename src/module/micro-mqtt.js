@@ -10,7 +10,7 @@ var MicroMqttClient = (function () {
     function MicroMqttClient(options, network) {
         var _this = this;
         if (network === void 0) { network = require('net'); }
-        this.version = '0.0.8';
+        this.version = '0.0.9';
         this.connected = false;
         this.connect = function () {
             _this.emit('info', "Connecting MicroMqttClient " + _this.version + " to " + _this.options.host + ":" + _this.options.port);
@@ -32,6 +32,20 @@ var MicroMqttClient = (function () {
             var controlPacketType = data.charCodeAt(0) >> 4;
             _this.emit('debug', "Rcvd: " + controlPacketType + ": '" + data + "'");
             switch (controlPacketType) {
+                case 2 /* ConnAck */:
+                    clearTimeout(_this.connectionTimeOutId);
+                    var returnCode = data.charCodeAt(3);
+                    if (returnCode === 0 /* Accepted */) {
+                        _this.connected = true;
+                        _this.emit('info', 'MQTT connection accepted');
+                        _this.emit('connected');
+                        _this.pingIntervalId = setInterval(_this.ping, pingInterval * 1000);
+                    }
+                    else {
+                        var connectionError = MicroMqttClient.getConnectionError(returnCode);
+                        _this.emit('error', connectionError);
+                    }
+                    break;
                 case 3 /* Publish */:
                     var parsedData = MqttProtocol.parsePublish(data);
                     _this.emit('publish', parsedData);
@@ -40,26 +54,7 @@ var MicroMqttClient = (function () {
                 case 9 /* SubAck */:
                 case 11 /* UnsubAck */:
                 case 13 /* PingResp */:
-                    break;
                 case 12 /* PingReq */:
-                    _this.networkSocket.write(13 /* PingResp */ + '\x00'); // reply to PINGREQ
-                    break;
-                case 2 /* ConnAck */:
-                    clearTimeout(_this.connectionTimeOutId);
-                    var returnCode = data.charCodeAt(3);
-                    if (returnCode === 0 /* Accepted */) {
-                        _this.connected = true;
-                        _this.emit('info', 'MQTT connection accepted');
-                        _this.emit('connected');
-                        // Set up regular keep alive ping
-                        _this.pingIntervalId = setInterval(function () {
-                            _this.ping();
-                        }, pingInterval * 1000);
-                    }
-                    else {
-                        var connectionError = MicroMqttClient.getConnectionError(returnCode);
-                        _this.emit('error', connectionError);
-                    }
                     break;
                 default:
                     _this.emit('error', 'MQTT unsupported packet type: ' + controlPacketType);
@@ -95,7 +90,7 @@ var MicroMqttClient = (function () {
         };
         /** Send ping request to server */
         this.ping = function () {
-            _this.networkSocket.write(String.fromCharCode(12 /* PingReq */ << 4) + '\x00');
+            _this.networkSocket.write(MqttProtocol.createPingReqPacket());
             _this.emit('debug', 'Sent: Ping request');
         };
         options.port = options.port || defaultPort;
@@ -222,7 +217,7 @@ var MqttProtocol;
             payload;
     }
     /**
-     * CONNECT – Client requests a connection to a Server
+     * CONNECT - Client requests a connection to a Server
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718028
      */
     function createConnectPacket(options) {
@@ -241,6 +236,13 @@ var MqttProtocol;
         return createPacket(cmd, protocolName + protocolLevel + flags + keepAlive, payload);
     }
     MqttProtocol.createConnectPacket = createConnectPacket;
+    /** PINGREQ – PING request
+     * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800454
+    */
+    function createPingReqPacket() {
+        return String.fromCharCode(12 /* PingReq */ << 4, 0);
+    }
+    MqttProtocol.createPingReqPacket = createPingReqPacket;
     function createPublishPacket(topic, message, qos) {
         var cmd = 3 /* Publish */ << 4 | (qos << 1);
         var pid = String.fromCharCode(fixedPackedId << 8, fixedPackedId & 255);

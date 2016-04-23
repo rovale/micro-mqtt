@@ -53,7 +53,7 @@ export interface Network {
  * The MQTT client.
  */
 export class MicroMqttClient {
-    public version = '0.0.8';
+    public version = '0.0.9';
 
     private options: ConnectionOptions;
     private network: Network;
@@ -134,18 +134,6 @@ export class MicroMqttClient {
         this.emit('debug', `Rcvd: ${controlPacketType}: '${data}'`);
 
         switch (controlPacketType) {
-            case ControlPacketType.Publish:
-                const parsedData = MqttProtocol.parsePublish(data);
-                this.emit('publish', parsedData);
-                break;
-            case ControlPacketType.PubAck:
-            case ControlPacketType.SubAck:
-            case ControlPacketType.UnsubAck:
-            case ControlPacketType.PingResp:
-                break;
-            case ControlPacketType.PingReq:
-                this.networkSocket.write(ControlPacketType.PingResp + '\x00'); // reply to PINGREQ
-                break;
             case ControlPacketType.ConnAck:
                 clearTimeout(this.connectionTimeOutId);
                 const returnCode = data.charCodeAt(3);
@@ -154,14 +142,21 @@ export class MicroMqttClient {
                     this.emit('info', 'MQTT connection accepted');
                     this.emit('connected');
 
-                    // Set up regular keep alive ping
-                    this.pingIntervalId = setInterval(() => {
-                        this.ping();
-                    }, pingInterval * 1000);
+                    this.pingIntervalId = setInterval(this.ping, pingInterval * 1000);
                 } else {
                     const connectionError = MicroMqttClient.getConnectionError(returnCode);
                     this.emit('error', connectionError);
                 }
+                break;
+            case ControlPacketType.Publish:
+                const parsedData = MqttProtocol.parsePublish(data);
+                this.emit('publish', parsedData);
+                break;
+            case ControlPacketType.PubAck:
+            case ControlPacketType.SubAck:
+            case ControlPacketType.UnsubAck:
+            case ControlPacketType.PingResp:
+            case ControlPacketType.PingReq:
                 break;
             default:
                 this.emit('error', 'MQTT unsupported packet type: ' + controlPacketType);
@@ -201,7 +196,7 @@ export class MicroMqttClient {
 
     /** Send ping request to server */
     private ping = () => {
-        this.networkSocket.write(String.fromCharCode(ControlPacketType.PingReq << 4) + '\x00');
+        this.networkSocket.write(MqttProtocol.createPingReqPacket());
         this.emit('debug', 'Sent: Ping request');
     };
 }
@@ -297,7 +292,7 @@ export module MqttProtocol {
     }
 
     /**
-     * CONNECT – Client requests a connection to a Server
+     * CONNECT - Client requests a connection to a Server
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718028
      */
     export function createConnectPacket(options: ConnectionOptions) {
@@ -322,6 +317,13 @@ export module MqttProtocol {
             protocolName + protocolLevel + flags + keepAlive,
             payload
         );
+    }
+
+    /** PINGREQ – PING request
+     * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800454
+    */
+    export function createPingReqPacket() {
+        return String.fromCharCode(ControlPacketType.PingReq << 4, 0);
     }
 
     export function createPublishPacket(topic: string, message: string, qos: number) {
