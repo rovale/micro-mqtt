@@ -1,71 +1,15 @@
 "use strict";
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
-/**
- * Tests for the MQTT client.
- */
-/// <reference path='_common.ts' />
-var micro_mqtt_1 = require('../module/micro-mqtt');
+var TestClasses_1 = require('./TestClasses');
 var ControlPacketVerifier_1 = require('./ControlPacketVerifier');
-var MicroMqttClientTestSubclass = (function (_super) {
-    __extends(MicroMqttClientTestSubclass, _super);
-    function MicroMqttClientTestSubclass(options, network) {
-        var _this = this;
-        _super.call(this, options, network);
-        this.emittedEvents = [];
-        this.emit = function (event) {
-            var args = [];
-            for (var _i = 1; _i < arguments.length; _i++) {
-                args[_i - 1] = arguments[_i];
-            }
-            _this.emittedEvents.push({ event: event, args: args });
-            return true;
-        };
-    }
-    MicroMqttClientTestSubclass.prototype.emittedInfo = function () {
-        return this.emittedEvents.filter(function (e) { return e.event === 'info'; });
-    };
-    return MicroMqttClientTestSubclass;
-}(micro_mqtt_1.MicroMqttClient));
-var TestNetwork = (function () {
-    function TestNetwork() {
-        this.connectIsCalled = false;
-    }
-    TestNetwork.prototype.connect = function (options, callback) {
-        this.connectIsCalled = true;
-        this.options = options;
-        this.callback = callback;
-    };
-    ;
-    return TestNetwork;
-}());
-var TestNetworkSocket = (function () {
-    function TestNetworkSocket() {
-        this.written = [];
-        this.eventSubscriptions = [];
-    }
-    TestNetworkSocket.prototype.write = function (data) {
-        this.written.push(data);
-    };
-    ;
-    TestNetworkSocket.prototype.on = function (event, listener) {
-        this.eventSubscriptions.push({ event: event, listener: listener });
-    };
-    ;
-    return TestNetworkSocket;
-}());
 describe('MicroMqttClient', function () {
     var subject;
     var network;
     var networkSocket;
     describe('When connecting to a specific host and port', function () {
         beforeEach(function () {
-            network = new TestNetwork();
+            network = new TestClasses_1.TestNetwork();
             network.connectIsCalled.should.be.equal(false, 'did not expect the client to connect to the network yet');
-            subject = new MicroMqttClientTestSubclass({ host: 'some-host', port: 1234 }, network);
+            subject = new TestClasses_1.MicroMqttClientTestSubclass({ host: 'some-host', port: 1234 }, network);
             subject.connect();
         });
         it('it should emit information about this action', function () {
@@ -82,8 +26,8 @@ describe('MicroMqttClient', function () {
     });
     describe('When connecting without specifying the port', function () {
         beforeEach(function () {
-            network = new TestNetwork();
-            subject = new MicroMqttClientTestSubclass({ host: 'some-host' }, network);
+            network = new TestClasses_1.TestNetwork();
+            subject = new TestClasses_1.MicroMqttClientTestSubclass({ host: 'some-host' }, network);
             subject.connect();
         });
         it('it should default to port 1883', function () {
@@ -92,9 +36,9 @@ describe('MicroMqttClient', function () {
     });
     describe('When the connection is established', function () {
         beforeEach(function () {
-            network = new TestNetwork();
-            subject = new MicroMqttClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, network);
-            networkSocket = new TestNetworkSocket();
+            network = new TestClasses_1.TestNetwork();
+            subject = new TestClasses_1.MicroMqttClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, network);
+            networkSocket = new TestClasses_1.TestNetworkSocket();
             subject.connect();
             network.callback(networkSocket);
         });
@@ -112,9 +56,9 @@ describe('MicroMqttClient', function () {
     });
     describe('When connecting with a username', function () {
         beforeEach(function () {
-            network = new TestNetwork();
-            subject = new MicroMqttClientTestSubclass({ host: 'host', clientId: 'some-client', username: 'some-username' }, network);
-            networkSocket = new TestNetworkSocket();
+            network = new TestClasses_1.TestNetwork();
+            subject = new TestClasses_1.MicroMqttClientTestSubclass({ host: 'host', clientId: 'some-client', username: 'some-username' }, network);
+            networkSocket = new TestClasses_1.TestNetworkSocket();
             subject.connect();
             network.callback(networkSocket);
         });
@@ -127,9 +71,9 @@ describe('MicroMqttClient', function () {
     });
     describe('When connecting with a username and password', function () {
         beforeEach(function () {
-            network = new TestNetwork();
-            subject = new MicroMqttClientTestSubclass({ host: 'host', clientId: 'some-client', username: 'some-username', password: 'some-password' }, network);
-            networkSocket = new TestNetworkSocket();
+            network = new TestClasses_1.TestNetwork();
+            subject = new TestClasses_1.MicroMqttClientTestSubclass({ host: 'host', clientId: 'some-client', username: 'some-username', password: 'some-password' }, network);
+            networkSocket = new TestClasses_1.TestNetworkSocket();
             subject.connect();
             network.callback(networkSocket);
         });

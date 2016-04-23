@@ -2,63 +2,10 @@
  * Tests for the MQTT client.
  */
 /// <reference path='_common.ts' />
-import { MicroMqttClient } from '../module/micro-mqtt';
-import ConnectionOptions from '../module/ConnectionOptions';
-import { Network, NetworkConnectOptions, NetworkSocket } from '../module/micro-mqtt';
 import { ConnectFlags } from '../module/micro-mqtt';
-import ControlPacketVerifier from './ControlPacketVerifier';
 import ControlPacketType from '../module/ControlPacketType';
-
-interface EmittedEvent {
-    event: string;
-    args: any[];
-}
-
-class MicroMqttClientTestSubclass extends MicroMqttClient {
-    public emittedEvents: EmittedEvent[] = [];
-
-    constructor(options: ConnectionOptions, network?: Network) {
-        super(options, network);
-        this.emit = (event: string, ...args: any[]) => {
-            this.emittedEvents.push({ event: event, args: args });
-            return true;
-        };
-    }
-
-    public emittedInfo() {
-        return this.emittedEvents.filter(e => e.event === 'info');
-    }
-}
-
-class TestNetwork implements Network {
-    public connectIsCalled = false;
-    public options: NetworkConnectOptions;
-    public callback: (socket: NetworkSocket) => void;
-
-    public connect(options: NetworkConnectOptions, callback: (socket: NetworkSocket) => void) {
-        this.connectIsCalled = true;
-        this.options = options;
-        this.callback = callback;
-    };
-}
-
-interface EventSubscription {
-    event: string;
-    listener: Function;
-}
-
-class TestNetworkSocket implements NetworkSocket {
-    public written: string[] = [];
-    public eventSubscriptions: EventSubscription[] = [];
-
-    public write(data: string) {
-        this.written.push(data);
-    };
-    public on(event: string, listener: Function) {
-        this.eventSubscriptions.push({ event: event, listener: listener });
-    };
-    public end: () => void;
-}
+import { MicroMqttClientTestSubclass, TestNetwork, TestNetworkSocket} from './TestClasses';
+import ControlPacketVerifier from './ControlPacketVerifier';
 
 describe('MicroMqttClient', () => {
     let subject: MicroMqttClientTestSubclass;
