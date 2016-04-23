@@ -12,13 +12,13 @@ const defaultQosLevel = 0;
  * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349229
  */
 export const enum ConnectFlags {
-    UserName        = 0b10000000,
-    Password        = 0b01000000,
-    WillRetain      = 0b00100000,
-    WillQoS2        = 0b00010000,
-    WillQoS1        = 0b00001000,
-    Will            = 0b00000100,
-    CleanSession    = 0b00000010
+    UserName = 0b10000000,
+    Password = 0b01000000,
+    WillRetain = 0b00100000,
+    WillQoS2 = 0b00010000,
+    WillQoS1 = 0b00001000,
+    Will = 0b00000100,
+    CleanSession = 0b00000010
 }
 
 /**
@@ -53,7 +53,7 @@ export interface Network {
  * The MQTT client.
  */
 export class MicroMqttClient {
-    public version = '0.0.7';
+    public version = '0.0.8';
 
     private options: ConnectionOptions;
     private network: Network;
@@ -214,12 +214,12 @@ export class MicroMqttClient {
 const fixedPackedId = 1;
 const keepAlive = 60;
 
-export class MqttProtocol {
+export module MqttProtocol {
     /** 
      * Remaining Length
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718023
      */
-    public static remainingLength(length: number) {
+    export function remainingLength(length: number) {
         const encBytes: number[] = [];
         do {
             let encByte = length & 0b01111111;
@@ -234,7 +234,7 @@ export class MqttProtocol {
     }
 
     /** PUBLISH packet parser - returns object with topic and message */
-    public static parsePublish(data: string) {
+    export function parsePublish(data: string) {
         if (data.length > 5 && typeof data !== undefined) {
             const cmd = data.charCodeAt(0);
             const remainingLength = data.charCodeAt(1);
@@ -254,16 +254,16 @@ export class MqttProtocol {
      * Connect flags
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349229
      */
-    private static createConnectionFlags(options: ConnectionOptions) {
+    function createConnectionFlags(options: ConnectionOptions) {
         let flags = 0;
         flags |= (options.username) ? ConnectFlags.UserName : 0;
         flags |= (options.username && options.password) ? ConnectFlags.Password : 0;
         flags |= (options.cleanSession) ? ConnectFlags.CleanSession : 0;
         return flags;
-    };
+    }
 
     /** Returns the MSB and LSB. */
-    private static getBytes(int16: number) {
+    function getBytes(int16: number) {
         return [int16 >> 8, int16 & 255];
     }
 
@@ -271,24 +271,24 @@ export class MqttProtocol {
      * Keep alive
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349237
      */
-    private static keepAliveBytes() {
-        return MqttProtocol.getBytes(keepAlive);
+    function keepAliveBytes() {
+        return getBytes(keepAlive);
     }
 
     /** 
      * Structure of UTF-8 encoded strings
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Figure_1.1_Structure
      */
-    private static createString(s: string) {
-        return String.fromCharCode(...MqttProtocol.getBytes(s.length)) + s;
-    };
+    function createString(s: string) {
+        return String.fromCharCode(...getBytes(s.length)) + s;
+    }
 
     /** 
      * Structure of an MQTT Control Packet
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800392
      */
-    private static createPacket(fixed1: number, variable: string, payload: string) {
-        const fixed2 = this.remainingLength(variable.length + payload.length);
+    function createPacket(fixed1: number, variable: string, payload: string) {
+        const fixed2 = remainingLength(variable.length + payload.length);
 
         return String.fromCharCode(fixed1) +
             String.fromCharCode(...fixed2) +
@@ -300,51 +300,51 @@ export class MqttProtocol {
      * CONNECT – Client requests a connection to a Server
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718028
      */
-    public static createConnectPacket(options: ConnectionOptions) {
+    export function createConnectPacket(options: ConnectionOptions) {
         const cmd = ControlPacketType.Connect << 4;
 
-        const protocolName = this.createString('MQTT');
+        const protocolName = createString('MQTT');
         const protocolLevel = String.fromCharCode(4);
-        const flags = String.fromCharCode(this.createConnectionFlags(options));
+        const flags = String.fromCharCode(createConnectionFlags(options));
 
-        const keepAlive: string = String.fromCharCode(...MqttProtocol.keepAliveBytes());
+        const keepAlive: string = String.fromCharCode(...keepAliveBytes());
 
-        let payload = this.createString(options.clientId);
+        let payload = createString(options.clientId);
         if (options.username) {
-            payload += this.createString(options.username);
+            payload += createString(options.username);
             if (options.password) {
-                payload += this.createString(options.password);
+                payload += createString(options.password);
             }
         }
 
-        return this.createPacket(
+        return createPacket(
             cmd,
             protocolName + protocolLevel + flags + keepAlive,
             payload
         );
-    };
-
-    public static createPublishPacket(topic: string, message: string, qos: number) {
-        const cmd = ControlPacketType.Publish << 4 | (qos << 1);
-        const pid = String.fromCharCode(fixedPackedId << 8, fixedPackedId & 255);
-        const variable = (qos === 0) ? this.createString(topic) : this.createString(topic) + pid;
-        return this.createPacket(cmd, variable, message);
     }
 
-    public static createSubscribePacket(topic: string, qos: number) {
+    export function createPublishPacket(topic: string, message: string, qos: number) {
+        const cmd = ControlPacketType.Publish << 4 | (qos << 1);
+        const pid = String.fromCharCode(fixedPackedId << 8, fixedPackedId & 255);
+        const variable = (qos === 0) ? createString(topic) : createString(topic) + pid;
+        return createPacket(cmd, variable, message);
+    }
+
+    export function createSubscribePacket(topic: string, qos: number) {
         const cmd = ControlPacketType.Subscribe << 4 | 2;
         const pid = String.fromCharCode(fixedPackedId << 8, fixedPackedId & 255);
-        return this.createPacket(cmd,
+        return createPacket(cmd,
             pid,
-            this.createString(topic) +
+            createString(topic) +
             String.fromCharCode(qos));
     }
 
-    public static createUnsubscribePacket(topic: string) {
+    export function createUnsubscribePacket(topic: string) {
         const cmd = ControlPacketType.Unsubscribe << 4 | 2;
         const pid = String.fromCharCode(fixedPackedId << 8, fixedPackedId & 255);
-        return this.createPacket(cmd,
+        return createPacket(cmd,
             pid,
-            this.createString(topic));
+            createString(topic));
     }
 }
