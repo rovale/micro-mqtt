@@ -7,11 +7,13 @@ import ControlPacketType from '../module/ControlPacketType';
 import { MicroMqttClientTestSubclass, TestNetwork, TestNetworkSocket} from './TestClasses';
 import ControlPacketVerifier from './ControlPacketVerifier';
 import ControlPacketBuilder from './ControlPacketBuilder';
+import * as sinon from 'sinon';
 
 describe('MicroMqttClient', () => {
     let subject: MicroMqttClientTestSubclass;
     let network: TestNetwork;
     let networkSocket: TestNetworkSocket;
+    let clock: Sinon.SinonFakeTimers;
 
     describe('When connecting to a specific host and port', () => {
         beforeEach(() => {
@@ -57,8 +59,8 @@ describe('MicroMqttClient', () => {
         });
 
         it('it should send a connect packet', () => {
-            networkSocket.written.should.have.lengthOf(1);
-            const packet = new ControlPacketVerifier(networkSocket.written[0]);
+            networkSocket.sentPackages.should.have.lengthOf(1);
+            const packet = new ControlPacketVerifier(networkSocket.sentPackages[0]);
 
             packet.shouldBeOfType(ControlPacketType.Connect);
             packet.shouldHaveRemainingLength();
@@ -81,8 +83,8 @@ describe('MicroMqttClient', () => {
         });
 
         it('it should include that info in the connect packet', () => {
-            networkSocket.written.should.have.lengthOf(1);
-            const packet = new ControlPacketVerifier(networkSocket.written[0]);
+            networkSocket.sentPackages.should.have.lengthOf(1);
+            const packet = new ControlPacketVerifier(networkSocket.sentPackages[0]);
             packet.shouldHaveConnectFlags(ConnectFlags.UserName | ConnectFlags.CleanSession);
             packet.shouldHavePayload('some-client', 'some-username');
         });
@@ -99,8 +101,8 @@ describe('MicroMqttClient', () => {
         });
 
         it('it should include that info in the connect packet', () => {
-            networkSocket.written.should.have.lengthOf(1);
-            const packet = new ControlPacketVerifier(networkSocket.written[0]);
+            networkSocket.sentPackages.should.have.lengthOf(1);
+            const packet = new ControlPacketVerifier(networkSocket.sentPackages[0]);
             packet.shouldHaveConnectFlags(ConnectFlags.UserName | ConnectFlags.Password | ConnectFlags.CleanSession);
             packet.shouldHavePayload('some-client', 'some-username', 'some-password');
         });
@@ -113,7 +115,7 @@ describe('MicroMqttClient', () => {
             networkSocket = new TestNetworkSocket();
             subject.connect();
             network.callback(networkSocket);
-            networkSocket.receive('Some unexpected packet');
+            networkSocket.receivePackage('Some unexpected packet');
         });
 
         it('it should emit some debug information', () => {
@@ -136,6 +138,8 @@ describe('MicroMqttClient', () => {
 
     describe('When receiving a ConnAck Accepted packet', () => {
         beforeEach(() => {
+            clock = sinon.useFakeTimers();
+
             network = new TestNetwork();
             subject = new MicroMqttClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, network);
             networkSocket = new TestNetworkSocket();
@@ -147,7 +151,11 @@ describe('MicroMqttClient', () => {
                 .withConnectReturnCode(ConnectReturnCode.Accepted)
                 .build();
 
-            networkSocket.receive(connAckPacket);
+            networkSocket.receivePackage(connAckPacket);
+        });
+
+        afterEach(() => {
+            clock.restore();
         });
 
         it('it should not emit errors', () => {
@@ -164,6 +172,25 @@ describe('MicroMqttClient', () => {
         it('it should emit the \'connected\' event', () => {
             const emittedConnect = subject.emittedConnected();
             emittedConnect.should.have.lengthOf(1);
+        });
+
+        it('it should start sending Ping packets every 40 seconds', () => {
+            subject.clearEmittedEvents();
+            networkSocket.clear();
+
+            clock.tick(40 * 1000);
+
+            const emittedDebugInfo = subject.emittedDebugInfo();
+            emittedDebugInfo.should.have.lengthOf(1);
+            emittedDebugInfo[0].args.should.have.lengthOf(1);
+            emittedDebugInfo[0].args[0].should.equal('Sent: Ping request');
+
+            networkSocket.sentPackages.should.have.lengthOf(1);
+            const packet = new ControlPacketVerifier(networkSocket.sentPackages[0]);
+            packet.shouldBeOfType(ControlPacketType.PingReq);
+
+            clock.tick(2 * 40 * 1000);
+            networkSocket.sentPackages.should.have.lengthOf(3);
         });
     });
 });

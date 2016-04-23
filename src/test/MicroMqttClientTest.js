@@ -2,10 +2,12 @@
 var TestClasses_1 = require('./TestClasses');
 var ControlPacketVerifier_1 = require('./ControlPacketVerifier');
 var ControlPacketBuilder_1 = require('./ControlPacketBuilder');
+var sinon = require('sinon');
 describe('MicroMqttClient', function () {
     var subject;
     var network;
     var networkSocket;
+    var clock;
     describe('When connecting to a specific host and port', function () {
         beforeEach(function () {
             network = new TestClasses_1.TestNetwork();
@@ -44,8 +46,8 @@ describe('MicroMqttClient', function () {
             network.callback(networkSocket);
         });
         it('it should send a connect packet', function () {
-            networkSocket.written.should.have.lengthOf(1);
-            var packet = new ControlPacketVerifier_1["default"](networkSocket.written[0]);
+            networkSocket.sentPackages.should.have.lengthOf(1);
+            var packet = new ControlPacketVerifier_1["default"](networkSocket.sentPackages[0]);
             packet.shouldBeOfType(1 /* Connect */);
             packet.shouldHaveRemainingLength();
             packet.shouldHaveMqttProtocol();
@@ -64,8 +66,8 @@ describe('MicroMqttClient', function () {
             network.callback(networkSocket);
         });
         it('it should include that info in the connect packet', function () {
-            networkSocket.written.should.have.lengthOf(1);
-            var packet = new ControlPacketVerifier_1["default"](networkSocket.written[0]);
+            networkSocket.sentPackages.should.have.lengthOf(1);
+            var packet = new ControlPacketVerifier_1["default"](networkSocket.sentPackages[0]);
             packet.shouldHaveConnectFlags(128 /* UserName */ | 2 /* CleanSession */);
             packet.shouldHavePayload('some-client', 'some-username');
         });
@@ -79,8 +81,8 @@ describe('MicroMqttClient', function () {
             network.callback(networkSocket);
         });
         it('it should include that info in the connect packet', function () {
-            networkSocket.written.should.have.lengthOf(1);
-            var packet = new ControlPacketVerifier_1["default"](networkSocket.written[0]);
+            networkSocket.sentPackages.should.have.lengthOf(1);
+            var packet = new ControlPacketVerifier_1["default"](networkSocket.sentPackages[0]);
             packet.shouldHaveConnectFlags(128 /* UserName */ | 64 /* Password */ | 2 /* CleanSession */);
             packet.shouldHavePayload('some-client', 'some-username', 'some-password');
         });
@@ -92,7 +94,7 @@ describe('MicroMqttClient', function () {
             networkSocket = new TestClasses_1.TestNetworkSocket();
             subject.connect();
             network.callback(networkSocket);
-            networkSocket.receive('Some unexpected packet');
+            networkSocket.receivePackage('Some unexpected packet');
         });
         it('it should emit some debug information', function () {
             var emittedDebugInfo = subject.emittedDebugInfo();
@@ -112,6 +114,7 @@ describe('MicroMqttClient', function () {
     });
     describe('When receiving a ConnAck Accepted packet', function () {
         beforeEach(function () {
+            clock = sinon.useFakeTimers();
             network = new TestClasses_1.TestNetwork();
             subject = new TestClasses_1.MicroMqttClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, network);
             networkSocket = new TestClasses_1.TestNetworkSocket();
@@ -121,7 +124,10 @@ describe('MicroMqttClient', function () {
             var connAckPacket = new ControlPacketBuilder_1["default"](2 /* ConnAck */)
                 .withConnectReturnCode(0 /* Accepted */)
                 .build();
-            networkSocket.receive(connAckPacket);
+            networkSocket.receivePackage(connAckPacket);
+        });
+        afterEach(function () {
+            clock.restore();
         });
         it('it should not emit errors', function () {
             subject.shouldNotEmitErrors();
@@ -135,6 +141,20 @@ describe('MicroMqttClient', function () {
         it('it should emit the \'connected\' event', function () {
             var emittedConnect = subject.emittedConnected();
             emittedConnect.should.have.lengthOf(1);
+        });
+        it('it should start sending Ping packets every 40 seconds', function () {
+            subject.clearEmittedEvents();
+            networkSocket.clear();
+            clock.tick(40 * 1000);
+            var emittedDebugInfo = subject.emittedDebugInfo();
+            emittedDebugInfo.should.have.lengthOf(1);
+            emittedDebugInfo[0].args.should.have.lengthOf(1);
+            emittedDebugInfo[0].args[0].should.equal('Sent: Ping request');
+            networkSocket.sentPackages.should.have.lengthOf(1);
+            var packet = new ControlPacketVerifier_1["default"](networkSocket.sentPackages[0]);
+            packet.shouldBeOfType(12 /* PingReq */);
+            clock.tick(2 * 40 * 1000);
+            networkSocket.sentPackages.should.have.lengthOf(3);
         });
     });
 });

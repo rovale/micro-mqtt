@@ -60,14 +60,14 @@ var TestNetwork = (function () {
 exports.TestNetwork = TestNetwork;
 var TestNetworkSocket = (function () {
     function TestNetworkSocket() {
-        this.written = [];
+        this.sentPackages = [];
         this.eventSubscriptions = [];
     }
     TestNetworkSocket.prototype.write = function (data) {
-        this.written.push(data);
+        this.sentPackages.push(data);
     };
     ;
-    TestNetworkSocket.prototype.receive = function (data) {
+    TestNetworkSocket.prototype.receivePackage = function (data) {
         var listeners = this.eventSubscriptions.filter(function (s) { return s.event === 'data'; });
         listeners.should.have.length.greaterThan(0);
         listeners.forEach(function (s) { return s.listener(data); });
@@ -77,6 +77,9 @@ var TestNetworkSocket = (function () {
         this.eventSubscriptions.push({ event: event, listener: listener });
     };
     ;
+    TestNetworkSocket.prototype.clear = function () {
+        this.sentPackages = [];
+    };
     return TestNetworkSocket;
 }());
 exports.TestNetworkSocket = TestNetworkSocket;

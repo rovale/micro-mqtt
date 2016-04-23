@@ -65,14 +65,14 @@ interface EventSubscription {
 }
 
 export class TestNetworkSocket implements NetworkSocket {
-    public written: string[] = [];
+    public sentPackages: string[] = [];
     public eventSubscriptions: EventSubscription[] = [];
 
     public write(data: string) {
-        this.written.push(data);
+        this.sentPackages.push(data);
     };
 
-    public receive(data: string) {
+    public receivePackage(data: string) {
         const listeners = this.eventSubscriptions.filter(s => s.event === 'data');
         listeners.should.have.length.greaterThan(0);
         listeners.forEach(s => s.listener(data));
@@ -81,5 +81,10 @@ export class TestNetworkSocket implements NetworkSocket {
     public on(event: string, listener: Function) {
         this.eventSubscriptions.push({ event: event, listener: listener });
     };
+
+    public clear() {
+        this.sentPackages = [];
+    }
+
     public end: () => void;
 }
