@@ -17,6 +17,7 @@
         "no-cookies": true,
         "no-delete-expression": true,
         "no-document-write": false,
+        "no-document-domain": true,
         "no-disable-auto-sanitization": true,
         "no-duplicate-case": true,
         "no-duplicate-parameter-names": true,
@@ -51,6 +52,13 @@
         "react-no-dangerous-html": true,
         "use-named-parameter": true,
         "valid-typeof": true,
+        "max-func-body-length": [
+            true,
+            100,
+            {
+                "ignore-parameters-to-function-regex": "describe"
+            }
+        ],
         "class-name": true,
         "curly": true,
         "eofline": false,
