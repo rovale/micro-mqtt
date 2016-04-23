@@ -33,6 +33,15 @@ var MicroMqttClientTestSubclass = (function (_super) {
     MicroMqttClientTestSubclass.prototype.emittedError = function () {
         return this.emittedEvents.filter(function (e) { return e.event === 'error'; });
     };
+    MicroMqttClientTestSubclass.prototype.emittedConnected = function () {
+        return this.emittedEvents.filter(function (e) { return e.event === 'connected'; });
+    };
+    MicroMqttClientTestSubclass.prototype.clearEmittedEvents = function () {
+        this.emittedEvents = [];
+    };
+    MicroMqttClientTestSubclass.prototype.shouldNotEmitErrors = function () {
+        this.emittedError().should.deep.equal([]);
+    };
     return MicroMqttClientTestSubclass;
 }(micro_mqtt_1.MicroMqttClient));
 exports.MicroMqttClientTestSubclass = MicroMqttClientTestSubclass;

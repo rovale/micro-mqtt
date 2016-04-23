@@ -25,7 +25,7 @@ export const enum ConnectFlags {
  * Connect Return code
  * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349256
  */
-const enum ConnectReturnCode {
+export const enum ConnectReturnCode {
     Accepted = 0,
     UnacceptableProtocolVersion = 1,
     IdentifierRejected = 2,

@@ -1,6 +1,7 @@
 "use strict";
 var TestClasses_1 = require('./TestClasses');
 var ControlPacketVerifier_1 = require('./ControlPacketVerifier');
+var ControlPacketBuilder_1 = require('./ControlPacketBuilder');
 describe('MicroMqttClient', function () {
     var subject;
     var network;
@@ -84,7 +85,7 @@ describe('MicroMqttClient', function () {
             packet.shouldHavePayload('some-client', 'some-username', 'some-password');
         });
     });
-    describe('When the MQTT server sends an unexpected packet', function () {
+    describe('When receiving an unexpected packet', function () {
         beforeEach(function () {
             network = new TestClasses_1.TestNetwork();
             subject = new TestClasses_1.MicroMqttClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, network);
@@ -107,6 +108,33 @@ describe('MicroMqttClient', function () {
             emittedError[0].args.should.have.lengthOf(1);
             var error = emittedError[0].args[0];
             error.should.contain('MQTT unsupported packet type:');
+        });
+    });
+    describe('When receiving a ConnAck Accepted packet', function () {
+        beforeEach(function () {
+            network = new TestClasses_1.TestNetwork();
+            subject = new TestClasses_1.MicroMqttClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, network);
+            networkSocket = new TestClasses_1.TestNetworkSocket();
+            subject.connect();
+            network.callback(networkSocket);
+            subject.clearEmittedEvents();
+            var connAckPacket = new ControlPacketBuilder_1["default"](2 /* ConnAck */)
+                .withConnectReturnCode(0 /* Accepted */)
+                .build();
+            networkSocket.receive(connAckPacket);
+        });
+        it('it should not emit errors', function () {
+            subject.shouldNotEmitErrors();
+        });
+        it('it should emit information about this succes', function () {
+            var emittedInfo = subject.emittedInfo();
+            emittedInfo.should.have.lengthOf(1);
+            emittedInfo[0].args.should.have.lengthOf(1);
+            emittedInfo[0].args[0].should.equal('MQTT connection accepted');
+        });
+        it('it should emit the \'connected\' event', function () {
+            var emittedConnect = subject.emittedConnected();
+            emittedConnect.should.have.lengthOf(1);
         });
     });
 });

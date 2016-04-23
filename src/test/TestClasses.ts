@@ -12,7 +12,7 @@ interface EmittedEvent {
 }
 
 export class MicroMqttClientTestSubclass extends MicroMqttClient {
-    public emittedEvents: EmittedEvent[] = [];
+    private emittedEvents: EmittedEvent[] = [];
 
     constructor(options: ConnectionOptions, network?: Network) {
         super(options, network);
@@ -32,6 +32,18 @@ export class MicroMqttClientTestSubclass extends MicroMqttClient {
 
     public emittedError() {
         return this.emittedEvents.filter(e => e.event === 'error');
+    }
+
+    public emittedConnected() {
+        return this.emittedEvents.filter(e => e.event === 'connected');
+    }
+
+    public clearEmittedEvents() {
+        this.emittedEvents = [];
+    }
+
+    public shouldNotEmitErrors() {
+        this.emittedError().should.deep.equal([]);
     }
 }
 
