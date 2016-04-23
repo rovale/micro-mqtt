@@ -165,7 +165,6 @@ export class MicroMqttClient {
                 break;
             default:
                 this.emit('error', 'MQTT unsupported packet type: ' + controlPacketType);
-                this.emit('error', '[MQTT]' + data.split('').map((c) => { return c.charCodeAt(0); }));
                 break;
         }
     };

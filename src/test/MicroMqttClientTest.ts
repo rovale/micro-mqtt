@@ -22,8 +22,8 @@ describe('MicroMqttClient', () => {
 
         it('it should emit information about this action', () => {
             const emittedInfo = subject.emittedInfo();
-            emittedInfo.should.have.length(1);
-            emittedInfo[0].args.should.have.length(1);
+            emittedInfo.should.have.lengthOf(1);
+            emittedInfo[0].args.should.have.lengthOf(1);
             emittedInfo[0].args[0].should.equal(`Connecting MicroMqttClient ${subject.version} to some-host:1234`);
         });
 
@@ -56,7 +56,7 @@ describe('MicroMqttClient', () => {
         });
 
         it('it should send a connect packet', () => {
-            networkSocket.written.should.have.length(1);
+            networkSocket.written.should.have.lengthOf(1);
             const packet = new ControlPacketVerifier(networkSocket.written[0]);
 
             packet.shouldBeOfType(ControlPacketType.Connect);
@@ -80,7 +80,7 @@ describe('MicroMqttClient', () => {
         });
 
         it('it should include that info in the connect packet', () => {
-            networkSocket.written.should.have.length(1);
+            networkSocket.written.should.have.lengthOf(1);
             const packet = new ControlPacketVerifier(networkSocket.written[0]);
             packet.shouldHaveConnectFlags(ConnectFlags.UserName | ConnectFlags.CleanSession);
             packet.shouldHavePayload('some-client', 'some-username');
@@ -98,10 +98,38 @@ describe('MicroMqttClient', () => {
         });
 
         it('it should include that info in the connect packet', () => {
-            networkSocket.written.should.have.length(1);
+            networkSocket.written.should.have.lengthOf(1);
             const packet = new ControlPacketVerifier(networkSocket.written[0]);
             packet.shouldHaveConnectFlags(ConnectFlags.UserName | ConnectFlags.Password | ConnectFlags.CleanSession);
             packet.shouldHavePayload('some-client', 'some-username', 'some-password');
+        });
+    });
+
+    describe('When the MQTT server sends an unexpected packet', () => {
+        beforeEach(() => {
+            network = new TestNetwork();
+            subject = new MicroMqttClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, network);
+            networkSocket = new TestNetworkSocket();
+            subject.connect();
+            network.callback(networkSocket);
+            networkSocket.receive('Some unexpected packet');
+        });
+
+        it('it should emit some debug information', () => {
+            const emittedDebugInfo = subject.emittedDebugInfo();
+            emittedDebugInfo.should.have.lengthOf(1);
+            emittedDebugInfo[0].args.should.have.lengthOf(1);
+            const debugInfo: string = emittedDebugInfo[0].args[0];
+            debugInfo.should.contain('Rcvd:');
+            debugInfo.should.contain('\'Some unexpected packet\'');
+        });
+
+        it('it should emit an error', () => {
+            const emittedError = subject.emittedError();
+            emittedError.should.have.lengthOf(1);
+            emittedError[0].args.should.have.lengthOf(1);
+            const error: string = emittedError[0].args[0];
+            error.should.contain('MQTT unsupported packet type:');
         });
     });
 });

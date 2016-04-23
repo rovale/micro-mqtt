@@ -24,8 +24,14 @@ var MicroMqttClientTestSubclass = (function (_super) {
             return true;
         };
     }
+    MicroMqttClientTestSubclass.prototype.emittedDebugInfo = function () {
+        return this.emittedEvents.filter(function (e) { return e.event === 'debug'; });
+    };
     MicroMqttClientTestSubclass.prototype.emittedInfo = function () {
         return this.emittedEvents.filter(function (e) { return e.event === 'info'; });
+    };
+    MicroMqttClientTestSubclass.prototype.emittedError = function () {
+        return this.emittedEvents.filter(function (e) { return e.event === 'error'; });
     };
     return MicroMqttClientTestSubclass;
 }(micro_mqtt_1.MicroMqttClient));
@@ -50,6 +56,12 @@ var TestNetworkSocket = (function () {
     }
     TestNetworkSocket.prototype.write = function (data) {
         this.written.push(data);
+    };
+    ;
+    TestNetworkSocket.prototype.receive = function (data) {
+        var listeners = this.eventSubscriptions.filter(function (s) { return s.event === 'data'; });
+        listeners.should.have.length.greaterThan(0);
+        listeners.forEach(function (s) { return s.listener(data); });
     };
     ;
     TestNetworkSocket.prototype.on = function (event, listener) {

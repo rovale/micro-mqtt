@@ -63,7 +63,6 @@ var MicroMqttClient = (function () {
                     break;
                 default:
                     _this.emit('error', 'MQTT unsupported packet type: ' + controlPacketType);
-                    _this.emit('error', '[MQTT]' + data.split('').map(function (c) { return c.charCodeAt(0); }));
                     break;
             }
         };

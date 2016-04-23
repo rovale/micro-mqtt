@@ -22,8 +22,16 @@ export class MicroMqttClientTestSubclass extends MicroMqttClient {
         };
     }
 
+    public emittedDebugInfo() {
+        return this.emittedEvents.filter(e => e.event === 'debug');
+    }
+
     public emittedInfo() {
         return this.emittedEvents.filter(e => e.event === 'info');
+    }
+
+    public emittedError() {
+        return this.emittedEvents.filter(e => e.event === 'error');
     }
 }
 
@@ -51,6 +59,13 @@ export class TestNetworkSocket implements NetworkSocket {
     public write(data: string) {
         this.written.push(data);
     };
+
+    public receive(data: string) {
+        const listeners = this.eventSubscriptions.filter(s => s.event === 'data');
+        listeners.should.have.length.greaterThan(0);
+        listeners.forEach(s => s.listener(data));
+    };
+
     public on(event: string, listener: Function) {
         this.eventSubscriptions.push({ event: event, listener: listener });
     };
