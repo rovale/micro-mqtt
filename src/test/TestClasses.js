@@ -24,23 +24,42 @@ var MicroMqttClientTestSubclass = (function (_super) {
             return true;
         };
     }
+    MicroMqttClientTestSubclass.prototype.shouldHaveEmitted = function (events, text) {
+        events.should.have.lengthOf(1);
+        events[0].args.should.have.lengthOf(1);
+        return events[0].args[0].should.equal(text);
+    };
+    MicroMqttClientTestSubclass.prototype.shouldHaveEmittedEvent = function (events, assert) {
+        events.should.have.lengthOf(1);
+        events[0].args.should.have.lengthOf(1);
+        return assert(events[0].args[0]);
+    };
     MicroMqttClientTestSubclass.prototype.emittedDebugInfo = function () {
         return this.emittedEvents.filter(function (e) { return e.event === 'debug'; });
+    };
+    MicroMqttClientTestSubclass.prototype.shouldHaveEmittedDebugInfo = function (debugInfo) {
+        return this.shouldHaveEmitted(this.emittedDebugInfo(), debugInfo);
     };
     MicroMqttClientTestSubclass.prototype.emittedInfo = function () {
         return this.emittedEvents.filter(function (e) { return e.event === 'info'; });
     };
+    MicroMqttClientTestSubclass.prototype.shouldHaveEmittedInfo = function (info) {
+        return this.shouldHaveEmitted(this.emittedInfo(), info);
+    };
     MicroMqttClientTestSubclass.prototype.emittedError = function () {
         return this.emittedEvents.filter(function (e) { return e.event === 'error'; });
+    };
+    MicroMqttClientTestSubclass.prototype.shouldHaveEmittedError = function (error) {
+        return this.shouldHaveEmitted(this.emittedError(), error);
+    };
+    MicroMqttClientTestSubclass.prototype.shouldNotEmitErrors = function () {
+        this.emittedError().should.deep.equal([]);
     };
     MicroMqttClientTestSubclass.prototype.emittedConnected = function () {
         return this.emittedEvents.filter(function (e) { return e.event === 'connected'; });
     };
     MicroMqttClientTestSubclass.prototype.clearEmittedEvents = function () {
         this.emittedEvents = [];
-    };
-    MicroMqttClientTestSubclass.prototype.shouldNotEmitErrors = function () {
-        this.emittedError().should.deep.equal([]);
     };
     return MicroMqttClientTestSubclass;
 }(micro_mqtt_1.MicroMqttClient));

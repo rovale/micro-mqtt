@@ -1,6 +1,6 @@
 {
   "name": "micro-mqtt",
-  "version": "0.0.6",
+  "version": "0.0.8",
   "description": "A MQTT client for Espruino.",
   "main": "./modules/micro-mqtt.ts",
   "bin": {

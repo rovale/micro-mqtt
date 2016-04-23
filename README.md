@@ -4,7 +4,7 @@
 [![devDependency Status](https://david-dm.org/rovale/micro-mqtt/dev-status.svg)](https://david-dm.org/rovale/micro-mqtt#info=devDependencies)
 # micro-mqtt
 
-A MQTT client for [Espruino](http://www.espruino.com/).
+An MQTT client for [Espruino](http://www.espruino.com/).
 ## TODO list
 - [x] Convert to TypeScript and restructure.
 - [x] Enable unit testing.

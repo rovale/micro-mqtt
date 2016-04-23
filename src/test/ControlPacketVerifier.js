@@ -9,7 +9,7 @@ var ControlPacketVerifier = (function () {
     ControlPacketVerifier.prototype.shouldBeOfType = function (packetType) {
         return (this.packet.charCodeAt(0) >> 4).should.equal(packetType);
     };
-    ControlPacketVerifier.prototype.shouldHaveRemainingLength = function () {
+    ControlPacketVerifier.prototype.shouldHaveValidRemainingLength = function () {
         this.packet.should.have.length.lessThan(127, 'When needed extend the assertions to support longer remaining length');
         return this.packet.charCodeAt(1).should.equal(this.packet.length - 2);
     };

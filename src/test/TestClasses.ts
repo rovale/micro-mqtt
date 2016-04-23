@@ -22,16 +22,44 @@ export class MicroMqttClientTestSubclass extends MicroMqttClient {
         };
     }
 
+    private shouldHaveEmitted(events: EmittedEvent[], text: string) {
+        events.should.have.lengthOf(1);
+        events[0].args.should.have.lengthOf(1);
+        return events[0].args[0].should.equal(text);
+    }
+
+    public shouldHaveEmittedEvent(events: EmittedEvent[], assert: (text: string) => Chai.Assertion) {
+        events.should.have.lengthOf(1);
+        events[0].args.should.have.lengthOf(1);
+        return assert(events[0].args[0]);
+    }
+
     public emittedDebugInfo() {
         return this.emittedEvents.filter(e => e.event === 'debug');
+    }
+
+    public shouldHaveEmittedDebugInfo(debugInfo: string) {
+        return this.shouldHaveEmitted(this.emittedDebugInfo(), debugInfo);
     }
 
     public emittedInfo() {
         return this.emittedEvents.filter(e => e.event === 'info');
     }
 
+    public shouldHaveEmittedInfo(info: string) {
+        return this.shouldHaveEmitted(this.emittedInfo(), info);
+    }
+
     public emittedError() {
         return this.emittedEvents.filter(e => e.event === 'error');
+    }
+
+    public shouldHaveEmittedError(error: string) {
+        return this.shouldHaveEmitted(this.emittedError(), error);
+    }
+
+    public shouldNotEmitErrors() {
+        this.emittedError().should.deep.equal([]);
     }
 
     public emittedConnected() {
@@ -40,10 +68,6 @@ export class MicroMqttClientTestSubclass extends MicroMqttClient {
 
     public clearEmittedEvents() {
         this.emittedEvents = [];
-    }
-
-    public shouldNotEmitErrors() {
-        this.emittedError().should.deep.equal([]);
     }
 }
 

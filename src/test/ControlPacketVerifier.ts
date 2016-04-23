@@ -14,7 +14,7 @@ export default class ControlPacketVerifier {
         return (this.packet.charCodeAt(0) >> 4).should.equal(packetType);
     }
 
-    public shouldHaveRemainingLength() {
+    public shouldHaveValidRemainingLength() {
         this.packet.should.have.length.lessThan(127, 'When needed extend the assertions to support longer remaining length');
         return this.packet.charCodeAt(1).should.equal(this.packet.length - 2);
     }
