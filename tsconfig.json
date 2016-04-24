@@ -1,8 +1,7 @@
 {
     "compileOnSave": false,
     "compilerOptions": {
-        "sourceMap": false,
-        "pretty": true,
+        "sourceMap": true,
         "noImplicitAny": true
     },
     "exclude": [

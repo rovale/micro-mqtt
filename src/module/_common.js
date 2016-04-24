@@ -1,3 +1,0 @@
-/**
- * Available for the Espruino.
- */

@@ -1,46 +1,48 @@
 {
-  "name": "micro-mqtt",
-  "version": "0.0.9",
-  "description": "A MQTT client for Espruino.",
-  "main": "./modules/micro-mqtt.ts",
-  "bin": {
-    "istanbul": "./node_modules/.bin/istanbul",
-    "tsc": "./node_modules/.bin/tsc",
-    "tslint": "./node_modules/.bin/tslint",
-    "typings": "./node_modules/.bin/typings"
-  },
-  "scripts": {
-    "postinstall": "typings install",
-    "build": "tsc && ncp ./src/module/micro-mqtt.js ./bin/modules/micro-mqtt.js",
-    "tslint": "tslint ./src/**/*.ts",
-    "pretest": "rimraf ./coverage && npm run build && npm run tslint",
-    "test": "istanbul cover ./node_modules/mocha/bin/_mocha -- -R spec ./src/test/*.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/rovale/micro-mqtt.git"
-  },
-  "keywords": [
-    "mqtt",
-    "espruino"
-  ],
-  "author": "R. van Leuwen",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/rovale/micro-mqtt/issues"
-  },
-  "homepage": "https://github.com/rovale/micro-mqtt#readme",
-  "devDependencies": {
-    "chai": "^3.5.0",
-    "coveralls": "^2.11.9",
-    "istanbul": "^0.4.3",
-    "mocha": "^2.4.5",
-    "ncp": "^2.0.0",
-    "rimraf": "^2.5.2",
-    "sinon": "^1.17.3",
-    "tslint": "^3.7.4",
-    "tslint-microsoft-contrib": "2.0.3",
-    "typescript": "^1.8.10",
-    "typings": "^0.8.1"
-  }
+    "name": "micro-mqtt",
+    "version": "0.0.9",
+    "description": "An MQTT client for Espruino.",
+    "main": "./modules/micro-mqtt.ts",
+    "scripts": {
+        "postinstall": "typings install",
+        "compile": "tsc --pretty",
+        "postcompile": "ncp ./src/module/micro-mqtt.js ./bin/modules/micro-mqtt.js",
+        "tslint": "tslint ./src/**/*.ts",
+        "pretest:quick": "npm run compile",
+        "test:quick": "mocha -R spec ./src/test/*.js",
+        "clean": "rimraf ./coverage",        
+        "pretest": "npm run clean && npm run compile && npm run tslint",
+        "test": "istanbul cover ./node_modules/mocha/bin/_mocha -- -R spec ./src/test/*.js",
+        "posttest": "npm run remap:lcov && npm run remap:html",
+        "remap:lcov": "remap-istanbul --input coverage/coverage.json --type lcovonly --output coverage/lcov-ts.info",
+        "remap:html": "remap-istanbul --input coverage/coverage.json --type html --output coverage/lcov-report-ts"        
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/rovale/micro-mqtt.git"
+    },
+    "keywords": [
+        "mqtt",
+        "espruino"
+    ],
+    "author": "R. van Leuwen",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/rovale/micro-mqtt/issues"
+    },
+    "homepage": "https://github.com/rovale/micro-mqtt#readme",
+    "devDependencies": {
+        "chai": "^3.5.0",
+        "coveralls": "^2.11.9",
+        "istanbul": "^0.4.3",
+        "mocha": "^2.4.5",
+        "ncp": "^2.0.0",
+        "remap-istanbul": "^0.6.3",
+        "rimraf": "^2.5.2",
+        "sinon": "^1.17.3",
+        "tslint": "^3.7.4",
+        "tslint-microsoft-contrib": "2.0.3",
+        "typescript": "^1.8.10",
+        "typings": "^0.8.1"
+    }
 }

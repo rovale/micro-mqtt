@@ -2,4 +2,6 @@
 /bin/modules/*.js
 /coverage
 /node_modules
+/src/**/*.js
+/src/**/*.js.map
 /typings

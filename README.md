@@ -24,7 +24,7 @@ An MQTT client for [Espruino](http://www.espruino.com/).
 - About code coverage
     - Currently using [Coverall](https://coveralls.io/github/rovale/micro-mqtt) with [Istanbul](https://github.com/gotwarlost/istanbul)
     - TODO
-        - [ ] Figure out how to get reports of the actual TypeScript sources.
+        - [x] Figure out how to get reports of the actual TypeScript sources.
         - [ ] Figure out how to see the same detailed level of coverage shown by the original Istanbul coverage reports. 
         
 - About [tslint](https://www.npmjs.com/package/tslint)
