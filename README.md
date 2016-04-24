@@ -11,7 +11,8 @@ An MQTT client for [Espruino](http://www.espruino.com/).
 - [x] Enable TSLint with suitable settings.
 - [x] Create an [Espruino Web IDE](https://github.com/espruino/EspruinoWebIDE) project.
 - [X] Improve assertions on packet content.
-- [ ] **Code coverage > 80%.**
+- [ ] **Code coverage > 95%.**
+- [ ] Add assertions on packet content of Publish packet.
 - [ ] Handle receiving multiple control packets at once.
 - [ ] Handle not being able to establish connection to host.
 - [ ] Implement Last Will and Testament.

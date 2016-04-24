@@ -149,7 +149,7 @@ export class MicroMqttClient {
                 }
                 break;
             case ControlPacketType.Publish:
-                const parsedData = MqttProtocol.parsePublish(data);
+                const parsedData = MqttProtocol.parsePublishPacket(data);
                 this.emit('publish', parsedData);
                 break;
             case ControlPacketType.PubAck:
@@ -228,23 +228,6 @@ export module MqttProtocol {
         return encBytes;
     }
 
-    /** PUBLISH packet parser - returns object with topic and message */
-    export function parsePublish(data: string) {
-        if (data.length > 5 && typeof data !== undefined) {
-            const cmd = data.charCodeAt(0);
-            const remainingLength = data.charCodeAt(1);
-            const variableLength = data.charCodeAt(2) << 8 | data.charCodeAt(3);
-            return {
-                topic: data.substr(4, variableLength),
-                message: data.substr(4 + variableLength, remainingLength - variableLength),
-                dup: (cmd & 0b00001000) >> 3,
-                qos: (cmd & 0b00000110) >> 1,
-                retain: cmd & 0b00000001
-            };
-        }
-        return undefined;
-    }
-
     /**
      * Connect flags
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349229
@@ -319,18 +302,46 @@ export module MqttProtocol {
         );
     }
 
-    /** PINGREQ – PING request
+    /** PINGREQ - PING request
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800454
     */
     export function createPingReqPacket() {
         return String.fromCharCode(ControlPacketType.PingReq << 4, 0);
     }
 
+    /** 
+     * PUBLISH - Publish message
+     * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800410
+     */
     export function createPublishPacket(topic: string, message: string, qos: number) {
         const cmd = ControlPacketType.Publish << 4 | (qos << 1);
         const pid = String.fromCharCode(fixedPackedId << 8, fixedPackedId & 255);
         const variable = (qos === 0) ? createString(topic) : createString(topic) + pid;
         return createPacket(cmd, variable, message);
+    }
+
+    export interface PublishPacket {
+        topic: string;
+        message: string;
+        dup: number;
+        qos: number;
+        retain: number;
+    }
+
+    export function parsePublishPacket(data: string) : PublishPacket {
+        if (data.length > 5 && typeof data !== undefined) {
+            const cmd = data.charCodeAt(0);
+            const remainingLength = data.charCodeAt(1);
+            const variableLength = data.charCodeAt(2) << 8 | data.charCodeAt(3);
+            return {
+                topic: data.substr(4, variableLength),
+                message: data.substr(4 + variableLength, remainingLength - variableLength),
+                dup: (cmd & 0b00001000) >> 3,
+                qos: (cmd & 0b00000110) >> 1,
+                retain: cmd & 0b00000001
+            };
+        }
+        return undefined;
     }
 
     export function createSubscribePacket(topic: string, qos: number) {

@@ -3,6 +3,7 @@
  */
 /// <reference path='_common.ts' />
 import { ConnectFlags, ConnectReturnCode } from '../module/micro-mqtt';
+import { MqttProtocol }  from '../module/micro-mqtt';
 import ControlPacketType from '../module/ControlPacketType';
 import { MicroMqttClientTestSubclass, TestNetwork, TestNetworkSocket} from './TestClasses';
 import ControlPacketVerifier from './ControlPacketVerifier';
@@ -279,6 +280,33 @@ describe('MicroMqttClient', () => {
                 clock.tick(expectedNumberOfPingReqPackets * 40 * 1000);
 
                 networkSocket.sentPackages.should.have.lengthOf(expectedNumberOfPingReqPackets);
+            });
+        });
+    });
+
+    describe('When receiving a Publish packet', () => {
+        beforeEach(() => {
+            networkSocket = new TestNetworkSocket();
+
+            subject = new MicroMqttClientTestSubclassBuilder()
+                .whichJustSentAConnectPacketOn(networkSocket)
+                .build();
+
+            const publishPacket = MqttProtocol.createPublishPacket('some/topic', 'some-message', 0);
+
+            networkSocket.receivePackage(publishPacket);
+        });
+
+        it('it should emit a \'publish\' event', () => {
+            const events = subject.emittedPublish();
+            events.should.have.lengthOf(1);
+            events[0].args.should.have.lengthOf(1);
+            events[0].args[0].should.deep.equal({
+                'topic': 'some/topic',
+                'message': 'some-message',
+                'qos': 0,
+                'dup': 0,
+                'retain': 0
             });
         });
     });

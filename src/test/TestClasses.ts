@@ -66,6 +66,10 @@ export class MicroMqttClientTestSubclass extends MicroMqttClient {
         return this.emittedEvents.filter(e => e.event === 'connected');
     }
 
+    public emittedPublish() {
+        return this.emittedEvents.filter(e => e.event === 'publish');
+    }
+
     public clearEmittedEvents() {
         this.emittedEvents = [];
     }
