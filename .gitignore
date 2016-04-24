@@ -1,7 +1,6 @@
 /.idea
-/bin/modules/*.js
+/bin
+/espruino/modules/*.js
 /coverage
 /node_modules
-/src/**/*.js
-/src/**/*.js.map
 /typings

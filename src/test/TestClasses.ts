@@ -110,5 +110,7 @@ export class TestNetworkSocket implements NetworkSocket {
         this.sentPackages = [];
     }
 
-    public end: () => void;
+    public end() {
+        this.clear();
+    };
 }

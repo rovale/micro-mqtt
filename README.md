@@ -8,7 +8,7 @@ An MQTT client for [Espruino](http://www.espruino.com/).
 ## TODO list
 - [x] Convert to TypeScript and restructure.
 - [x] Enable unit testing.
-- [x] Enable tslint with suitable settings.
+- [x] Enable TSLint with suitable settings.
 - [x] Create an [Espruino Web IDE](https://github.com/espruino/EspruinoWebIDE) project.
 - [X] Improve assertions on packet content.
 - [ ] **Code coverage > 80%.**
@@ -22,19 +22,19 @@ An MQTT client for [Espruino](http://www.espruino.com/).
 
 ## Technial notes
 - About code coverage
-    - Currently using [Coverall](https://coveralls.io/github/rovale/micro-mqtt) with [Istanbul](https://github.com/gotwarlost/istanbul)
+    - Currently using [Istanbul](https://github.com/gotwarlost/istanbul) reports remapped with [remap-istanbul](https://github.com/SitePen/remap-istanbul) to the TypeScript sources. The [Travis CI](https://travis-ci.org/rovale/micro-mqtt) build sends this report to [Coverall](https://coveralls.io/github/rovale/micro-mqtt).
     - TODO
         - [x] Figure out how to get reports of the actual TypeScript sources.
         - [ ] Figure out how to see the same detailed level of coverage shown by the original Istanbul coverage reports. 
         
-- About [tslint](https://www.npmjs.com/package/tslint)
+- About [TSLint](https://www.npmjs.com/package/tslint)
     - It works perfectly fine in VSCode when the [extension](https://marketplace.visualstudio.com/items?itemName=eg2.tslint) is installed.
     - Atom works by default.
     - tslint.json initially taken from https://github.com/Microsoft/tslint-microsoft-contrib/blob/2.0.2/tslint.json
     - TODO
         - [x] File an [issue](https://github.com/Microsoft/tslint-microsoft-contrib/issues/109) for no-document-write, it fails when enabled.
         - [x] Figure out cause of misplaced 'else' warning. (Got it, my C# background bit me :-)
-            - [x] Add tslint to test if this is resolved.
+            - [x] Add TSLint to test if this is resolved.
 
 Based on the [Espruino MQTT.js module](https://github.com/espruino/EspruinoDocs/blob/master/modules/MQTT.md) by Lars Toft Jacobsen (boxed.dk), Gordon Williams. License: MIT.
 
