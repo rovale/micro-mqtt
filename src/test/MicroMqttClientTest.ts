@@ -301,13 +301,7 @@ describe('MicroMqttClient', () => {
             const events = subject.emittedPublish();
             events.should.have.lengthOf(1);
             events[0].args.should.have.lengthOf(1);
-            events[0].args[0].should.deep.equal({
-                'topic': 'some/topic',
-                'message': 'some-message',
-                'qos': 0,
-                'dup': 0,
-                'retain': 0
-            });
+            <MqttProtocol.PublishPacket>(events[0].args[0]).topic.should.equal('some/topic');
         });
     });
 });

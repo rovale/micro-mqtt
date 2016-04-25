@@ -97,4 +97,42 @@ describe('MqttProtocol', () => {
             });
         });
     });
+
+    describe('When parsing a Publish packet', () => {
+        let parsedPacket: MqttProtocol.PublishPacket;
+
+        describe('with a topic, a message, and a QoS of 0', () => {
+            beforeEach(() => {
+                const packet = MqttProtocol.createPublishPacket('some/topic', 'some-message', 0);
+                parsedPacket = MqttProtocol.parsePublishPacket(packet);
+            });
+
+            it('it should return the expected data.', () => {
+                parsedPacket.should.deep.equal({
+                    'topic': 'some/topic',
+                    'message': 'some-message',
+                    'qos': 0,
+                    'dup': 0,
+                    'retain': 0
+                });
+            });
+        });
+
+        describe('with a topic, a message, and a QoS of 1', () => {
+            beforeEach(() => {
+                const packet = MqttProtocol.createPublishPacket('some/topic', 'some-message', 1);
+                parsedPacket = MqttProtocol.parsePublishPacket(packet);
+            });
+
+            it('it should return the expected data.', () => {
+                parsedPacket.should.deep.equal({
+                    'topic': 'some/topic',
+                    'message': 'some-message',
+                    'qos': 1,
+                    'dup': 0,
+                    'retain': 0
+                });
+            });
+        });
+    });
 });

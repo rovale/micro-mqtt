@@ -328,16 +328,22 @@ export module MqttProtocol {
         retain: number;
     }
 
-    export function parsePublishPacket(data: string) : PublishPacket {
+    export function parsePublishPacket(data: string): PublishPacket {
         if (data.length > 5 && typeof data !== undefined) {
             const cmd = data.charCodeAt(0);
+            const qos = (cmd & 0b00000110) >> 1;
             const remainingLength = data.charCodeAt(1);
-            const variableLength = data.charCodeAt(2) << 8 | data.charCodeAt(3);
+            const topicLength = data.charCodeAt(2) << 8 | data.charCodeAt(3);
+            let variableLength = topicLength;
+            if (qos > 0) {
+                variableLength += 2;
+            }
+
             return {
-                topic: data.substr(4, variableLength),
+                topic: data.substr(4, topicLength),
                 message: data.substr(4 + variableLength, remainingLength - variableLength),
                 dup: (cmd & 0b00001000) >> 3,
-                qos: (cmd & 0b00000110) >> 1,
+                qos: qos,
                 retain: cmd & 0b00000001
             };
         }
