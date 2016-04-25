@@ -112,7 +112,6 @@ describe('MqttProtocol', () => {
                     'topic': 'some/topic',
                     'message': 'some-message',
                     'qos': 0,
-                    'dup': 0,
                     'retain': 0
                 });
             });
@@ -129,7 +128,6 @@ describe('MqttProtocol', () => {
                     'topic': 'some/topic',
                     'message': 'some-message',
                     'qos': 1,
-                    'dup': 0,
                     'retain': 0
                 });
             });

@@ -323,7 +323,6 @@ export module MqttProtocol {
     export interface PublishPacket {
         topic: string;
         message: string;
-        dup: number;
         qos: number;
         retain: number;
     }
@@ -342,7 +341,6 @@ export module MqttProtocol {
             return {
                 topic: data.substr(4, topicLength),
                 message: data.substr(4 + variableLength, remainingLength - variableLength),
-                dup: (cmd & 0b00001000) >> 3,
                 qos: qos,
                 retain: cmd & 0b00000001
             };

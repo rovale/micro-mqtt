@@ -12,8 +12,8 @@ An MQTT client for [Espruino](http://www.espruino.com/).
 - [x] Create an [Espruino Web IDE](https://github.com/espruino/EspruinoWebIDE) project.
 - [x] Improve assertions on packet content.
 - [x] Add assertions on packet content of Publish packet.
+- [x] Remove parsing the DUP flag.
 - [ ] **Code coverage > 95%.**
-- [ ] **Remove code about the DUP flag.**
 - [ ] Handle receiving multiple control packets at once.
 - [ ] Handle not being able to establish connection to host.
 - [ ] Implement Last Will and Testament.
