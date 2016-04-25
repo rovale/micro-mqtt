@@ -25,11 +25,11 @@ describe('MicroMqttClient', () => {
                 subject.connect();
             });
 
-            it('it should emit information about this action', () => {
+            it('it should emit information about this action.', () => {
                 subject.shouldHaveEmittedInfo(`Connecting MicroMqttClient ${subject.version} to some-host:1234`);
             });
 
-            it('it should try to establish a connection to the expected host and port', () => {
+            it('it should try to establish a connection to the expected host and port.', () => {
                 network.connectIsCalled.should.be.equal(true, 'expected the client to connect to the network');
                 network.options.host.should.equal('some-host');
                 network.options.port.should.equal(1234);
@@ -43,7 +43,7 @@ describe('MicroMqttClient', () => {
                 subject.connect();
             });
 
-            it('it should default to port 1883', () => {
+            it('it should default to port 1883.', () => {
                 network.options.port.should.equal(1883);
             });
         });
@@ -52,63 +52,25 @@ describe('MicroMqttClient', () => {
     describe('When the network connection is established', () => {
         let network: TestNetwork;
 
-        describe('and no username and password are specified', () => {
-            beforeEach(() => {
-                network = new TestNetwork();
-                subject = new MicroMqttClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, network);
-                networkSocket = new TestNetworkSocket();
-                subject.connect();
-                network.callback(networkSocket);
-            });
+        beforeEach(() => {
+            network = new TestNetwork();
+            subject = new MicroMqttClientTestSubclass({
+                host: 'host',
+                clientId: 'some-client',
+                username: 'some-username',
+                password: 'some-password'
+            }, network);
 
-            it('it should send a Connect packet without username and password', () => {
-                networkSocket.sentPackages.should.have.lengthOf(1);
-                const packet = new ControlPacketVerifier(networkSocket.sentPackages[0]);
-
-                packet.shouldBeOfType(ControlPacketType.Connect);
-                packet.shouldHaveValidRemainingLength();
-                packet.shouldHaveMqttProtocol();
-                packet.shouldHaveProtocolLevel4();
-                packet.shouldHaveConnectFlags(ConnectFlags.CleanSession);
-                packet.shouldHaveKeepAliveOf60Seconds();
-                packet.shouldHavePayload('some-client');
-            });
+            networkSocket = new TestNetworkSocket();
+            subject.connect();
+            network.callback(networkSocket);
         });
 
-        describe('and only a username is specified', () => {
-            beforeEach(() => {
-                network = new TestNetwork();
-                subject = new MicroMqttClientTestSubclass(
-                    { host: 'host', clientId: 'some-client', username: 'some-username' }, network);
-                networkSocket = new TestNetworkSocket();
-                subject.connect();
-                network.callback(networkSocket);
-            });
-
-            it('it should send a Connect packet with username and without password', () => {
-                networkSocket.sentPackages.should.have.lengthOf(1);
-                const packet = new ControlPacketVerifier(networkSocket.sentPackages[0]);
-                packet.shouldHaveConnectFlags(ConnectFlags.UserName | ConnectFlags.CleanSession);
-                packet.shouldHavePayload('some-client', 'some-username');
-            });
-        });
-
-        describe('and the username and password are specified', () => {
-            beforeEach(() => {
-                network = new TestNetwork();
-                subject = new MicroMqttClientTestSubclass(
-                    { host: 'host', clientId: 'some-client', username: 'some-username', password: 'some-password' }, network);
-                networkSocket = new TestNetworkSocket();
-                subject.connect();
-                network.callback(networkSocket);
-            });
-
-            it('it should send a Connect packet with username and password', () => {
-                networkSocket.sentPackages.should.have.lengthOf(1);
-                const packet = new ControlPacketVerifier(networkSocket.sentPackages[0]);
-                packet.shouldHaveConnectFlags(ConnectFlags.UserName | ConnectFlags.Password | ConnectFlags.CleanSession);
-                packet.shouldHavePayload('some-client', 'some-username', 'some-password');
-            });
+        it('it should send a Connect packet.', () => {
+            networkSocket.sentPackages.should.have.lengthOf(1);
+            const packet = new ControlPacketVerifier(networkSocket.sentPackages[0]);
+            packet.shouldHaveConnectFlags(ConnectFlags.UserName | ConnectFlags.Password | ConnectFlags.CleanSession);
+            packet.shouldHavePayload('some-client', 'some-username', 'some-password');
         });
     });
 
@@ -123,12 +85,12 @@ describe('MicroMqttClient', () => {
             networkSocket.receivePackage('Some unexpected packet');
         });
 
-        it('it should emit some debug information', () => {
+        it('it should emit some debug information.', () => {
             subject.shouldHaveEmittedEvent(subject.emittedDebugInfo(),
                 i => { return i.should.contain('Rcvd:').and.contain('\'Some unexpected packet\''); });
         });
 
-        it('it should emit an error', () => {
+        it('it should emit an error.', () => {
             subject.shouldHaveEmittedEvent(subject.emittedError(),
                 e => { return e.should.contain('MQTT unsupported packet type:'); });
         });
@@ -152,7 +114,7 @@ describe('MicroMqttClient', () => {
                 networkSocket.receivePackage(connAckPacket);
             });
 
-            it('it should emit an error', () => {
+            it('it should emit an error.', () => {
                 subject.shouldHaveEmittedError('Connection refused, unacceptable protocol version.');
             });
         });
@@ -166,7 +128,7 @@ describe('MicroMqttClient', () => {
                 networkSocket.receivePackage(connAckPacket);
             });
 
-            it('it should emit an error', () => {
+            it('it should emit an error.', () => {
                 subject.shouldHaveEmittedError('Connection refused, identifier rejected.');
             });
         });
@@ -181,7 +143,7 @@ describe('MicroMqttClient', () => {
                 networkSocket.receivePackage(connAckPacket);
             });
 
-            it('it should emit an error', () => {
+            it('it should emit an error.', () => {
                 subject.shouldHaveEmittedError('Connection refused, server unavailable.');
             });
         });
@@ -195,7 +157,7 @@ describe('MicroMqttClient', () => {
                 networkSocket.receivePackage(connAckPacket);
             });
 
-            it('it should emit an error', () => {
+            it('it should emit an error.', () => {
                 subject.shouldHaveEmittedError('Connection refused, bad user name or password.');
             });
         });
@@ -209,7 +171,7 @@ describe('MicroMqttClient', () => {
                 networkSocket.receivePackage(connAckPacket);
             });
 
-            it('it should emit an error', () => {
+            it('it should emit an error.', () => {
                 subject.shouldHaveEmittedError('Connection refused, not authorized.');
             });
         });
@@ -223,7 +185,7 @@ describe('MicroMqttClient', () => {
                 networkSocket.receivePackage(connAckPacket);
             });
 
-            it('it should emit an error', () => {
+            it('it should emit an error.', () => {
                 subject.shouldHaveEmittedError('Connection refused, unknown return code: 111.');
             });
         });
@@ -245,20 +207,20 @@ describe('MicroMqttClient', () => {
                 clock.restore();
             });
 
-            it('it should not emit errors', () => {
+            it('it should not emit errors.', () => {
                 subject.shouldNotEmitErrors();
             });
 
-            it('it should emit information about this succes', () => {
+            it('it should emit information about this succes.', () => {
                 subject.shouldHaveEmittedInfo('MQTT connection accepted');
             });
 
-            it('it should emit the \'connected\' event', () => {
+            it('it should emit the \'connected\' event.', () => {
                 const emittedConnect = subject.emittedConnected();
                 emittedConnect.should.have.lengthOf(1);
             });
 
-            it('it should send the first PingReq packet after 40 seconds', () => {
+            it('it should send the first PingReq packet after 40 seconds.', () => {
                 subject.clearEmittedEvents();
                 networkSocket.clear();
 
@@ -272,7 +234,7 @@ describe('MicroMqttClient', () => {
                 packet.shouldHaveValidRemainingLength();
             });
 
-            it('it should send PingReq packets every 40 seconds', () => {
+            it('it should send PingReq packets every 40 seconds.', () => {
                 subject.clearEmittedEvents();
                 networkSocket.clear();
 
@@ -297,7 +259,7 @@ describe('MicroMqttClient', () => {
             networkSocket.receivePackage(publishPacket);
         });
 
-        it('it should emit a \'publish\' event', () => {
+        it('it should emit a \'publish\' event.', () => {
             const events = subject.emittedPublish();
             events.should.have.lengthOf(1);
             events[0].args.should.have.lengthOf(1);

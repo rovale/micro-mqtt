@@ -37,7 +37,7 @@ An MQTT client for [Espruino](http://www.espruino.com/).
         - [ ] Figure out how to see the same detailed level of coverage shown by the original Istanbul coverage reports. 
         
 - About [TSLint](https://www.npmjs.com/package/tslint)
-    - It works perfectly fine in VSCode when the [extension](https://marketplace.visualstudio.com/items?itemName=eg2.tslint) is installed.
+    - It works perfectly fine in [Visual Studio Code](https://code.visualstudio.com/) when the [extension](https://marketplace.visualstudio.com/items?itemName=eg2.tslint) is installed.
     - tslint.json initially taken from https://github.com/Microsoft/tslint-microsoft-contrib/blob/2.0.2/tslint.json
     - TODO
         - [x] File an [issue](https://github.com/Microsoft/tslint-microsoft-contrib/issues/109) for no-document-write, it fails when enabled.
