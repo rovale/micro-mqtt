@@ -53,7 +53,7 @@ export interface Network {
  * The MQTT client.
  */
 export class MicroMqttClient {
-    public version = '0.0.9';
+    public version = '0.0.11';
 
     private options: ConnectionOptions;
     private network: Network;
@@ -68,21 +68,11 @@ export class MicroMqttClient {
 
     constructor(options: ConnectionOptions, network: Network = require('net')) {
         options.port = options.port || defaultPort;
-        options.clientId = options.clientId || MicroMqttClient.generateClientId();
-        options.cleanSession = options.cleanSession || true;
+        options.clientId = options.clientId || '';
 
         this.options = options;
         this.network = network;
     }
-
-    private static generateClientId = () => {
-        function s4() {
-            return Math.floor((1 + Math.random()) * 0x10000)
-                .toString(16)
-                .substring(1);
-        }
-        return s4() + s4() + s4();
-    };
 
     private static getConnectionError(returnCode: number) {
         let error = 'Connection refused, ';
@@ -119,9 +109,8 @@ export class MicroMqttClient {
         this.networkSocket = socket;
 
         this.networkSocket.write(MqttProtocol.createConnectPacket(this.options));
-        // Disconnect if no CONNACK is received
         this.connectionTimeOutId = setTimeout(() => {
-            this.disconnect();
+            // TODO: Add a retry mechanism
         }, connectionTimeout * 1000);
 
         this.networkSocket.on('data', (data: string) => this.onNetworkData(data));
@@ -172,13 +161,6 @@ export class MicroMqttClient {
         this.emit('close');
     };
 
-    /** Disconnect from server */
-    public disconnect = () => {
-        this.networkSocket.write(String.fromCharCode(ControlPacketType.Disconnect << 4) + '\x00');
-        this.networkSocket.end();
-        this.connected = false;
-    };
-
     /** Publish message using specified topic */
     public publish = (topic: string, message: string, qos = defaultQosLevel) => {
         this.networkSocket.write(MqttProtocol.createPublishPacket(topic, message, qos));
@@ -187,11 +169,6 @@ export class MicroMqttClient {
     /** Subscribe to topic (filter) */
     public subscribe = (topic: string, qos = defaultQosLevel) => {
         this.networkSocket.write(MqttProtocol.createSubscribePacket(topic, qos));
-    };
-
-    /** Unsubscribe to topic (filter) */
-    public unsubscribe = (topic: string) => {
-        this.networkSocket.write(MqttProtocol.createUnsubscribePacket(topic));
     };
 
     /** Send ping request to server */
@@ -236,7 +213,7 @@ export module MqttProtocol {
         let flags = 0;
         flags |= (options.username) ? ConnectFlags.UserName : 0;
         flags |= (options.username && options.password) ? ConnectFlags.Password : 0;
-        flags |= (options.cleanSession) ? ConnectFlags.CleanSession : 0;
+        flags |= ConnectFlags.CleanSession;
         return flags;
     }
 
@@ -328,24 +305,21 @@ export module MqttProtocol {
     }
 
     export function parsePublishPacket(data: string): PublishPacket {
-        if (data.length > 5 && typeof data !== undefined) {
-            const cmd = data.charCodeAt(0);
-            const qos = (cmd & 0b00000110) >> 1;
-            const remainingLength = data.charCodeAt(1);
-            const topicLength = data.charCodeAt(2) << 8 | data.charCodeAt(3);
-            let variableLength = topicLength;
-            if (qos > 0) {
-                variableLength += 2;
-            }
-
-            return {
-                topic: data.substr(4, topicLength),
-                message: data.substr(4 + variableLength, remainingLength - variableLength),
-                qos: qos,
-                retain: cmd & 0b00000001
-            };
+        const cmd = data.charCodeAt(0);
+        const qos = (cmd & 0b00000110) >> 1;
+        const remainingLength = data.charCodeAt(1);
+        const topicLength = data.charCodeAt(2) << 8 | data.charCodeAt(3);
+        let variableLength = topicLength;
+        if (qos > 0) {
+            variableLength += 2;
         }
-        return undefined;
+
+        return {
+            topic: data.substr(4, topicLength),
+            message: data.substr(4 + variableLength, remainingLength - variableLength),
+            qos: qos,
+            retain: cmd & 0b00000001
+        };
     }
 
     export function createSubscribePacket(topic: string, qos: number) {
@@ -355,13 +329,5 @@ export module MqttProtocol {
             pid,
             createString(topic) +
             String.fromCharCode(qos));
-    }
-
-    export function createUnsubscribePacket(topic: string) {
-        const cmd = ControlPacketType.Unsubscribe << 4 | 2;
-        const pid = String.fromCharCode(fixedPackedId >> 8, fixedPackedId & 255);
-        return createPacket(cmd,
-            pid,
-            createString(topic));
     }
 }

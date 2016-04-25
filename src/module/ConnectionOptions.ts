@@ -7,8 +7,6 @@ interface ConnectionOptions {
     username?: string;
     password?: string;
     clientId?: string;
-    cleanSession?: boolean;
 }
-
 
 export default ConnectionOptions;
