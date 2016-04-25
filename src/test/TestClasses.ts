@@ -66,6 +66,10 @@ export class MicroMqttClientTestSubclass extends MicroMqttClient {
         return this.emittedEvents.filter(e => e.event === 'connected');
     }
 
+    public emittedDisconnected() {
+        return this.emittedEvents.filter(e => e.event === 'disconnected');
+    }
+
     public emittedPublish() {
         return this.emittedEvents.filter(e => e.event === 'publish');
     }
@@ -106,6 +110,12 @@ export class TestNetworkSocket implements NetworkSocket {
         listeners.forEach(s => s.listener(data));
     };
 
+    public end() {
+        const listeners = this.eventSubscriptions.filter(s => s.event === 'end');
+        listeners.should.have.length.greaterThan(0);
+        listeners.forEach(s => s.listener());
+    };
+
     public on(event: string, listener: Function) {
         this.eventSubscriptions.push({ event: event, listener: listener });
     };
@@ -113,8 +123,4 @@ export class TestNetworkSocket implements NetworkSocket {
     public clear() {
         this.sentPackages = [];
     }
-
-    public end() {
-        this.clear();
-    };
 }

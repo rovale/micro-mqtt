@@ -83,17 +83,16 @@ describe('MicroMqttClient', () => {
                 .whichJustSentAConnectPacketOn(networkSocket)
                 .build();
 
-            networkSocket.receivePackage('Some unexpected packet');
+            networkSocket.receivePackage(MqttProtocol.createSubscribePacket('Some unexpected packet', 0));
         });
 
         it('it should emit some debug information.', () => {
             subject.shouldHaveEmittedEvent(subject.emittedDebugInfo(),
-                i => { return i.should.contain('Rcvd:').and.contain('\'Some unexpected packet\''); });
+                i => { return i.should.contain('Rcvd:').and.contain('Some unexpected packet'); });
         });
 
         it('it should emit an error.', () => {
-            subject.shouldHaveEmittedEvent(subject.emittedError(),
-                e => { return e.should.contain('MQTT unsupported packet type:'); });
+            subject.shouldHaveEmittedError('MQTT unexpected packet type: 8');
         });
     });
 
@@ -268,6 +267,54 @@ describe('MicroMqttClient', () => {
         });
     });
 
+    describe('When receiving a PingResp packet', () => {
+        beforeEach(() => {
+            networkSocket = new TestNetworkSocket();
+
+            subject = new MicroMqttClientTestSubclassBuilder()
+                .whichJustSentAConnectPacketOn(networkSocket)
+                .build();
+
+            networkSocket.receivePackage(new ControlPacketBuilder(ControlPacketType.PingResp).build());
+        });
+
+        it('it should not emit errors.', () => {
+            subject.shouldNotEmitErrors();
+        });
+    });
+
+    describe('When receiving a PubAck packet', () => {
+        beforeEach(() => {
+            networkSocket = new TestNetworkSocket();
+
+            subject = new MicroMqttClientTestSubclassBuilder()
+                .whichJustSentAConnectPacketOn(networkSocket)
+                .build();
+
+            networkSocket.receivePackage(new ControlPacketBuilder(ControlPacketType.PubAck).build());
+        });
+
+        it('it should not emit errors.', () => {
+            subject.shouldNotEmitErrors();
+        });
+    });
+
+    describe('When receiving a SubAck packet', () => {
+        beforeEach(() => {
+            networkSocket = new TestNetworkSocket();
+
+            subject = new MicroMqttClientTestSubclassBuilder()
+                .whichJustSentAConnectPacketOn(networkSocket)
+                .build();
+
+            networkSocket.receivePackage(new ControlPacketBuilder(ControlPacketType.SubAck).build());
+        });
+
+        it('it should not emit errors.', () => {
+            subject.shouldNotEmitErrors();
+        });
+    });
+
     describe('When subscribing to a topic', () => {
         beforeEach(() => {
             networkSocket = new TestNetworkSocket();
@@ -351,6 +398,39 @@ describe('MicroMqttClient', () => {
                 packet.shouldBeOfType(ControlPacketType.Publish);
                 packet.shouldHaveQoS1();
             });
+        });
+    });
+
+    describe('When the network connection is lost', () => {
+        let clock: Sinon.SinonFakeTimers;
+
+        beforeEach(() => {
+            clock = sinon.useFakeTimers();
+            networkSocket = new TestNetworkSocket();
+
+            subject = new MicroMqttClientTestSubclassBuilder()
+                .whichIsConnectedOn(networkSocket)
+                .build();
+
+            networkSocket.end();
+        });
+
+        afterEach(() => {
+            clock.restore();
+        });
+
+        it('it should emit information about this event.', () => {
+            subject.shouldHaveEmittedInfo('MQTT client disconnected');
+        });
+
+        it('it should emit the \'disconnected\' event.', () => {
+            const emittedDisconnect = subject.emittedDisconnected();
+            emittedDisconnect.should.have.lengthOf(1);
+        });
+
+        it('it should not send PingReq packets anymore.', () => {
+            clock.tick(40 * 1000 * 10);
+            networkSocket.sentPackages.should.have.lengthOf(0);
         });
     });
 });

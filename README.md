@@ -23,6 +23,7 @@ An MQTT client for [Espruino](http://www.espruino.com/).
 - [ ] Implement Last Will and Testament.
 - [ ] Support sending retained Publish packets.
 - [ ] Reconnect on lost connection.
+- [ ] Handle not receiving PingResp packets.
 - [ ] Optimize memory usage and size.
 
 ## Technial notes

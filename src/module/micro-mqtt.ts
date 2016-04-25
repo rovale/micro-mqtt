@@ -53,7 +53,7 @@ export interface Network {
  * The MQTT client.
  */
 export class MicroMqttClient {
-    public version = '0.0.11';
+    public version = '0.0.12';
 
     private options: ConnectionOptions;
     private network: Network;
@@ -141,14 +141,12 @@ export class MicroMqttClient {
                 const parsedData = MqttProtocol.parsePublishPacket(data);
                 this.emit('publish', parsedData);
                 break;
+            case ControlPacketType.PingResp:
             case ControlPacketType.PubAck:
             case ControlPacketType.SubAck:
-            case ControlPacketType.UnsubAck:
-            case ControlPacketType.PingResp:
-            case ControlPacketType.PingReq:
                 break;
             default:
-                this.emit('error', 'MQTT unsupported packet type: ' + controlPacketType);
+                this.emit('error', 'MQTT unexpected packet type: ' + controlPacketType);
                 break;
         }
     };
@@ -158,7 +156,6 @@ export class MicroMqttClient {
         clearInterval(this.pingIntervalId);
         this.networkSocket = undefined;
         this.emit('disconnected');
-        this.emit('close');
     };
 
     /** Publish message using specified topic */
