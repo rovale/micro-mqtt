@@ -42,6 +42,9 @@ describe('MqttProtocol', () => {
                 packet.shouldBeOfType(ControlPacketType.Publish);
                 packet.shouldHaveValidRemainingLength();
                 packet.shouldHaveQoS0();
+                packet.shouldNotBeRetained();
+                packet.shouldHaveTopic('some/topic');
+                packet.shouldHaveMessage('some-message');
             });
         });
     });
