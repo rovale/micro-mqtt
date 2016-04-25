@@ -70,8 +70,16 @@ export default class ControlPacketVerifier {
         return this.hasPayloadStartingAt(12, ...elements);
     }
 
+    private qoS() {
+        return (this.packet.charCodeAt(0) & 0b00000110) >> 1;
+    }
+
     public shouldHaveQoS0() {
-        return (this.packet.charCodeAt(0) & 0b00000110).should.equal(0);
+        return this.qoS().should.equal(0);
+    }
+
+    public shouldHaveQoS1() {
+        return this.qoS().should.equal(1);
     }
 
     public shouldNotBeRetained() {
@@ -82,8 +90,19 @@ export default class ControlPacketVerifier {
         return this.hasTextStartingAt(2, topic);
     }
 
+    public shouldHaveAPacketId() {
+        const topicLength = this.packet.charCodeAt(2) << 8 | this.packet.charCodeAt(3);
+        const packetIdPosition = 2 + 2 + topicLength;
+        const packetId = this.packet.charCodeAt(packetIdPosition) << 8 | this.packet.charCodeAt(packetIdPosition + 1);
+
+        return packetId.should.equal(1, 'since it is currently hard coded.');
+    }
+
     public shouldHaveMessage(message: string) {
-        const variableLength = this.packet.charCodeAt(2) << 8 | this.packet.charCodeAt(3);
+        let variableLength = this.packet.charCodeAt(2) << 8 | this.packet.charCodeAt(3);
+        if (this.qoS() > 0) {
+            variableLength += 2;
+        }
         const messageLength = this.remainingLength() - variableLength;
         const actualMessage = this.packet.substr(2 + 2 + variableLength, messageLength);
         return actualMessage.should.equal(message);

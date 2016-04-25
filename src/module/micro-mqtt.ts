@@ -315,7 +315,7 @@ export module MqttProtocol {
      */
     export function createPublishPacket(topic: string, message: string, qos: number) {
         const cmd = ControlPacketType.Publish << 4 | (qos << 1);
-        const pid = String.fromCharCode(fixedPackedId << 8, fixedPackedId & 255);
+        const pid = String.fromCharCode(fixedPackedId >> 8, fixedPackedId & 255);
         const variable = (qos === 0) ? createString(topic) : createString(topic) + pid;
         return createPacket(cmd, variable, message);
     }
@@ -346,7 +346,7 @@ export module MqttProtocol {
 
     export function createSubscribePacket(topic: string, qos: number) {
         const cmd = ControlPacketType.Subscribe << 4 | 2;
-        const pid = String.fromCharCode(fixedPackedId << 8, fixedPackedId & 255);
+        const pid = String.fromCharCode(fixedPackedId >> 8, fixedPackedId & 255);
         return createPacket(cmd,
             pid,
             createString(topic) +
@@ -355,7 +355,7 @@ export module MqttProtocol {
 
     export function createUnsubscribePacket(topic: string) {
         const cmd = ControlPacketType.Unsubscribe << 4 | 2;
-        const pid = String.fromCharCode(fixedPackedId << 8, fixedPackedId & 255);
+        const pid = String.fromCharCode(fixedPackedId >> 8, fixedPackedId & 255);
         return createPacket(cmd,
             pid,
             createString(topic));

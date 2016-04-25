@@ -31,19 +31,68 @@ describe('MqttProtocol', () => {
     });
 
     describe('When creating a Publish packet', () => {
-        let packet : ControlPacketVerifier;
+        let packet: ControlPacketVerifier;
 
-        describe('with a topic a message and a QoS of 0', () => {
+        describe('with a topic, a message, and a QoS of 0', () => {
             beforeEach(() => {
                 packet = new ControlPacketVerifier(MqttProtocol.createPublishPacket('some/topic', 'some-message', 0));
             });
 
-            it('it should return the expected packet.', () => {
+            it('it should be a Publish packet type.', () => {
                 packet.shouldBeOfType(ControlPacketType.Publish);
-                packet.shouldHaveValidRemainingLength();
+            });
+
+            it('it should have a valid remaining length.', () => {
+                packet.shouldBeOfType(ControlPacketType.Publish);
+            });
+
+            it('it should have a QoS of 0.', () => {
                 packet.shouldHaveQoS0();
+            });
+
+            it('it should not be retained.', () => {
                 packet.shouldNotBeRetained();
+            });
+
+            it('it should contain the topic.', () => {
                 packet.shouldHaveTopic('some/topic');
+            });
+
+            it('it should contain the message.', () => {
+                packet.shouldHaveMessage('some-message');
+            });
+        });
+
+        describe('with a topic, a message, and a QoS of 1', () => {
+            beforeEach(() => {
+                packet = new ControlPacketVerifier(MqttProtocol.createPublishPacket('some/topic', 'some-message', 1));
+            });
+
+            it('it should be a Publish packet type.', () => {
+                packet.shouldBeOfType(ControlPacketType.Publish);
+            });
+
+            it('it should have a valid remaining length.', () => {
+                packet.shouldBeOfType(ControlPacketType.Publish);
+            });
+
+            it('it should have a QoS of 1.', () => {
+                packet.shouldHaveQoS1();
+            });
+
+            it('it should not be retained.', () => {
+                packet.shouldNotBeRetained();
+            });
+
+            it('it should contain the topic.', () => {
+                packet.shouldHaveTopic('some/topic');
+            });
+
+            it('it should have a fixed packet id.', () => {
+                packet.shouldHaveAPacketId();
+            });
+
+            it('it should contain the message.', () => {
                 packet.shouldHaveMessage('some-message');
             });
         });
