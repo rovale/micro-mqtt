@@ -16,7 +16,7 @@ An MQTT client for [Espruino](http://www.espruino.com/).
 - [x] Remove cleanSession from options &
 - [x] Remove generated client id.
 - [x] Remove unsubscribe & disconnect.
-- [ ] **Code coverage > 95%.**
+- [x] Code coverage > 95%.
 - [ ] Handle receiving multiple control packets at once.
 - [ ] Handle not being able to establish connection to host.
 - [ ] Respond with PubAck packet when receiving a QoS 1 Publish packet.

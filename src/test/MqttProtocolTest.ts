@@ -111,7 +111,7 @@ describe('MqttProtocol', () => {
     describe('When creating a Publish packet', () => {
         let packet: ControlPacketVerifier;
 
-        describe('with a topic, a message, and a QoS of 0', () => {
+        describe('with a QoS of 0', () => {
             beforeEach(() => {
                 packet = new ControlPacketVerifier(MqttProtocol.createPublishPacket('some/topic', 'some-message', 0));
             });
@@ -141,7 +141,7 @@ describe('MqttProtocol', () => {
             });
         });
 
-        describe('with a topic, a message, and a QoS of 1', () => {
+        describe('with a QoS of 1', () => {
             beforeEach(() => {
                 packet = new ControlPacketVerifier(MqttProtocol.createPublishPacket('some/topic', 'some-message', 1));
             });
@@ -208,6 +208,62 @@ describe('MqttProtocol', () => {
                     'qos': 1,
                     'retain': 0
                 });
+            });
+        });
+    });
+
+    describe('When creating a Subscribe packet', () => {
+        let packet: ControlPacketVerifier;
+
+        describe('with a QoS of 0', () => {
+            beforeEach(() => {
+                packet = new ControlPacketVerifier(MqttProtocol.createSubscribePacket('some/topic', 0));
+            });
+
+            it('it should be a Subscribe packet.', () => {
+                packet.shouldBeOfType(ControlPacketType.Subscribe);
+            });
+
+            it('it should set the reserved bits.', () => {
+                packet.shouldSetTheReservedBits();
+            });
+
+            it('it should have a fixed packet id.', () => {
+                packet.shouldHaveAPacketId();
+            });
+
+            it('it should contain the topic.', () => {
+                packet.shouldHaveTopic('some/topic');
+            });
+
+            it('it should have a QoS of 0.', () => {
+                packet.shouldHaveQoS0();
+            });
+        });
+
+        describe('with a QoS of 1', () => {
+            beforeEach(() => {
+                packet = new ControlPacketVerifier(MqttProtocol.createSubscribePacket('some/topic', 1));
+            });
+
+            it('it should be a Subscribe packet.', () => {
+                packet.shouldBeOfType(ControlPacketType.Subscribe);
+            });
+
+            it('it should set the reserved bits.', () => {
+                packet.shouldSetTheReservedBits();
+            });
+
+            it('it should have a fixed packet id.', () => {
+                packet.shouldHaveAPacketId();
+            });
+
+            it('it should contain the topic.', () => {
+                packet.shouldHaveTopic('some/topic');
+            });
+
+            it('it should have a QoS of 1.', () => {
+                packet.shouldHaveQoS1();
             });
         });
     });

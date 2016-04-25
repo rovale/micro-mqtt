@@ -69,6 +69,7 @@ describe('MicroMqttClient', () => {
         it('it should send a Connect packet.', () => {
             networkSocket.sentPackages.should.have.lengthOf(1);
             const packet = new ControlPacketVerifier(networkSocket.sentPackages[0]);
+            packet.shouldBeOfType(ControlPacketType.Connect);
             packet.shouldHaveConnectFlags(ConnectFlags.UserName | ConnectFlags.Password | ConnectFlags.CleanSession);
             packet.shouldHavePayload('some-client', 'some-username', 'some-password');
         });
@@ -251,7 +252,7 @@ describe('MicroMqttClient', () => {
             networkSocket = new TestNetworkSocket();
 
             subject = new MicroMqttClientTestSubclassBuilder()
-                .whichJustSentAConnectPacketOn(networkSocket)
+                .whichIsConnectedOn(networkSocket)
                 .build();
 
             const publishPacket = MqttProtocol.createPublishPacket('some/topic', 'some-message', 0);
@@ -264,6 +265,92 @@ describe('MicroMqttClient', () => {
             events.should.have.lengthOf(1);
             events[0].args.should.have.lengthOf(1);
             <MqttProtocol.PublishPacket>(events[0].args[0]).topic.should.equal('some/topic');
+        });
+    });
+
+    describe('When subscribing to a topic', () => {
+        beforeEach(() => {
+            networkSocket = new TestNetworkSocket();
+
+            subject = new MicroMqttClientTestSubclassBuilder()
+                .whichIsConnectedOn(networkSocket)
+                .build();
+        });
+
+        describe('without specifying the QoS level', () => {
+            beforeEach(() => {
+                subject.subscribe('some/topic');
+            });
+
+            it('it should send a Subscribe packet with QoS level 0.', () => {
+                networkSocket.sentPackages.should.have.lengthOf(1);
+                const packet = new ControlPacketVerifier(networkSocket.sentPackages[0]);
+                packet.shouldBeOfType(ControlPacketType.Subscribe);
+                packet.shouldHaveQoS0();
+            });
+        });
+
+        describe('specifying the QoS level 1', () => {
+            beforeEach(() => {
+                subject.subscribe('some/topic', 1);
+            });
+
+            it('it should send a Subscribe packet with QoS level 1.', () => {
+                networkSocket.sentPackages.should.have.lengthOf(1);
+                const packet = new ControlPacketVerifier(networkSocket.sentPackages[0]);
+                packet.shouldBeOfType(ControlPacketType.Subscribe);
+                packet.shouldHaveQoS1();
+            });
+        });
+    });
+
+    describe('When publishing a message', () => {
+        beforeEach(() => {
+            networkSocket = new TestNetworkSocket();
+
+            subject = new MicroMqttClientTestSubclassBuilder()
+                .whichIsConnectedOn(networkSocket)
+                .build();
+
+            subject.publish('some/topic', 'some-message');
+        });
+
+        describe('without specifying the QoS level', () => {
+            beforeEach(() => {
+                networkSocket = new TestNetworkSocket();
+
+                subject = new MicroMqttClientTestSubclassBuilder()
+                    .whichIsConnectedOn(networkSocket)
+                    .build();
+
+                subject.publish('some/topic', 'some-message');
+            });
+
+            it('it should send a Publish packet with QoS level 0.', () => {
+                networkSocket.sentPackages.should.have.lengthOf(1);
+                const packet = new ControlPacketVerifier(networkSocket.sentPackages[0]);
+                packet.shouldBeOfType(ControlPacketType.Publish);
+                packet.shouldHaveQoS0();
+            });
+        });
+
+        describe('with QoS level 1.', () => {
+            beforeEach(() => {
+                networkSocket = new TestNetworkSocket();
+
+                subject = new MicroMqttClientTestSubclassBuilder()
+                    .whichIsConnectedOn(networkSocket)
+                    .build();
+
+                subject.publish('some/topic', 'some-message', 1);
+            });
+
+            it('it should send a Publish packet with QoS level 1.', () => {
+                networkSocket.sentPackages.should.have.lengthOf(1);
+                const packet = new ControlPacketVerifier(networkSocket.sentPackages[0]);
+                packet.shouldBeOfType(ControlPacketType.Publish);
+                packet.shouldHaveQoS1();
+            });
         });
     });
 });

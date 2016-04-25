@@ -322,6 +322,10 @@ export module MqttProtocol {
         };
     }
 
+    /** 
+     * SUBSCRIBE - Subscribe to topics
+     * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800436
+     */
     export function createSubscribePacket(topic: string, qos: number) {
         const cmd = ControlPacketType.Subscribe << 4 | 2;
         const pid = String.fromCharCode(fixedPackedId >> 8, fixedPackedId & 255);

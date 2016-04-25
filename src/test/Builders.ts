@@ -1,18 +1,31 @@
 /**
  * Builders.
  */
-import { ConnectReturnCode, NetworkSocket } from '../module/micro-mqtt';
+import { ConnectReturnCode  } from '../module/micro-mqtt';
 import ControlPacketType from '../module/ControlPacketType';
-import { MicroMqttClientTestSubclass, TestNetwork } from './TestClasses';
+import { MicroMqttClientTestSubclass, TestNetwork, TestNetworkSocket } from './TestClasses';
 
 export class MicroMqttClientTestSubclassBuilder {
     private client: MicroMqttClientTestSubclass;
 
-    public whichJustSentAConnectPacketOn(networkSocket: NetworkSocket) {
+    public whichJustSentAConnectPacketOn(networkSocket: TestNetworkSocket) {
         const network = new TestNetwork();
         this.client = new MicroMqttClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, network);
         this.client.connect();
         network.callback(networkSocket);
+        this.client.clearEmittedEvents();
+        return this;
+    }
+
+    public whichIsConnectedOn(networkSocket: TestNetworkSocket) {
+        this.whichJustSentAConnectPacketOn(networkSocket);
+
+        const connAckPacket = new ControlPacketBuilder(ControlPacketType.ConnAck)
+            .withConnectReturnCode(ConnectReturnCode.Accepted)
+            .build();
+
+        networkSocket.receivePackage(connAckPacket);
+        networkSocket.clear();
         this.client.clearEmittedEvents();
         return this;
     }

@@ -10,8 +10,12 @@ export default class ControlPacketVerifier {
         this.packet = packet;
     }
 
+    private controlPacketType(): ControlPacketType {
+        return (this.packet.charCodeAt(0) >> 4);
+    }
+
     public shouldBeOfType(packetType: ControlPacketType) {
-        return (this.packet.charCodeAt(0) >> 4).should.equal(packetType);
+        return this.controlPacketType().should.equal(packetType);
     }
 
     private remainingLength() {
@@ -71,7 +75,14 @@ export default class ControlPacketVerifier {
     }
 
     private qoS() {
-        return (this.packet.charCodeAt(0) & 0b00000110) >> 1;
+        switch (this.controlPacketType()) {
+            case ControlPacketType.Publish:
+                return (this.packet.charCodeAt(0) & 0b00000110) >> 1;
+            case ControlPacketType.Subscribe:
+                return (this.packet.charCodeAt(this.packet.length - 1));
+            default:
+                throw `packet type ${this.controlPacketType()} is not supported`;
+        }
     }
 
     public shouldHaveQoS0() {
@@ -87,14 +98,32 @@ export default class ControlPacketVerifier {
     }
 
     public shouldHaveTopic(topic: string) {
-        return this.hasTextStartingAt(2, topic);
+        switch (this.controlPacketType()) {
+            case ControlPacketType.Publish:
+                return this.hasTextStartingAt(2, topic);
+            case ControlPacketType.Subscribe:
+                return this.hasTextStartingAt(4, topic);
+            default:
+                throw `packet type ${this.controlPacketType()} is not supported`;
+        }
     }
 
     public shouldHaveAPacketId() {
-        const topicLength = this.packet.charCodeAt(2) << 8 | this.packet.charCodeAt(3);
-        const packetIdPosition = 2 + 2 + topicLength;
-        const packetId = this.packet.charCodeAt(packetIdPosition) << 8 | this.packet.charCodeAt(packetIdPosition + 1);
+        let packetIdPosition: number;
 
+        switch (this.controlPacketType()) {
+            case ControlPacketType.Publish:
+                let topicLength = this.packet.charCodeAt(2) << 8 | this.packet.charCodeAt(3);
+                packetIdPosition = 2 + 2 + topicLength;
+                break;
+            case ControlPacketType.Subscribe:
+                packetIdPosition = 2;
+                break;
+            default:
+                throw `packet type ${this.controlPacketType()} is not supported`;
+        }
+
+        const packetId = this.packet.charCodeAt(packetIdPosition) << 8 | this.packet.charCodeAt(packetIdPosition + 1);
         return packetId.should.equal(1, 'since it is currently hard coded.');
     }
 
@@ -106,5 +135,14 @@ export default class ControlPacketVerifier {
         const messageLength = this.remainingLength() - variableLength;
         const actualMessage = this.packet.substr(2 + 2 + variableLength, messageLength);
         return actualMessage.should.equal(message);
+    }
+
+    /**
+     * [MQTT-3.8.1-1] Bits 3,2,1 and 0 of the fixed header of the SUBSCRIBE Control Packet are reserved 
+     * and MUST be set to 0,0,1 and 0 respectively. The Server MUST treat any other value as malformed and
+     * close the Network Connection.
+     */
+    public shouldSetTheReservedBits() {
+        return (this.packet.charCodeAt(0) & 0b00001111).should.equal(0b00000010);
     }
 }
