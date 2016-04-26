@@ -53,7 +53,7 @@ export interface Network {
  * The MQTT client.
  */
 export class MicroMqttClient {
-    public version = '0.0.12';
+    public version = '0.0.13';
 
     private options: ConnectionOptions;
     private network: Network;
@@ -119,9 +119,12 @@ export class MicroMqttClient {
 
     private onNetworkData = (data: string) => {
         const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
-
         this.emit('debug', `Rcvd: ${controlPacketType}: '${data}'`);
+        this.handleData(data);
+    };
 
+    private handleData = (data: string) => {
+        const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
         switch (controlPacketType) {
             case ControlPacketType.ConnAck:
                 clearTimeout(this.connectionTimeOutId);
@@ -140,6 +143,10 @@ export class MicroMqttClient {
             case ControlPacketType.Publish:
                 const parsedData = MqttProtocol.parsePublishPacket(data);
                 this.emit('publish', parsedData);
+                if (parsedData.next) {
+                    this.handleData(data.substr(parsedData.next));
+                }
+
                 break;
             case ControlPacketType.PingResp:
             case ControlPacketType.PubAck:
@@ -299,6 +306,7 @@ export module MqttProtocol {
         message: string;
         qos: number;
         retain: number;
+        next?: number;
     }
 
     export function parsePublishPacket(data: string): PublishPacket {
@@ -311,12 +319,20 @@ export module MqttProtocol {
             variableLength += 2;
         }
 
-        return {
+        const messageLength = (remainingLength - variableLength) - 2;
+
+        let packet: PublishPacket = {
             topic: data.substr(4, topicLength),
-            message: data.substr(4 + variableLength, remainingLength - variableLength),
+            message: data.substr(4 + variableLength, messageLength),
             qos: qos,
             retain: cmd & 0b00000001
         };
+
+        if (data.charCodeAt(remainingLength + 2) > 0) {
+            packet.next = remainingLength + 2;
+        }
+
+        return packet;
     }
 
     /** 

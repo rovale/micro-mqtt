@@ -17,7 +17,7 @@ An MQTT client for [Espruino](http://www.espruino.com/).
 - [x] Remove generated client id.
 - [x] Remove unsubscribe & disconnect.
 - [x] Code coverage > 95%.
-- [ ] Handle receiving multiple control packets at once.
+- [x] Handle receiving multiple Publish packets at once.
 - [ ] Handle not being able to establish connection to host.
 - [ ] Respond with PubAck packet when receiving a QoS 1 Publish packet.
 - [ ] Implement Last Will and Testament.
@@ -25,6 +25,7 @@ An MQTT client for [Espruino](http://www.espruino.com/).
 - [ ] Reconnect on lost connection.
 - [ ] Handle not receiving PingResp packets.
 - [ ] Optimize memory usage and size.
+- [ ] Handle receiving long Publish packets.
 
 ## Technial notes
 - About the [npm-scripts](https://docs.npmjs.com/misc/scripts)

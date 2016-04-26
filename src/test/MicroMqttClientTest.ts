@@ -433,4 +433,23 @@ describe('MicroMqttClient', () => {
             networkSocket.sentPackages.should.have.lengthOf(0);
         });
     });
+
+    describe('When receiving two Publish packets at once', () => {
+        beforeEach(() => {
+            networkSocket = new TestNetworkSocket();
+
+            subject = new MicroMqttClientTestSubclassBuilder()
+                .whichIsConnectedOn(networkSocket)
+                .build();
+
+            const publishPacket = MqttProtocol.createPublishPacket('some/topic', 'some-message', 0);
+
+            networkSocket.receivePackage(publishPacket + publishPacket);
+        });
+
+        it('it should emit two \'publish\' events.', () => {
+            const events = subject.emittedPublish();
+            events.should.have.lengthOf(2);
+        });
+    });
 });
