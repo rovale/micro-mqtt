@@ -6,7 +6,8 @@ import { ConnectFlags, ConnectReturnCode } from '../module/micro-mqtt';
 import { MqttProtocol }  from '../module/micro-mqtt';
 import ControlPacketType from '../module/ControlPacketType';
 import { MicroMqttClientTestSubclass, TestNetwork, TestNetworkSocket} from './TestClasses';
-import ControlPacketVerifier from './ControlPacketVerifier';
+import { ConnectPacketVerifier, SubscribePacketVerifier, PublishPacketVerifier,
+    GenericControlPacketVerifier } from './ControlPacketVerifier';
 import { ControlPacketBuilder, MicroMqttClientTestSubclassBuilder } from './Builders';
 import * as sinon from 'sinon';
 
@@ -68,8 +69,7 @@ describe('MicroMqttClient', () => {
 
         it('it should send a Connect packet.', () => {
             networkSocket.sentPackages.should.have.lengthOf(1);
-            const packet = new ControlPacketVerifier(networkSocket.sentPackages[0]);
-            packet.shouldBeOfType(ControlPacketType.Connect);
+            const packet = new ConnectPacketVerifier(networkSocket.sentPackages[0]);
             packet.shouldHaveConnectFlags(ConnectFlags.UserName | ConnectFlags.Password | ConnectFlags.CleanSession);
             packet.shouldHavePayload('some-client', 'some-username', 'some-password');
         });
@@ -229,9 +229,8 @@ describe('MicroMqttClient', () => {
                 subject.shouldHaveEmittedDebugInfo('Sent: Ping request');
 
                 networkSocket.sentPackages.should.have.lengthOf(1);
-                const packet = new ControlPacketVerifier(networkSocket.sentPackages[0]);
-                packet.shouldBeOfType(ControlPacketType.PingReq);
-                packet.shouldHaveValidRemainingLength();
+                new GenericControlPacketVerifier(networkSocket.sentPackages[0], ControlPacketType.PingReq)
+                    .verify();
             });
 
             it('it should send PingReq packets every 40 seconds.', () => {
@@ -331,8 +330,7 @@ describe('MicroMqttClient', () => {
 
             it('it should send a Subscribe packet with QoS level 0.', () => {
                 networkSocket.sentPackages.should.have.lengthOf(1);
-                const packet = new ControlPacketVerifier(networkSocket.sentPackages[0]);
-                packet.shouldBeOfType(ControlPacketType.Subscribe);
+                const packet = new SubscribePacketVerifier(networkSocket.sentPackages[0]);
                 packet.shouldHaveQoS0();
             });
         });
@@ -344,8 +342,7 @@ describe('MicroMqttClient', () => {
 
             it('it should send a Subscribe packet with QoS level 1.', () => {
                 networkSocket.sentPackages.should.have.lengthOf(1);
-                const packet = new ControlPacketVerifier(networkSocket.sentPackages[0]);
-                packet.shouldBeOfType(ControlPacketType.Subscribe);
+                const packet = new SubscribePacketVerifier(networkSocket.sentPackages[0]);
                 packet.shouldHaveQoS1();
             });
         });
@@ -375,8 +372,7 @@ describe('MicroMqttClient', () => {
 
             it('it should send a Publish packet with QoS level 0.', () => {
                 networkSocket.sentPackages.should.have.lengthOf(1);
-                const packet = new ControlPacketVerifier(networkSocket.sentPackages[0]);
-                packet.shouldBeOfType(ControlPacketType.Publish);
+                const packet = new PublishPacketVerifier(networkSocket.sentPackages[0]);
                 packet.shouldHaveQoS0();
             });
         });
@@ -394,8 +390,7 @@ describe('MicroMqttClient', () => {
 
             it('it should send a Publish packet with QoS level 1.', () => {
                 networkSocket.sentPackages.should.have.lengthOf(1);
-                const packet = new ControlPacketVerifier(networkSocket.sentPackages[0]);
-                packet.shouldBeOfType(ControlPacketType.Publish);
+                const packet = new PublishPacketVerifier(networkSocket.sentPackages[0]);
                 packet.shouldHaveQoS1();
             });
         });

@@ -3,8 +3,7 @@
  */
 /// <reference path='_common.ts' />
 import { MqttProtocol, ConnectFlags } from '../module/micro-mqtt';
-import ControlPacketVerifier from './ControlPacketVerifier';
-import ControlPacketType from '../module/ControlPacketType';
+import { ConnectPacketVerifier, PublishPacketVerifier, SubscribePacketVerifier } from './ControlPacketVerifier';
 
 describe('MqttProtocol', () => {
     describe('When calculating the remaining length of a packet', () => {
@@ -30,20 +29,15 @@ describe('MqttProtocol', () => {
         });
     });
 
-
     describe('When creating a Connect packet', () => {
-        let packet: ControlPacketVerifier;
+        let packet: ConnectPacketVerifier;
 
         describe('without username and password', () => {
             beforeEach(() => {
-                packet = new ControlPacketVerifier(MqttProtocol.createConnectPacket({
+                packet = new ConnectPacketVerifier(MqttProtocol.createConnectPacket({
                     host: 'some-host',
                     clientId: 'some-client'
                 }));
-            });
-
-            it('it should be a Connect packet.', () => {
-                packet.shouldBeOfType(ControlPacketType.Connect);
             });
 
             it('it should have a valid remaining length.', () => {
@@ -73,7 +67,7 @@ describe('MqttProtocol', () => {
 
         describe('with only a username', () => {
             beforeEach(() => {
-                packet = new ControlPacketVerifier(MqttProtocol.createConnectPacket({
+                packet = new ConnectPacketVerifier(MqttProtocol.createConnectPacket({
                     host: 'host',
                     clientId: 'some-client',
                     username: 'some-username'
@@ -91,7 +85,7 @@ describe('MqttProtocol', () => {
 
         describe('with both username and password', () => {
             beforeEach(() => {
-                packet = new ControlPacketVerifier(MqttProtocol.createConnectPacket({
+                packet = new ConnectPacketVerifier(MqttProtocol.createConnectPacket({
                     host: 'host',
                     clientId: 'some-client', username: 'some-username',
                     password: 'some-password'
@@ -109,19 +103,15 @@ describe('MqttProtocol', () => {
     });
 
     describe('When creating a Publish packet', () => {
-        let packet: ControlPacketVerifier;
+        let packet: PublishPacketVerifier;
 
         describe('with a QoS of 0', () => {
             beforeEach(() => {
-                packet = new ControlPacketVerifier(MqttProtocol.createPublishPacket('some/topic', 'some-message', 0));
-            });
-
-            it('it should be a Publish packet.', () => {
-                packet.shouldBeOfType(ControlPacketType.Publish);
+                packet = new PublishPacketVerifier(MqttProtocol.createPublishPacket('some/topic', 'some-message', 0));
             });
 
             it('it should have a valid remaining length.', () => {
-                packet.shouldBeOfType(ControlPacketType.Publish);
+                packet.shouldHaveValidRemainingLength();
             });
 
             it('it should have a QoS of 0.', () => {
@@ -143,15 +133,11 @@ describe('MqttProtocol', () => {
 
         describe('with a QoS of 1', () => {
             beforeEach(() => {
-                packet = new ControlPacketVerifier(MqttProtocol.createPublishPacket('some/topic', 'some-message', 1));
-            });
-
-            it('it should be a Publish packet.', () => {
-                packet.shouldBeOfType(ControlPacketType.Publish);
+                packet = new PublishPacketVerifier(MqttProtocol.createPublishPacket('some/topic', 'some-message', 1));
             });
 
             it('it should have a valid remaining length.', () => {
-                packet.shouldBeOfType(ControlPacketType.Publish);
+                packet.shouldHaveValidRemainingLength();
             });
 
             it('it should have a QoS of 1.', () => {
@@ -213,15 +199,11 @@ describe('MqttProtocol', () => {
     });
 
     describe('When creating a Subscribe packet', () => {
-        let packet: ControlPacketVerifier;
+        let packet: SubscribePacketVerifier;
 
         describe('with a QoS of 0', () => {
             beforeEach(() => {
-                packet = new ControlPacketVerifier(MqttProtocol.createSubscribePacket('some/topic', 0));
-            });
-
-            it('it should be a Subscribe packet.', () => {
-                packet.shouldBeOfType(ControlPacketType.Subscribe);
+                packet = new SubscribePacketVerifier(MqttProtocol.createSubscribePacket('some/topic', 0));
             });
 
             it('it should set the reserved bits.', () => {
@@ -243,11 +225,7 @@ describe('MqttProtocol', () => {
 
         describe('with a QoS of 1', () => {
             beforeEach(() => {
-                packet = new ControlPacketVerifier(MqttProtocol.createSubscribePacket('some/topic', 1));
-            });
-
-            it('it should be a Subscribe packet.', () => {
-                packet.shouldBeOfType(ControlPacketType.Subscribe);
+                packet = new SubscribePacketVerifier(MqttProtocol.createSubscribePacket('some/topic', 1));
             });
 
             it('it should set the reserved bits.', () => {
