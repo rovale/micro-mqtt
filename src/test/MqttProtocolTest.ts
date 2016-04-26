@@ -105,7 +105,7 @@ describe('MqttProtocol', () => {
     describe('When creating a Publish packet', () => {
         let packet: PublishPacketVerifier;
 
-        describe('with a QoS of 0', () => {
+        describe('with QoS 0', () => {
             beforeEach(() => {
                 packet = new PublishPacketVerifier(MqttProtocol.createPublishPacket('some/topic', 'some-message', 0));
             });
@@ -114,7 +114,7 @@ describe('MqttProtocol', () => {
                 packet.shouldHaveValidRemainingLength();
             });
 
-            it('it should have a QoS of 0.', () => {
+            it('it should have QoS 0.', () => {
                 packet.shouldHaveQoS0();
             });
 
@@ -131,7 +131,7 @@ describe('MqttProtocol', () => {
             });
         });
 
-        describe('with a QoS of 1', () => {
+        describe('with QoS 1', () => {
             beforeEach(() => {
                 packet = new PublishPacketVerifier(MqttProtocol.createPublishPacket('some/topic', 'some-message', 1));
             });
@@ -140,7 +140,7 @@ describe('MqttProtocol', () => {
                 packet.shouldHaveValidRemainingLength();
             });
 
-            it('it should have a QoS of 1.', () => {
+            it('it should have QoS 1.', () => {
                 packet.shouldHaveQoS1();
             });
 
@@ -165,7 +165,7 @@ describe('MqttProtocol', () => {
     describe('When parsing a Publish packet', () => {
         let parsedPacket: MqttProtocol.PublishPacket;
 
-        describe('with a topic, a message, and a QoS of 0', () => {
+        describe('with a topic, a message, and QoS 0', () => {
             beforeEach(() => {
                 const packet = MqttProtocol.createPublishPacket('some/topic', 'some-message', 0);
                 parsedPacket = MqttProtocol.parsePublishPacket(packet);
@@ -181,7 +181,7 @@ describe('MqttProtocol', () => {
             });
         });
 
-        describe('with a topic, a message, and a QoS of 1', () => {
+        describe('with a topic, a message, and QoS 1', () => {
             beforeEach(() => {
                 const packet = MqttProtocol.createPublishPacket('some/topic', 'some-message', 1);
                 parsedPacket = MqttProtocol.parsePublishPacket(packet);
@@ -189,6 +189,7 @@ describe('MqttProtocol', () => {
 
             it('it should return the expected data.', () => {
                 parsedPacket.should.deep.equal({
+                    'packetId': 1,
                     'topic': 'some/topic',
                     'message': 'some-message',
                     'qos': 1,
@@ -201,7 +202,7 @@ describe('MqttProtocol', () => {
     describe('When creating a Subscribe packet', () => {
         let packet: SubscribePacketVerifier;
 
-        describe('with a QoS of 0', () => {
+        describe('with QoS 0', () => {
             beforeEach(() => {
                 packet = new SubscribePacketVerifier(MqttProtocol.createSubscribePacket('some/topic', 0));
             });
@@ -218,12 +219,12 @@ describe('MqttProtocol', () => {
                 packet.shouldHaveTopic('some/topic');
             });
 
-            it('it should have a QoS of 0.', () => {
+            it('it should have QoS 0.', () => {
                 packet.shouldHaveQoS0();
             });
         });
 
-        describe('with a QoS of 1', () => {
+        describe('with QoS 1', () => {
             beforeEach(() => {
                 packet = new SubscribePacketVerifier(MqttProtocol.createSubscribePacket('some/topic', 1));
             });
@@ -240,7 +241,7 @@ describe('MqttProtocol', () => {
                 packet.shouldHaveTopic('some/topic');
             });
 
-            it('it should have a QoS of 1.', () => {
+            it('it should have QoS 1.', () => {
                 packet.shouldHaveQoS1();
             });
         });

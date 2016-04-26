@@ -7,7 +7,7 @@ import { MqttProtocol }  from '../module/micro-mqtt';
 import ControlPacketType from '../module/ControlPacketType';
 import { MicroMqttClientTestSubclass, TestNetwork, TestNetworkSocket} from './TestClasses';
 import { ConnectPacketVerifier, SubscribePacketVerifier, PublishPacketVerifier,
-    GenericControlPacketVerifier } from './ControlPacketVerifier';
+    PubAckPacketVerifier, GenericControlPacketVerifier } from './ControlPacketVerifier';
 import { ControlPacketBuilder, MicroMqttClientTestSubclassBuilder } from './Builders';
 import * as sinon from 'sinon';
 
@@ -246,23 +246,54 @@ describe('MicroMqttClient', () => {
     });
 
     describe('When receiving a Publish packet', () => {
-        beforeEach(() => {
-            networkSocket = new TestNetworkSocket();
+        describe('With QoS 0', () => {
+            beforeEach(() => {
+                networkSocket = new TestNetworkSocket();
 
-            subject = new MicroMqttClientTestSubclassBuilder()
-                .whichIsConnectedOn(networkSocket)
-                .build();
+                subject = new MicroMqttClientTestSubclassBuilder()
+                    .whichIsConnectedOn(networkSocket)
+                    .build();
 
-            const publishPacket = MqttProtocol.createPublishPacket('some/topic', 'some-message', 0);
+                const publishPacket = MqttProtocol.createPublishPacket('some/topic', 'some-message', 0);
 
-            networkSocket.receivePackage(publishPacket);
+                networkSocket.receivePackage(publishPacket);
+            });
+
+            it('it should emit a \'publish\' event.', () => {
+                const events = subject.emittedPublish();
+                events.should.have.lengthOf(1);
+                events[0].args.should.have.lengthOf(1);
+                <MqttProtocol.PublishPacket>(events[0].args[0]).topic.should.equal('some/topic');
+            });
         });
 
-        it('it should emit a \'publish\' event.', () => {
-            const events = subject.emittedPublish();
-            events.should.have.lengthOf(1);
-            events[0].args.should.have.lengthOf(1);
-            <MqttProtocol.PublishPacket>(events[0].args[0]).topic.should.equal('some/topic');
+        describe('With QoS 1', () => {
+            beforeEach(() => {
+                networkSocket = new TestNetworkSocket();
+
+                subject = new MicroMqttClientTestSubclassBuilder()
+                    .whichIsConnectedOn(networkSocket)
+                    .build();
+
+                const publishPacket = MqttProtocol.createPublishPacket('some/topic', 'some-message', 1);
+
+                networkSocket.receivePackage(publishPacket);
+            });
+
+            it('it should emit a \'publish\' event.', () => {
+                const events = subject.emittedPublish();
+                events.should.have.lengthOf(1);
+                events[0].args.should.have.lengthOf(1);
+                <MqttProtocol.PublishPacket>(events[0].args[0]).topic.should.equal('some/topic');
+            });
+
+
+            it('it should send a PubAck packet.', () => {
+                networkSocket.sentPackages.should.have.lengthOf(1);
+                const packet = new PubAckPacketVerifier(networkSocket.sentPackages[0]);
+                packet.shouldHaveValidRemainingLength();
+                packet.shouldHavePacketId(MqttProtocol.fixedPackedId);
+            });
         });
     });
 
@@ -323,24 +354,24 @@ describe('MicroMqttClient', () => {
                 .build();
         });
 
-        describe('without specifying the QoS level', () => {
+        describe('without specifying the QoS', () => {
             beforeEach(() => {
                 subject.subscribe('some/topic');
             });
 
-            it('it should send a Subscribe packet with QoS level 0.', () => {
+            it('it should send a Subscribe packet with QoS 0.', () => {
                 networkSocket.sentPackages.should.have.lengthOf(1);
                 const packet = new SubscribePacketVerifier(networkSocket.sentPackages[0]);
                 packet.shouldHaveQoS0();
             });
         });
 
-        describe('specifying the QoS level 1', () => {
+        describe('specifying the QoS 1', () => {
             beforeEach(() => {
                 subject.subscribe('some/topic', 1);
             });
 
-            it('it should send a Subscribe packet with QoS level 1.', () => {
+            it('it should send a Subscribe packet with QoS 1.', () => {
                 networkSocket.sentPackages.should.have.lengthOf(1);
                 const packet = new SubscribePacketVerifier(networkSocket.sentPackages[0]);
                 packet.shouldHaveQoS1();
@@ -359,7 +390,7 @@ describe('MicroMqttClient', () => {
             subject.publish('some/topic', 'some-message');
         });
 
-        describe('without specifying the QoS level', () => {
+        describe('without specifying the QoS', () => {
             beforeEach(() => {
                 networkSocket = new TestNetworkSocket();
 
@@ -370,14 +401,14 @@ describe('MicroMqttClient', () => {
                 subject.publish('some/topic', 'some-message');
             });
 
-            it('it should send a Publish packet with QoS level 0.', () => {
+            it('it should send a Publish packet with QoS 0.', () => {
                 networkSocket.sentPackages.should.have.lengthOf(1);
                 const packet = new PublishPacketVerifier(networkSocket.sentPackages[0]);
                 packet.shouldHaveQoS0();
             });
         });
 
-        describe('with QoS level 1.', () => {
+        describe('with QoS 1.', () => {
             beforeEach(() => {
                 networkSocket = new TestNetworkSocket();
 
@@ -388,7 +419,7 @@ describe('MicroMqttClient', () => {
                 subject.publish('some/topic', 'some-message', 1);
             });
 
-            it('it should send a Publish packet with QoS level 1.', () => {
+            it('it should send a Publish packet with QoS 1.', () => {
                 networkSocket.sentPackages.should.have.lengthOf(1);
                 const packet = new PublishPacketVerifier(networkSocket.sentPackages[0]);
                 packet.shouldHaveQoS1();

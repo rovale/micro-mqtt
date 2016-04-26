@@ -1,4 +1,5 @@
 import ControlPacketType from '../module/ControlPacketType';
+import { MqttProtocol } from '../module/micro-mqtt';
 
 /**
  * Verifies the content of a control packet.
@@ -88,6 +89,21 @@ export class PublishPacketVerifier extends ControlPacketVerifier {
     }
 }
 
+export class PubAckPacketVerifier extends ControlPacketVerifier {
+    constructor(packet: string) {
+        super(packet, ControlPacketType.PubAck);
+    }
+
+    public shouldHaveValidRemainingLength() {
+        return this.packet.charCodeAt(1).should.equal(2, 'the length of a PubAck packet is 4 bytes.');
+    }
+
+    public shouldHavePacketId(id: number) {
+        const packetId = this.packet.charCodeAt(2) << 8 | this.packet.charCodeAt(3);
+        return packetId.should.equal(1);
+    }
+}
+
 export class SubscribePacketVerifier extends ControlPacketVerifier {
     constructor(packet: string) {
         super(packet, ControlPacketType.Subscribe);
@@ -121,7 +137,7 @@ export class SubscribePacketVerifier extends ControlPacketVerifier {
     public shouldHaveAPacketId() {
         const packetIdPosition = 2;
         const packetId = this.packet.charCodeAt(packetIdPosition) << 8 | this.packet.charCodeAt(packetIdPosition + 1);
-        return packetId.should.equal(1, 'since it is currently hard coded.');
+        return packetId.should.equal(MqttProtocol.fixedPackedId, 'since it is currently hard coded.');
     }
 }
 

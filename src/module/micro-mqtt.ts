@@ -5,7 +5,7 @@ import ControlPacketType from './ControlPacketType';
 const pingInterval = 40;
 const connectionTimeout = 5;
 const defaultPort = 1883;
-const defaultQosLevel = 0;
+const defaultQos = 0;
 
 /**
  * Connect flags
@@ -53,7 +53,7 @@ export interface Network {
  * The MQTT client.
  */
 export class MicroMqttClient {
-    public version = '0.0.13';
+    public version = '0.0.14';
 
     private options: ConnectionOptions;
     private network: Network;
@@ -143,6 +143,9 @@ export class MicroMqttClient {
             case ControlPacketType.Publish:
                 const parsedData = MqttProtocol.parsePublishPacket(data);
                 this.emit('publish', parsedData);
+                if (parsedData.qos > 0) {
+                    this.networkSocket.write(MqttProtocol.createPubAckPacket(parsedData.packetId));
+                }
                 if (parsedData.next) {
                     this.handleData(data.substr(parsedData.next));
                 }
@@ -166,12 +169,12 @@ export class MicroMqttClient {
     };
 
     /** Publish message using specified topic */
-    public publish = (topic: string, message: string, qos = defaultQosLevel) => {
+    public publish = (topic: string, message: string, qos = defaultQos) => {
         this.networkSocket.write(MqttProtocol.createPublishPacket(topic, message, qos));
     };
 
     /** Subscribe to topic (filter) */
-    public subscribe = (topic: string, qos = defaultQosLevel) => {
+    public subscribe = (topic: string, qos = defaultQos) => {
         this.networkSocket.write(MqttProtocol.createSubscribePacket(topic, qos));
     };
 
@@ -185,12 +188,11 @@ export class MicroMqttClient {
 /**
  * The specifics of the MQTT protocol.
  */
-
-// FIXME: The packet id is fixed.
-const fixedPackedId = 1;
-const keepAlive = 60;
-
 export module MqttProtocol {
+    // FIXME: The packet id is fixed.
+    export const fixedPackedId = 1;
+    const keepAlive = 60;
+
     /** 
      * Remaining Length
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718023
@@ -246,7 +248,7 @@ export module MqttProtocol {
      * Structure of an MQTT Control Packet
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800392
      */
-    function createPacket(fixed1: number, variable: string, payload: string) {
+    function createPacket(fixed1: number, variable: string, payload: string = '') {
         const fixed2 = remainingLength(variable.length + payload.length);
 
         return String.fromCharCode(fixed1) +
@@ -302,6 +304,7 @@ export module MqttProtocol {
     }
 
     export interface PublishPacket {
+        packetId?: number;
         topic: string;
         message: string;
         qos: number;
@@ -332,7 +335,22 @@ export module MqttProtocol {
             packet.next = remainingLength + 2;
         }
 
+        if (qos > 0) {
+            packet.packetId = data.charCodeAt(4 + variableLength - 2) << 8 |
+                data.charCodeAt(4 + variableLength - 1);
+        }
+
         return packet;
+    }
+
+
+    /** 
+     * PUBACK - Publish acknowledgement
+     * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800416
+     */
+    export function createPubAckPacket(packetId: number) {
+        const cmd = ControlPacketType.PubAck << 4;
+        return createPacket(cmd, String.fromCharCode(packetId >> 8, packetId & 255));
     }
 
     /** 

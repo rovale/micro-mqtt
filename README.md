@@ -18,8 +18,8 @@ An MQTT client for [Espruino](http://www.espruino.com/).
 - [x] Remove unsubscribe & disconnect.
 - [x] Code coverage > 95%.
 - [x] Handle receiving multiple Publish packets at once.
+- [x] Respond with PubAck packet when receiving a QoS 1 Publish packet.
 - [ ] Handle not being able to establish connection to host.
-- [ ] Respond with PubAck packet when receiving a QoS 1 Publish packet.
 - [ ] Implement Last Will and Testament.
 - [ ] Support sending retained Publish packets.
 - [ ] Reconnect on lost connection.
