@@ -52,14 +52,13 @@ export interface Network {
 /**
  * The MQTT client.
  */
-export class MicroMqttClient {
+export class MqttClient {
     public version = '0.0.16';
 
     private options: ConnectionOptions;
     private network: Network;
 
     private networkSocket: NetworkSocket;
-    private connected = false;
 
     protected emit: (event: string, ...args: any[]) => boolean;
 
@@ -114,7 +113,7 @@ export class MicroMqttClient {
 
     private onNetworkConnected = (socket: NetworkSocket) => {
         clearTimeout(this.connectionTimeOutId);
-        this.emit('info', 'Network connection established');
+        this.emit('info', 'Network connection established.');
         this.networkSocket = socket;
 
         this.networkSocket.write(MqttProtocol.createConnectPacket(this.options));
@@ -129,7 +128,7 @@ export class MicroMqttClient {
 
     private onNetworkData = (data: string) => {
         const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
-        this.emit('debug', `Rcvd: ${controlPacketType}: '${data}'`);
+        this.emit('debug', `Rcvd: ${controlPacketType}: '${data}'.`);
         this.handleData(data);
     };
 
@@ -140,13 +139,12 @@ export class MicroMqttClient {
                 clearTimeout(this.connectionTimeOutId);
                 const returnCode = data.charCodeAt(3);
                 if (returnCode === ConnectReturnCode.Accepted) {
-                    this.connected = true;
-                    this.emit('info', 'MQTT connection accepted');
+                    this.emit('info', 'MQTT connection accepted.');
                     this.emit('connected');
 
                     this.pingIntervalId = setInterval(this.ping, pingInterval * 1000);
                 } else {
-                    const connectionError = MicroMqttClient.getConnectionError(returnCode);
+                    const connectionError = MqttClient.getConnectionError(returnCode);
                     this.emit('error', connectionError);
                 }
                 break;
@@ -166,7 +164,7 @@ export class MicroMqttClient {
             case ControlPacketType.SubAck:
                 break;
             default:
-                this.emit('error', 'MQTT unexpected packet type: ' + controlPacketType);
+                this.emit('error', `MQTT unexpected packet type: ${controlPacketType}.`);
                 break;
         }
     };
@@ -189,7 +187,7 @@ export class MicroMqttClient {
 
     private ping = () => {
         this.networkSocket.write(MqttProtocol.createPingReqPacket());
-        this.emit('debug', 'Sent: Ping request');
+        this.emit('debug', 'Sent: Ping request.');
     };
 }
 

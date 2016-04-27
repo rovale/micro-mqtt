@@ -5,14 +5,14 @@
 import { ConnectFlags, ConnectReturnCode } from '../module/micro-mqtt';
 import { MqttProtocol }  from '../module/micro-mqtt';
 import ControlPacketType from '../module/ControlPacketType';
-import { MicroMqttClientTestSubclass, TestNetwork, TestNetworkSocket} from './TestClasses';
+import { MqttClientTestSubclass, TestNetwork, TestNetworkSocket} from './TestClasses';
 import { ConnectPacketVerifier, SubscribePacketVerifier, PublishPacketVerifier,
     PubAckPacketVerifier, GenericControlPacketVerifier } from './ControlPacketVerifier';
-import { ControlPacketBuilder, MicroMqttClientTestSubclassBuilder } from './Builders';
+import { ControlPacketBuilder, MqttClientTestSubclassBuilder } from './Builders';
 import * as sinon from 'sinon';
 
-describe('MicroMqttClient', () => {
-    let subject: MicroMqttClientTestSubclass;
+describe('MqttClient', () => {
+    let subject: MqttClientTestSubclass;
     let networkSocket: TestNetworkSocket;
 
     context('When establishing a network connection', () => {
@@ -22,7 +22,7 @@ describe('MicroMqttClient', () => {
             beforeEach(() => {
                 network = new TestNetwork();
                 network.connectIsCalled.should.equal(false, 'did not expect the client to connect to the network yet');
-                subject = new MicroMqttClientTestSubclass({ host: 'some-host', port: 1234 }, network);
+                subject = new MqttClientTestSubclass({ host: 'some-host', port: 1234 }, network);
                 subject.connect();
             });
 
@@ -40,7 +40,7 @@ describe('MicroMqttClient', () => {
         context('without specifying the port', () => {
             beforeEach(() => {
                 network = new TestNetwork();
-                subject = new MicroMqttClientTestSubclass({ host: 'some-host' }, network);
+                subject = new MqttClientTestSubclass({ host: 'some-host' }, network);
                 subject.connect();
             });
 
@@ -58,7 +58,7 @@ describe('MicroMqttClient', () => {
             clock = sinon.useFakeTimers();
 
             network = new TestNetwork();
-            subject = new MicroMqttClientTestSubclass({
+            subject = new MqttClientTestSubclass({
                 host: 'host',
                 clientId: 'some-client'
             }, network);
@@ -88,7 +88,7 @@ describe('MicroMqttClient', () => {
 
         beforeEach(() => {
             network = new TestNetwork();
-            subject = new MicroMqttClientTestSubclass({
+            subject = new MqttClientTestSubclass({
                 host: 'host',
                 clientId: 'some-client',
                 username: 'some-username',
@@ -116,7 +116,7 @@ describe('MicroMqttClient', () => {
         beforeEach(() => {
             networkSocket = new TestNetworkSocket();
 
-            subject = new MicroMqttClientTestSubclassBuilder()
+            subject = new MqttClientTestSubclassBuilder()
                 .whichJustSentAConnectPacketOn(networkSocket)
                 .build();
 
@@ -129,7 +129,7 @@ describe('MicroMqttClient', () => {
         });
 
         it('it should emit an error.', () => {
-            subject.shouldHaveEmittedError('MQTT unexpected packet type: 8');
+            subject.shouldHaveEmittedError('MQTT unexpected packet type: 8.');
         });
     });
 
@@ -143,7 +143,7 @@ describe('MicroMqttClient', () => {
             network = new TestNetwork();
             networkSocket = new TestNetworkSocket();
 
-            subject = new MicroMqttClientTestSubclassBuilder()
+            subject = new MqttClientTestSubclassBuilder()
                 .whichJustSentAConnectPacketOn(networkSocket, network)
                 .build();
         });
@@ -168,7 +168,7 @@ describe('MicroMqttClient', () => {
         beforeEach(() => {
             networkSocket = new TestNetworkSocket();
 
-            subject = new MicroMqttClientTestSubclassBuilder()
+            subject = new MqttClientTestSubclassBuilder()
                 .whichJustSentAConnectPacketOn(networkSocket)
                 .build();
         });
@@ -280,7 +280,7 @@ describe('MicroMqttClient', () => {
             });
 
             it('it should emit information about this succes.', () => {
-                subject.shouldHaveEmittedInfo('MQTT connection accepted');
+                subject.shouldHaveEmittedInfo('MQTT connection accepted.');
             });
 
             it('it should emit the \'connected\' event.', () => {
@@ -294,7 +294,7 @@ describe('MicroMqttClient', () => {
 
                 clock.tick(40 * 1000);
 
-                subject.shouldHaveEmittedDebugInfo('Sent: Ping request');
+                subject.shouldHaveEmittedDebugInfo('Sent: Ping request.');
 
                 networkSocket.sentPackages.should.have.lengthOf(1);
                 new GenericControlPacketVerifier(networkSocket.sentPackages[0], ControlPacketType.PingReq)
@@ -318,7 +318,7 @@ describe('MicroMqttClient', () => {
             beforeEach(() => {
                 networkSocket = new TestNetworkSocket();
 
-                subject = new MicroMqttClientTestSubclassBuilder()
+                subject = new MqttClientTestSubclassBuilder()
                     .whichIsConnectedOn(networkSocket)
                     .build();
 
@@ -343,7 +343,7 @@ describe('MicroMqttClient', () => {
 
                 networkSocket = new TestNetworkSocket();
 
-                subject = new MicroMqttClientTestSubclassBuilder()
+                subject = new MqttClientTestSubclassBuilder()
                     .whichIsConnectedOn(networkSocket)
                     .build();
 
@@ -378,7 +378,7 @@ describe('MicroMqttClient', () => {
         beforeEach(() => {
             networkSocket = new TestNetworkSocket();
 
-            subject = new MicroMqttClientTestSubclassBuilder()
+            subject = new MqttClientTestSubclassBuilder()
                 .whichJustSentAConnectPacketOn(networkSocket)
                 .build();
 
@@ -394,7 +394,7 @@ describe('MicroMqttClient', () => {
         beforeEach(() => {
             networkSocket = new TestNetworkSocket();
 
-            subject = new MicroMqttClientTestSubclassBuilder()
+            subject = new MqttClientTestSubclassBuilder()
                 .whichJustSentAConnectPacketOn(networkSocket)
                 .build();
 
@@ -410,7 +410,7 @@ describe('MicroMqttClient', () => {
         beforeEach(() => {
             networkSocket = new TestNetworkSocket();
 
-            subject = new MicroMqttClientTestSubclassBuilder()
+            subject = new MqttClientTestSubclassBuilder()
                 .whichJustSentAConnectPacketOn(networkSocket)
                 .build();
 
@@ -426,7 +426,7 @@ describe('MicroMqttClient', () => {
         beforeEach(() => {
             networkSocket = new TestNetworkSocket();
 
-            subject = new MicroMqttClientTestSubclassBuilder()
+            subject = new MqttClientTestSubclassBuilder()
                 .whichIsConnectedOn(networkSocket)
                 .build();
         });
@@ -460,7 +460,7 @@ describe('MicroMqttClient', () => {
         beforeEach(() => {
             networkSocket = new TestNetworkSocket();
 
-            subject = new MicroMqttClientTestSubclassBuilder()
+            subject = new MqttClientTestSubclassBuilder()
                 .whichIsConnectedOn(networkSocket)
                 .build();
 
@@ -471,7 +471,7 @@ describe('MicroMqttClient', () => {
             beforeEach(() => {
                 networkSocket = new TestNetworkSocket();
 
-                subject = new MicroMqttClientTestSubclassBuilder()
+                subject = new MqttClientTestSubclassBuilder()
                     .whichIsConnectedOn(networkSocket)
                     .build();
 
@@ -489,7 +489,7 @@ describe('MicroMqttClient', () => {
             beforeEach(() => {
                 networkSocket = new TestNetworkSocket();
 
-                subject = new MicroMqttClientTestSubclassBuilder()
+                subject = new MqttClientTestSubclassBuilder()
                     .whichIsConnectedOn(networkSocket)
                     .build();
 
@@ -507,7 +507,7 @@ describe('MicroMqttClient', () => {
             beforeEach(() => {
                 networkSocket = new TestNetworkSocket();
 
-                subject = new MicroMqttClientTestSubclassBuilder()
+                subject = new MqttClientTestSubclassBuilder()
                     .whichIsConnectedOn(networkSocket)
                     .build();
 
@@ -532,7 +532,7 @@ describe('MicroMqttClient', () => {
             network = new TestNetwork();
             networkSocket = new TestNetworkSocket();
 
-            subject = new MicroMqttClientTestSubclassBuilder()
+            subject = new MqttClientTestSubclassBuilder()
                 .whichIsConnectedOn(networkSocket, network)
                 .build();
 
@@ -561,7 +561,7 @@ describe('MicroMqttClient', () => {
         beforeEach(() => {
             networkSocket = new TestNetworkSocket();
 
-            subject = new MicroMqttClientTestSubclassBuilder()
+            subject = new MqttClientTestSubclassBuilder()
                 .whichIsConnectedOn(networkSocket)
                 .build();
 
