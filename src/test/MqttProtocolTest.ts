@@ -107,7 +107,7 @@ describe('MqttProtocol', () => {
 
         describe('with QoS 0', () => {
             beforeEach(() => {
-                packet = new PublishPacketVerifier(MqttProtocol.createPublishPacket('some/topic', 'some-message', 0));
+                packet = new PublishPacketVerifier(MqttProtocol.createPublishPacket('some/topic', 'some-message', 0, false));
             });
 
             it('it should have a valid remaining length.', () => {
@@ -133,7 +133,7 @@ describe('MqttProtocol', () => {
 
         describe('with QoS 1', () => {
             beforeEach(() => {
-                packet = new PublishPacketVerifier(MqttProtocol.createPublishPacket('some/topic', 'some-message', 1));
+                packet = new PublishPacketVerifier(MqttProtocol.createPublishPacket('some/topic', 'some-message', 1, false));
             });
 
             it('it should have a valid remaining length.', () => {
@@ -160,6 +160,32 @@ describe('MqttProtocol', () => {
                 packet.shouldHaveMessage('some-message');
             });
         });
+
+        describe('with QoS 0, retained', () => {
+            beforeEach(() => {
+                packet = new PublishPacketVerifier(MqttProtocol.createPublishPacket('some/topic', 'some-message', 0, true));
+            });
+
+            it('it should have a valid remaining length.', () => {
+                packet.shouldHaveValidRemainingLength();
+            });
+
+            it('it should have QoS 0.', () => {
+                packet.shouldHaveQoS0();
+            });
+
+            it('it should not retained.', () => {
+                packet.shouldBeRetained();
+            });
+
+            it('it should contain the topic.', () => {
+                packet.shouldHaveTopic('some/topic');
+            });
+
+            it('it should contain the message.', () => {
+                packet.shouldHaveMessage('some-message');
+            });
+        });
     });
 
     describe('When parsing a Publish packet', () => {
@@ -167,7 +193,7 @@ describe('MqttProtocol', () => {
 
         describe('with a topic, a message, and QoS 0', () => {
             beforeEach(() => {
-                const packet = MqttProtocol.createPublishPacket('some/topic', 'some-message', 0);
+                const packet = MqttProtocol.createPublishPacket('some/topic', 'some-message', 0, false);
                 parsedPacket = MqttProtocol.parsePublishPacket(packet);
             });
 
@@ -183,7 +209,7 @@ describe('MqttProtocol', () => {
 
         describe('with a topic, a message, and QoS 1', () => {
             beforeEach(() => {
-                const packet = MqttProtocol.createPublishPacket('some/topic', 'some-message', 1);
+                const packet = MqttProtocol.createPublishPacket('some/topic', 'some-message', 1, false);
                 parsedPacket = MqttProtocol.parsePublishPacket(packet);
             });
 

@@ -53,7 +53,7 @@ export interface Network {
  * The MQTT client.
  */
 export class MicroMqttClient {
-    public version = '0.0.14';
+    public version = '0.0.15';
 
     private options: ConnectionOptions;
     private network: Network;
@@ -169,8 +169,8 @@ export class MicroMqttClient {
     };
 
     /** Publish message using specified topic */
-    public publish = (topic: string, message: string, qos = defaultQos) => {
-        this.networkSocket.write(MqttProtocol.createPublishPacket(topic, message, qos));
+    public publish = (topic: string, message: string, qos = defaultQos, retained = false) => {
+        this.networkSocket.write(MqttProtocol.createPublishPacket(topic, message, qos, true));
     };
 
     /** Subscribe to topic (filter) */
@@ -296,8 +296,10 @@ export module MqttProtocol {
      * PUBLISH - Publish message
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800410
      */
-    export function createPublishPacket(topic: string, message: string, qos: number) {
-        const cmd = ControlPacketType.Publish << 4 | (qos << 1);
+    export function createPublishPacket(topic: string, message: string, qos: number, retained: boolean) {
+        let cmd = ControlPacketType.Publish << 4 | (qos << 1);
+        cmd |= (retained) ? 1 : 0;
+
         const pid = String.fromCharCode(fixedPackedId >> 8, fixedPackedId & 255);
         const variable = (qos === 0) ? createString(topic) : createString(topic) + pid;
         return createPacket(cmd, variable, message);
