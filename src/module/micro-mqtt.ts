@@ -149,7 +149,7 @@ export class MicroMqttClient {
                 const parsedData = MqttProtocol.parsePublishPacket(data);
                 this.emit('publish', parsedData);
                 if (parsedData.qos > 0) {
-                    this.networkSocket.write(MqttProtocol.createPubAckPacket(parsedData.pid));
+                    setTimeout(() => { this.networkSocket.write(MqttProtocol.createPubAckPacket(parsedData.pid)); }, 0);
                 }
                 if (parsedData.next) {
                     this.handleData(data.substr(parsedData.next));
