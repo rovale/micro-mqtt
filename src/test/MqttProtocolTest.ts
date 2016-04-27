@@ -6,7 +6,7 @@ import { MqttProtocol, ConnectFlags } from '../module/micro-mqtt';
 import { ConnectPacketVerifier, PublishPacketVerifier, SubscribePacketVerifier } from './ControlPacketVerifier';
 
 describe('MqttProtocol', () => {
-    describe('When calculating the remaining length of a packet', () => {
+    context('When calculating the remaining length of a packet', () => {
 
         it('it should return 1 byte for the values 0 to 127.', () => {
             MqttProtocol.remainingLength(0).should.deep.equal([0]);
@@ -29,10 +29,10 @@ describe('MqttProtocol', () => {
         });
     });
 
-    describe('When creating a Connect packet', () => {
+    context('When creating a Connect packet', () => {
         let packet: ConnectPacketVerifier;
 
-        describe('without username and password', () => {
+        context('without username and password', () => {
             beforeEach(() => {
                 packet = new ConnectPacketVerifier(MqttProtocol.createConnectPacket({
                     host: 'some-host',
@@ -65,7 +65,7 @@ describe('MqttProtocol', () => {
             });
         });
 
-        describe('with only a username', () => {
+        context('with only a username', () => {
             beforeEach(() => {
                 packet = new ConnectPacketVerifier(MqttProtocol.createConnectPacket({
                     host: 'host',
@@ -83,7 +83,7 @@ describe('MqttProtocol', () => {
             });
         });
 
-        describe('with both username and password', () => {
+        context('with both username and password', () => {
             beforeEach(() => {
                 packet = new ConnectPacketVerifier(MqttProtocol.createConnectPacket({
                     host: 'host',
@@ -102,10 +102,10 @@ describe('MqttProtocol', () => {
         });
     });
 
-    describe('When creating a Publish packet', () => {
+    context('When creating a Publish packet', () => {
         let packet: PublishPacketVerifier;
 
-        describe('with QoS 0', () => {
+        context('with QoS 0', () => {
             beforeEach(() => {
                 packet = new PublishPacketVerifier(MqttProtocol.createPublishPacket('some/topic', 'some-message', 0, false));
             });
@@ -131,7 +131,7 @@ describe('MqttProtocol', () => {
             });
         });
 
-        describe('with QoS 1', () => {
+        context('with QoS 1', () => {
             beforeEach(() => {
                 packet = new PublishPacketVerifier(MqttProtocol.createPublishPacket('some/topic', 'some-message', 1, false));
             });
@@ -161,7 +161,7 @@ describe('MqttProtocol', () => {
             });
         });
 
-        describe('with QoS 0, retained', () => {
+        context('with QoS 0, retained', () => {
             beforeEach(() => {
                 packet = new PublishPacketVerifier(MqttProtocol.createPublishPacket('some/topic', 'some-message', 0, true));
             });
@@ -188,10 +188,10 @@ describe('MqttProtocol', () => {
         });
     });
 
-    describe('When parsing a Publish packet', () => {
+    context('When parsing a Publish packet', () => {
         let parsedPacket: MqttProtocol.PublishPacket;
 
-        describe('with a topic, a message, and QoS 0', () => {
+        context('with a topic, a message, and QoS 0', () => {
             beforeEach(() => {
                 const packet = MqttProtocol.createPublishPacket('some/topic', 'some-message', 0, false);
                 parsedPacket = MqttProtocol.parsePublishPacket(packet);
@@ -207,7 +207,7 @@ describe('MqttProtocol', () => {
             });
         });
 
-        describe('with a topic, a message, and QoS 1', () => {
+        context('with a topic, a message, and QoS 1', () => {
             beforeEach(() => {
                 const packet = MqttProtocol.createPublishPacket('some/topic', 'some-message', 1, false);
                 parsedPacket = MqttProtocol.parsePublishPacket(packet);
@@ -215,7 +215,7 @@ describe('MqttProtocol', () => {
 
             it('it should return the expected data.', () => {
                 parsedPacket.should.deep.equal({
-                    'packetId': 1,
+                    'pid': 1,
                     'topic': 'some/topic',
                     'message': 'some-message',
                     'qos': 1,
@@ -225,10 +225,10 @@ describe('MqttProtocol', () => {
         });
     });
 
-    describe('When creating a Subscribe packet', () => {
+    context('When creating a Subscribe packet', () => {
         let packet: SubscribePacketVerifier;
 
-        describe('with QoS 0', () => {
+        context('with QoS 0', () => {
             beforeEach(() => {
                 packet = new SubscribePacketVerifier(MqttProtocol.createSubscribePacket('some/topic', 0));
             });
@@ -250,7 +250,7 @@ describe('MqttProtocol', () => {
             });
         });
 
-        describe('with QoS 1', () => {
+        context('with QoS 1', () => {
             beforeEach(() => {
                 packet = new SubscribePacketVerifier(MqttProtocol.createSubscribePacket('some/topic', 1));
             });

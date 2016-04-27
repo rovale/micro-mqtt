@@ -45,7 +45,7 @@ An MQTT client for [Espruino](http://www.espruino.com/).
         - [x] File an [issue](https://github.com/Microsoft/tslint-microsoft-contrib/issues/109) for no-document-write, it fails when enabled.
         - [x] Figure out cause of misplaced 'else' warning. (Got it, my C# background bit me :-)
             - [x] Add TSLint to test if this is resolved.
-
+        - [ ] Suggest to ignore `context` for the `max-func-body-length` too. 
 - About debugging the unit tests in [Visual Studio Code](https://code.visualstudio.com/)
     - The .vscode/launch.json is configured correctly for this project.
     - Just put a breakpoint in the TypeScript code and press F5.
