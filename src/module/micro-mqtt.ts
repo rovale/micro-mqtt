@@ -104,18 +104,23 @@ export class MicroMqttClient {
     }
 
     public connect = () => {
-        this.emit('info', `Connecting MicroMqttClient ${this.version} to ${this.options.host}:${this.options.port}`);
+        this.emit('info', `Connecting to ${this.options.host}:${this.options.port}`);
         this.network.connect({ host: this.options.host, port: this.options.port }, (socket) => this.onNetworkConnected(socket));
-        // TODO: Reconnect on timeout
+        this.connectionTimeOutId = setTimeout(() => {
+            this.emit('error', 'Network connection timeout. Retrying.');
+            this.connect();
+        }, connectionTimeout * 1000);
     };
 
     private onNetworkConnected = (socket: NetworkSocket) => {
+        clearTimeout(this.connectionTimeOutId);
         this.emit('info', 'Network connection established');
         this.networkSocket = socket;
 
         this.networkSocket.write(MqttProtocol.createConnectPacket(this.options));
         this.connectionTimeOutId = setTimeout(() => {
-            // TODO: Add a retry mechanism
+            this.emit('error', 'MQTT connection timeout. Reconnecting.');
+            this.connect();
         }, connectionTimeout * 1000);
 
         this.networkSocket.on('data', (data: string) => this.onNetworkData(data));
@@ -167,10 +172,9 @@ export class MicroMqttClient {
     };
 
     private onNetworkEnd = () => {
-        this.emit('info', 'MQTT client disconnected');
+        this.emit('error', 'MQTT client disconnected. Reconnecting.');
         clearInterval(this.pingIntervalId);
-        this.networkSocket = undefined;
-        this.emit('disconnected');
+        this.connect();
     };
 
     /** Publish a message */

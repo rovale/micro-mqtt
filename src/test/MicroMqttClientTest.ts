@@ -21,17 +21,17 @@ describe('MicroMqttClient', () => {
         context('to a specific host and port', () => {
             beforeEach(() => {
                 network = new TestNetwork();
-                network.connectIsCalled.should.be.equal(false, 'did not expect the client to connect to the network yet');
+                network.connectIsCalled.should.equal(false, 'did not expect the client to connect to the network yet');
                 subject = new MicroMqttClientTestSubclass({ host: 'some-host', port: 1234 }, network);
                 subject.connect();
             });
 
             it('it should emit information about this action.', () => {
-                subject.shouldHaveEmittedInfo(`Connecting MicroMqttClient ${subject.version} to some-host:1234`);
+                subject.shouldHaveEmittedInfo('Connecting to some-host:1234');
             });
 
             it('it should try to establish a connection to the expected host and port.', () => {
-                network.connectIsCalled.should.be.equal(true, 'expected the client to connect to the network');
+                network.connectIsCalled.should.equal(true, 'expected the client to connect to the network');
                 network.options.host.should.equal('some-host');
                 network.options.port.should.equal(1234);
             });
@@ -47,6 +47,39 @@ describe('MicroMqttClient', () => {
             it('it should default to port 1883.', () => {
                 network.options.port.should.equal(1883);
             });
+        });
+    });
+
+    context('When the network connection is not established within 5 seconds', () => {
+        let network: TestNetwork;
+        let clock: Sinon.SinonFakeTimers;
+
+        beforeEach(() => {
+            clock = sinon.useFakeTimers();
+
+            network = new TestNetwork();
+            subject = new MicroMqttClientTestSubclass({
+                host: 'host',
+                clientId: 'some-client'
+            }, network);
+
+            networkSocket = new TestNetworkSocket();
+            subject.connect();
+        });
+
+        afterEach(() => {
+            clock.reset();
+        });
+
+        it('it should emit an error.', () => {
+            clock.tick(5000);
+            subject.shouldHaveEmittedError('Network connection timeout. Retrying.');
+        });
+
+        it('it should try it again.', () => {
+            network.connectIsCalledTwice.should.equal(false, 'because it is the first attempt.');
+            clock.tick(5000);
+            network.connectIsCalledTwice.should.equal(true, 'because it should try it again.');
         });
     });
 
@@ -97,6 +130,37 @@ describe('MicroMqttClient', () => {
 
         it('it should emit an error.', () => {
             subject.shouldHaveEmittedError('MQTT unexpected packet type: 8');
+        });
+    });
+
+    context('When not receiving a ConnAck packet within 5 seconds', () => {
+        let clock: Sinon.SinonFakeTimers;
+        let network: TestNetwork;
+
+        beforeEach(() => {
+            clock = sinon.useFakeTimers();
+
+            network = new TestNetwork();
+            networkSocket = new TestNetworkSocket();
+
+            subject = new MicroMqttClientTestSubclassBuilder()
+                .whichJustSentAConnectPacketOn(networkSocket, network)
+                .build();
+        });
+
+        afterEach(() => {
+            clock.reset();
+        });
+
+        it('it should emit an error.', () => {
+            clock.tick(5000);
+            subject.shouldHaveEmittedError('MQTT connection timeout. Reconnecting.');
+        });
+
+        it('it should reconnect.', () => {
+            network.connectIsCalledTwice.should.equal(false, 'because it is the first attempt.');
+            clock.tick(5000);
+            network.connectIsCalledTwice.should.equal(true, 'because it should reconnect.');
         });
     });
 
@@ -461,13 +525,15 @@ describe('MicroMqttClient', () => {
 
     context('When the network connection is lost', () => {
         let clock: Sinon.SinonFakeTimers;
+        let network: TestNetwork;
 
         beforeEach(() => {
             clock = sinon.useFakeTimers();
+            network = new TestNetwork();
             networkSocket = new TestNetworkSocket();
 
             subject = new MicroMqttClientTestSubclassBuilder()
-                .whichIsConnectedOn(networkSocket)
+                .whichIsConnectedOn(networkSocket, network)
                 .build();
 
             networkSocket.end();
@@ -477,18 +543,17 @@ describe('MicroMqttClient', () => {
             clock.restore();
         });
 
-        it('it should emit information about this event.', () => {
-            subject.shouldHaveEmittedInfo('MQTT client disconnected');
-        });
-
-        it('it should emit the \'disconnected\' event.', () => {
-            const emittedDisconnect = subject.emittedDisconnected();
-            emittedDisconnect.should.have.lengthOf(1);
+        it('it should emit an error.', () => {
+            subject.shouldHaveEmittedError('MQTT client disconnected. Reconnecting.');
         });
 
         it('it should not send PingReq packets anymore.', () => {
             clock.tick(40 * 1000 * 10);
             networkSocket.sentPackages.should.have.lengthOf(0);
+        });
+
+        it('it should reconnect.', () => {
+            network.connectIsCalledTwice.should.equal(true, 'because it should reconnect.');
         });
     });
 

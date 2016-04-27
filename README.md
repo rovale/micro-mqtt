@@ -21,10 +21,12 @@ An MQTT client for [Espruino](http://www.espruino.com/).
 - [x] Respond with PubAck packet when receiving a QoS 1 Publish packet.
 - [x] Support sending retained Publish packets.
 - [x] Support Last Will and Testament.
+- [x] Retry when not being able to establish a network connection.
+- [x] Reconnect when not receiving a ConnAck package.
+- [x] Reconnect on lost connection.
 - [ ] Handle not receiving PingResp packets.
-- [ ] Reconnect on lost connection.
+- [ ] Add retry mechanism when receiving a return code != Accepted?
 - [ ] Optimize memory usage and size.
-- [ ] Handle not being able to establish connection to host.
 - [ ] Handle receiving long Publish packets.
 - [ ] Create tests for example
 
@@ -44,8 +46,7 @@ An MQTT client for [Espruino](http://www.espruino.com/).
     - tslint.json initially taken from https://github.com/Microsoft/tslint-microsoft-contrib/blob/2.0.2/tslint.json
     - TODO
         - [x] File an [issue](https://github.com/Microsoft/tslint-microsoft-contrib/issues/109) for no-document-write, it fails when enabled.
-        - [x] Figure out cause of misplaced 'else' warning. (Got it, my C# background bit me :-)
-            - [x] Add TSLint to test if this is resolved.
+        - [x] Add TSLint to test if this is resolved.
         - [ ] Suggest to ignore `context` for the `max-func-body-length` too. 
 - About debugging the unit tests in [Visual Studio Code](https://code.visualstudio.com/)
     - The .vscode/launch.json is configured correctly for this project.
