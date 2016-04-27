@@ -53,7 +53,7 @@ export interface Network {
  * The MQTT client.
  */
 export class MicroMqttClient {
-    public version = '0.0.15';
+    public version = '0.0.16';
 
     private options: ConnectionOptions;
     private network: Network;
@@ -69,6 +69,11 @@ export class MicroMqttClient {
     constructor(options: ConnectionOptions, network: Network = require('net')) {
         options.port = options.port || defaultPort;
         options.clientId = options.clientId || '';
+
+        if (options.will) {
+            options.will.qos = options.will.qos || defaultQos;
+            options.will.retain = options.will.retain || false;
+        }
 
         this.options = options;
         this.network = network;
@@ -214,11 +219,18 @@ export module MqttProtocol {
      * Connect flags
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349229
      */
-    function createConnectionFlags(options: ConnectionOptions) {
+    function createConnectFlags(options: ConnectionOptions) {
         let flags = 0;
         flags |= (options.username) ? ConnectFlags.UserName : 0;
         flags |= (options.username && options.password) ? ConnectFlags.Password : 0;
         flags |= ConnectFlags.CleanSession;
+
+        if (options.will) {
+            flags |= ConnectFlags.Will;
+            flags |= options.will.qos << 3;
+            flags |= (options.will.retain) ? ConnectFlags.WillRetain : 0;
+        }
+
         return flags;
     }
 
@@ -265,11 +277,17 @@ export module MqttProtocol {
 
         const protocolName = createString('MQTT');
         const protocolLevel = String.fromCharCode(4);
-        const flags = String.fromCharCode(createConnectionFlags(options));
+        const flags = String.fromCharCode(createConnectFlags(options));
 
         const keepAlive: string = String.fromCharCode(...keepAliveBytes());
 
         let payload = createString(options.clientId);
+
+        if (options.will) {
+            payload += createString(options.will.topic);
+            payload += createString(options.will.message);
+        }
+
         if (options.username) {
             payload += createString(options.username);
             if (options.password) {

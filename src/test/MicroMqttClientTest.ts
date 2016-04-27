@@ -59,7 +59,11 @@ describe('MicroMqttClient', () => {
                 host: 'host',
                 clientId: 'some-client',
                 username: 'some-username',
-                password: 'some-password'
+                password: 'some-password',
+                will: {
+                    topic: 'some/willTopic',
+                    message: 'offline'
+                }
             }, network);
 
             networkSocket = new TestNetworkSocket();
@@ -70,8 +74,8 @@ describe('MicroMqttClient', () => {
         it('it should send a Connect packet.', () => {
             networkSocket.sentPackages.should.have.lengthOf(1);
             const packet = new ConnectPacketVerifier(networkSocket.sentPackages[0]);
-            packet.shouldHaveConnectFlags(ConnectFlags.UserName | ConnectFlags.Password | ConnectFlags.CleanSession);
-            packet.shouldHavePayload('some-client', 'some-username', 'some-password');
+            packet.shouldHaveConnectFlags(ConnectFlags.UserName | ConnectFlags.Password | ConnectFlags.CleanSession | ConnectFlags.Will);
+            packet.shouldHavePayload('some-client', 'some/willTopic', 'offline', 'some-username', 'some-password');
         });
     });
 
