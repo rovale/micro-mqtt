@@ -272,7 +272,11 @@ describe('MicroMqttClient', () => {
         });
 
         context('With QoS 1', () => {
+            let clock: Sinon.SinonFakeTimers;
+
             beforeEach(() => {
+                clock = sinon.useFakeTimers();
+
                 networkSocket = new TestNetworkSocket();
 
                 subject = new MicroMqttClientTestSubclassBuilder()
@@ -284,6 +288,10 @@ describe('MicroMqttClient', () => {
                 networkSocket.receivePackage(publishPacket);
             });
 
+            afterEach(() => {
+                clock.reset();
+            });
+
             it('it should emit a \'publish\' event.', () => {
                 const events = subject.emittedPublish();
                 events.should.have.lengthOf(1);
@@ -293,6 +301,7 @@ describe('MicroMqttClient', () => {
 
 
             it('it should send a PubAck packet.', () => {
+                clock.tick(1);
                 networkSocket.sentPackages.should.have.lengthOf(1);
                 const packet = new PubAckPacketVerifier(networkSocket.sentPackages[0]);
                 packet.shouldHaveValidRemainingLength();
