@@ -73,6 +73,10 @@ export class PublishPacketVerifier extends ControlPacketVerifier {
         return actualMessage.should.equal(message);
     }
 
+    public shouldBeRetained() {
+        return (this.packet.charCodeAt(0) & 0b00000001).should.equal(1);
+    }
+
     public shouldNotBeRetained() {
         return (this.packet.charCodeAt(0) & 0b00000001).should.equal(0);
     }

@@ -254,7 +254,7 @@ describe('MicroMqttClient', () => {
                     .whichIsConnectedOn(networkSocket)
                     .build();
 
-                const publishPacket = MqttProtocol.createPublishPacket('some/topic', 'some-message', 0);
+                const publishPacket = MqttProtocol.createPublishPacket('some/topic', 'some-message', 0, false);
 
                 networkSocket.receivePackage(publishPacket);
             });
@@ -275,7 +275,7 @@ describe('MicroMqttClient', () => {
                     .whichIsConnectedOn(networkSocket)
                     .build();
 
-                const publishPacket = MqttProtocol.createPublishPacket('some/topic', 'some-message', 1);
+                const publishPacket = MqttProtocol.createPublishPacket('some/topic', 'some-message', 1, false);
 
                 networkSocket.receivePackage(publishPacket);
             });
@@ -425,6 +425,25 @@ describe('MicroMqttClient', () => {
                 packet.shouldHaveQoS1();
             });
         });
+
+        describe('with QoS 1, retained.', () => {
+            beforeEach(() => {
+                networkSocket = new TestNetworkSocket();
+
+                subject = new MicroMqttClientTestSubclassBuilder()
+                    .whichIsConnectedOn(networkSocket)
+                    .build();
+
+                subject.publish('some/topic', 'some-message', 1, true);
+            });
+
+            it('it should send a Publish packet with QoS 1, retained.', () => {
+                networkSocket.sentPackages.should.have.lengthOf(1);
+                const packet = new PublishPacketVerifier(networkSocket.sentPackages[0]);
+                packet.shouldHaveQoS1();
+                packet.shouldBeRetained();
+            });
+        });
     });
 
     describe('When the network connection is lost', () => {
@@ -468,7 +487,7 @@ describe('MicroMqttClient', () => {
                 .whichIsConnectedOn(networkSocket)
                 .build();
 
-            const publishPacket = MqttProtocol.createPublishPacket('some/topic', 'some-message', 0);
+            const publishPacket = MqttProtocol.createPublishPacket('some/topic', 'some-message', 0, false);
 
             networkSocket.receivePackage(publishPacket + publishPacket);
         });
