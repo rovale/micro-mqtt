@@ -15,10 +15,10 @@ describe('MicroMqttClient', () => {
     let subject: MicroMqttClientTestSubclass;
     let networkSocket: TestNetworkSocket;
 
-    describe('When establishing a network connection', () => {
+    context('When establishing a network connection', () => {
         let network: TestNetwork;
 
-        describe('to a specific host and port', () => {
+        context('to a specific host and port', () => {
             beforeEach(() => {
                 network = new TestNetwork();
                 network.connectIsCalled.should.be.equal(false, 'did not expect the client to connect to the network yet');
@@ -37,7 +37,7 @@ describe('MicroMqttClient', () => {
             });
         });
 
-        describe('without specifying the port', () => {
+        context('without specifying the port', () => {
             beforeEach(() => {
                 network = new TestNetwork();
                 subject = new MicroMqttClientTestSubclass({ host: 'some-host' }, network);
@@ -50,7 +50,7 @@ describe('MicroMqttClient', () => {
         });
     });
 
-    describe('When the network connection is established', () => {
+    context('When the network connection is established', () => {
         let network: TestNetwork;
 
         beforeEach(() => {
@@ -75,7 +75,7 @@ describe('MicroMqttClient', () => {
         });
     });
 
-    describe('When receiving an unexpected packet', () => {
+    context('When receiving an unexpected packet', () => {
         beforeEach(() => {
             networkSocket = new TestNetworkSocket();
 
@@ -96,7 +96,7 @@ describe('MicroMqttClient', () => {
         });
     });
 
-    describe('When receiving a ConnAck packet', () => {
+    context('When receiving a ConnAck packet', () => {
         beforeEach(() => {
             networkSocket = new TestNetworkSocket();
 
@@ -105,7 +105,7 @@ describe('MicroMqttClient', () => {
                 .build();
         });
 
-        describe('with ConnectReturnCode UnacceptableProtocolVersion', () => {
+        context('with ConnectReturnCode UnacceptableProtocolVersion', () => {
             beforeEach(() => {
                 const connAckPacket = new ControlPacketBuilder(ControlPacketType.ConnAck)
                     .withConnectReturnCode(ConnectReturnCode.UnacceptableProtocolVersion)
@@ -119,7 +119,7 @@ describe('MicroMqttClient', () => {
             });
         });
 
-        describe('with ConnectReturnCode IdentifierRejected', () => {
+        context('with ConnectReturnCode IdentifierRejected', () => {
             beforeEach(() => {
                 const connAckPacket = new ControlPacketBuilder(ControlPacketType.ConnAck)
                     .withConnectReturnCode(ConnectReturnCode.IdentifierRejected)
@@ -134,7 +134,7 @@ describe('MicroMqttClient', () => {
         });
 
 
-        describe('with ConnectReturnCode ServerUnavailable', () => {
+        context('with ConnectReturnCode ServerUnavailable', () => {
             beforeEach(() => {
                 const connAckPacket = new ControlPacketBuilder(ControlPacketType.ConnAck)
                     .withConnectReturnCode(ConnectReturnCode.ServerUnavailable)
@@ -148,7 +148,7 @@ describe('MicroMqttClient', () => {
             });
         });
 
-        describe('with ConnectReturnCode BadUserNameOrPassword', () => {
+        context('with ConnectReturnCode BadUserNameOrPassword', () => {
             beforeEach(() => {
                 const connAckPacket = new ControlPacketBuilder(ControlPacketType.ConnAck)
                     .withConnectReturnCode(ConnectReturnCode.BadUserNameOrPassword)
@@ -162,7 +162,7 @@ describe('MicroMqttClient', () => {
             });
         });
 
-        describe('with ConnectReturnCode NotAuthorized', () => {
+        context('with ConnectReturnCode NotAuthorized', () => {
             beforeEach(() => {
                 const connAckPacket = new ControlPacketBuilder(ControlPacketType.ConnAck)
                     .withConnectReturnCode(ConnectReturnCode.NotAuthorized)
@@ -176,7 +176,7 @@ describe('MicroMqttClient', () => {
             });
         });
 
-        describe('with an unknown return code', () => {
+        context('with an unknown return code', () => {
             beforeEach(() => {
                 const connAckPacket = new ControlPacketBuilder(ControlPacketType.ConnAck)
                     .withConnectReturnCode(<ConnectReturnCode>111)
@@ -190,7 +190,7 @@ describe('MicroMqttClient', () => {
             });
         });
 
-        describe('with ConnectReturnCode Accepted', () => {
+        context('with ConnectReturnCode Accepted', () => {
             let clock: Sinon.SinonFakeTimers;
 
             beforeEach(() => {
@@ -245,8 +245,8 @@ describe('MicroMqttClient', () => {
         });
     });
 
-    describe('When receiving a Publish packet', () => {
-        describe('With QoS 0', () => {
+    context('When receiving a Publish packet', () => {
+        context('With QoS 0', () => {
             beforeEach(() => {
                 networkSocket = new TestNetworkSocket();
 
@@ -267,7 +267,7 @@ describe('MicroMqttClient', () => {
             });
         });
 
-        describe('With QoS 1', () => {
+        context('With QoS 1', () => {
             beforeEach(() => {
                 networkSocket = new TestNetworkSocket();
 
@@ -297,7 +297,7 @@ describe('MicroMqttClient', () => {
         });
     });
 
-    describe('When receiving a PingResp packet', () => {
+    context('When receiving a PingResp packet', () => {
         beforeEach(() => {
             networkSocket = new TestNetworkSocket();
 
@@ -313,7 +313,7 @@ describe('MicroMqttClient', () => {
         });
     });
 
-    describe('When receiving a PubAck packet', () => {
+    context('When receiving a PubAck packet', () => {
         beforeEach(() => {
             networkSocket = new TestNetworkSocket();
 
@@ -329,7 +329,7 @@ describe('MicroMqttClient', () => {
         });
     });
 
-    describe('When receiving a SubAck packet', () => {
+    context('When receiving a SubAck packet', () => {
         beforeEach(() => {
             networkSocket = new TestNetworkSocket();
 
@@ -345,7 +345,7 @@ describe('MicroMqttClient', () => {
         });
     });
 
-    describe('When subscribing to a topic', () => {
+    context('When subscribing to a topic', () => {
         beforeEach(() => {
             networkSocket = new TestNetworkSocket();
 
@@ -354,7 +354,7 @@ describe('MicroMqttClient', () => {
                 .build();
         });
 
-        describe('without specifying the QoS', () => {
+        context('without specifying the QoS', () => {
             beforeEach(() => {
                 subject.subscribe('some/topic');
             });
@@ -366,7 +366,7 @@ describe('MicroMqttClient', () => {
             });
         });
 
-        describe('specifying the QoS 1', () => {
+        context('specifying the QoS 1', () => {
             beforeEach(() => {
                 subject.subscribe('some/topic', 1);
             });
@@ -379,7 +379,7 @@ describe('MicroMqttClient', () => {
         });
     });
 
-    describe('When publishing a message', () => {
+    context('When publishing a message', () => {
         beforeEach(() => {
             networkSocket = new TestNetworkSocket();
 
@@ -390,7 +390,7 @@ describe('MicroMqttClient', () => {
             subject.publish('some/topic', 'some-message');
         });
 
-        describe('without specifying the QoS', () => {
+        context('without specifying the QoS', () => {
             beforeEach(() => {
                 networkSocket = new TestNetworkSocket();
 
@@ -408,7 +408,7 @@ describe('MicroMqttClient', () => {
             });
         });
 
-        describe('with QoS 1.', () => {
+        context('with QoS 1.', () => {
             beforeEach(() => {
                 networkSocket = new TestNetworkSocket();
 
@@ -426,7 +426,7 @@ describe('MicroMqttClient', () => {
             });
         });
 
-        describe('with QoS 1, retained.', () => {
+        context('with QoS 1, retained.', () => {
             beforeEach(() => {
                 networkSocket = new TestNetworkSocket();
 
@@ -446,7 +446,7 @@ describe('MicroMqttClient', () => {
         });
     });
 
-    describe('When the network connection is lost', () => {
+    context('When the network connection is lost', () => {
         let clock: Sinon.SinonFakeTimers;
 
         beforeEach(() => {
@@ -479,7 +479,7 @@ describe('MicroMqttClient', () => {
         });
     });
 
-    describe('When receiving two Publish packets at once', () => {
+    context('When receiving two Publish packets at once', () => {
         beforeEach(() => {
             networkSocket = new TestNetworkSocket();
 
