@@ -20,12 +20,13 @@ An MQTT client for [Espruino](http://www.espruino.com/).
 - [x] Handle receiving multiple Publish packets at once.
 - [x] Respond with PubAck packet when receiving a QoS 1 Publish packet.
 - [x] Support sending retained Publish packets.
-- [ ] Implement Last Will and Testament.
+- [x] Support Last Will and Testament.
 - [ ] Handle not receiving PingResp packets.
 - [ ] Reconnect on lost connection.
 - [ ] Optimize memory usage and size.
 - [ ] Handle not being able to establish connection to host.
 - [ ] Handle receiving long Publish packets.
+- [ ] Create tests for example
 
 ## Technial notes
 - About the [npm-scripts](https://docs.npmjs.com/misc/scripts)

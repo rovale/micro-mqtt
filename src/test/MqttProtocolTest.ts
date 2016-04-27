@@ -87,7 +87,8 @@ describe('MqttProtocol', () => {
             beforeEach(() => {
                 packet = new ConnectPacketVerifier(MqttProtocol.createConnectPacket({
                     host: 'host',
-                    clientId: 'some-client', username: 'some-username',
+                    clientId: 'some-client',
+                    username: 'some-username',
                     password: 'some-password'
                 }));
             });
@@ -98,6 +99,101 @@ describe('MqttProtocol', () => {
 
             it('it should provide the client id, the username, and the password.', () => {
                 packet.shouldHavePayload('some-client', 'some-username', 'some-password');
+            });
+        });
+
+        context('specifying the Last Will Testament', () => {
+            context('With QoS 0, not retained', () => {
+                beforeEach(() => {
+                    packet = new ConnectPacketVerifier(MqttProtocol.createConnectPacket({
+                        host: 'host',
+                        clientId: 'some-client',
+                        username: 'some-username',
+                        will: {
+                            topic: 'some/willTopic',
+                            message: 'offline',
+                            qos: 0,
+                            retain: false
+                        }
+                    }));
+                });
+
+                it('it should provide the correct connect flags.', () => {
+                    packet.shouldHaveConnectFlags(ConnectFlags.CleanSession | ConnectFlags.UserName | ConnectFlags.Will);
+                });
+
+                it('it should provide the will topic, and the will message.', () => {
+                    packet.shouldHavePayload('some-client', 'some/willTopic', 'offline', 'some-username');
+                });
+            });
+
+            context('With QoS 1, not retained', () => {
+                beforeEach(() => {
+                    packet = new ConnectPacketVerifier(MqttProtocol.createConnectPacket({
+                        host: 'host',
+                        clientId: 'some-client',
+                        will: {
+                            topic: 'some/willTopic',
+                            message: 'offline',
+                            qos: 1,
+                            retain: false
+                        }
+                    }));
+                });
+
+                it('it should provide the correct connect flags.', () => {
+                    packet.shouldHaveConnectFlags(ConnectFlags.CleanSession | ConnectFlags.Will | ConnectFlags.WillQoS1);
+                });
+
+                it('it should provide the will topic, and will message.', () => {
+                    packet.shouldHavePayload('some-client', 'some/willTopic', 'offline');
+                });
+            });
+
+            context('With QoS 2, not retained', () => {
+                beforeEach(() => {
+                    packet = new ConnectPacketVerifier(MqttProtocol.createConnectPacket({
+                        host: 'host',
+                        clientId: 'some-client',
+                        will: {
+                            topic: 'some/willTopic',
+                            message: 'offline',
+                            qos: 2,
+                            retain: false
+                        }
+                    }));
+                });
+
+                it('it should provide the correct connect flags.', () => {
+                    packet.shouldHaveConnectFlags(ConnectFlags.CleanSession | ConnectFlags.Will | ConnectFlags.WillQoS2);
+                });
+
+                it('it should provide the will topic, and will message.', () => {
+                    packet.shouldHavePayload('some-client', 'some/willTopic', 'offline');
+                });
+            });
+
+            context('With QoS 0, retained', () => {
+                beforeEach(() => {
+                    packet = new ConnectPacketVerifier(MqttProtocol.createConnectPacket({
+                        host: 'host',
+                        clientId: 'some-client',
+                        will: {
+                            topic: 'some/willTopic',
+                            message: 'offline',
+                            qos: 0,
+                            retain: true
+                        }
+                    }));
+                });
+
+                it('it should provide the correct connect flags.', () => {
+                    packet.shouldHaveConnectFlags(ConnectFlags.CleanSession | ConnectFlags.Will | ConnectFlags.WillRetain);
+                });
+
+                it('it should provide the will topic, and will message.', () => {
+                    packet.shouldHavePayload('some-client', 'some/willTopic', 'offline');
+                });
             });
         });
     });
