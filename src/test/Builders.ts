@@ -8,8 +8,7 @@ import { MicroMqttClientTestSubclass, TestNetwork, TestNetworkSocket } from './T
 export class MicroMqttClientTestSubclassBuilder {
     private client: MicroMqttClientTestSubclass;
 
-    public whichJustSentAConnectPacketOn(networkSocket: TestNetworkSocket) {
-        const network = new TestNetwork();
+    public whichJustSentAConnectPacketOn(networkSocket: TestNetworkSocket, network: TestNetwork = new TestNetwork()) {
         this.client = new MicroMqttClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, network);
         this.client.connect();
         network.callback(networkSocket);
@@ -17,8 +16,8 @@ export class MicroMqttClientTestSubclassBuilder {
         return this;
     }
 
-    public whichIsConnectedOn(networkSocket: TestNetworkSocket) {
-        this.whichJustSentAConnectPacketOn(networkSocket);
+    public whichIsConnectedOn(networkSocket: TestNetworkSocket, network: TestNetwork = new TestNetwork()) {
+        this.whichJustSentAConnectPacketOn(networkSocket, network);
 
         const connAckPacket = new ControlPacketBuilder(ControlPacketType.ConnAck)
             .withConnectReturnCode(ConnectReturnCode.Accepted)

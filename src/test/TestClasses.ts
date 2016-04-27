@@ -66,10 +66,6 @@ export class MicroMqttClientTestSubclass extends MicroMqttClient {
         return this.emittedEvents.filter(e => e.event === 'connected');
     }
 
-    public emittedDisconnected() {
-        return this.emittedEvents.filter(e => e.event === 'disconnected');
-    }
-
     public emittedPublish() {
         return this.emittedEvents.filter(e => e.event === 'publish');
     }
@@ -81,11 +77,16 @@ export class MicroMqttClientTestSubclass extends MicroMqttClient {
 
 export class TestNetwork implements Network {
     public connectIsCalled = false;
+    public connectIsCalledTwice = false;
     public options: NetworkConnectOptions;
     public callback: (socket: NetworkSocket) => void;
 
     public connect(options: NetworkConnectOptions, callback: (socket: NetworkSocket) => void) {
-        this.connectIsCalled = true;
+        if (this.connectIsCalled) {
+            this.connectIsCalledTwice = true;
+        } else {
+            this.connectIsCalled = true;
+        }
         this.options = options;
         this.callback = callback;
     };
