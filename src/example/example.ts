@@ -4,13 +4,13 @@
 declare let global: any;
 
 /* tslint:disable:no-unused-variable */
-import { MqttClient, PublishPacket } from '../module/micro-mqtt';
+import { Client, PublishPacket } from '../module/micro-mqtt';
 
 function onInit() {
     /* tslint:disable:variable-name */
-    const MqttClient = require('micro-mqtt').MqttClient;
+    const Client = require('micro-mqtt').Client;
     /* tslint:enable:no-unused-variable variable-name */
-    const mqttClient: MqttClient = new MqttClient({
+    const client: Client = new Client({
         host: '192.168.2.4',
         clientId: 'espruino',
         username: 'username', password: 'password',
@@ -22,29 +22,29 @@ function onInit() {
         }
     });
 
-    mqttClient.on('connected', () => {
-        mqttClient.subscribe('rovale/#', 1);
-        mqttClient.publish('rovale/espruino/status', 'online', 1, true);
+    client.on('connected', () => {
+        client.subscribe('rovale/#', 1);
+        client.publish('rovale/espruino/status', 'online', 1, true);
     });
 
-    mqttClient.on('publish', (pub: PublishPacket) => {
+    client.on('publish', (pub: PublishPacket) => {
         console.log('on publish');
         console.log(pub);
     });
 
-    mqttClient.on('debug', (debug: string) => {
+    client.on('debug', (debug: string) => {
         console.log('[debug] ' + debug);
     });
 
-    mqttClient.on('info', (info: string) => {
+    client.on('info', (info: string) => {
         console.log('[info] ' + info);
     });
 
-    mqttClient.on('error', (error: string) => {
+    client.on('error', (error: string) => {
         console.log('[error] ' + error);
     });
 
-    mqttClient.connect();
+    client.connect();
 
-    global.mqttClient = mqttClient;
+    global.client = client;
 }

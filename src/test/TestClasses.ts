@@ -2,7 +2,7 @@
  * Test subclasses and mocks.
  */
 /// <reference path='_common.ts' />
-import { MqttClient, PublishPacket } from '../module/micro-mqtt';
+import { Client, PublishPacket } from '../module/micro-mqtt';
 import ConnectionOptions from '../module/ConnectionOptions';
 import { Network, NetworkConnectOptions, NetworkSocket } from '../module/micro-mqtt';
 
@@ -11,7 +11,7 @@ interface EmittedEvent {
     args: string | PublishPacket;
 }
 
-export class MqttClientTestSubclass extends MqttClient {
+export class ClientTestSubclass extends Client {
     private emittedEvents: EmittedEvent[] = [];
 
     constructor(options: ConnectionOptions, network?: Network) {
