@@ -49,9 +49,22 @@ export interface Network {
     connect: (options: NetworkConnectOptions, callback: (socket: NetworkSocket) => void) => void;
 }
 
+export interface PublishPacket {
+    pid?: number;
+    topic: string;
+    message: string;
+    qos: number;
+    retain: number;
+    next?: number;
+}
+
 /**
  * The MQTT client.
  */
+export interface MqttClient {
+    on: (event: string, listener: (arg: string | PublishPacket) => void) => void;
+}
+
 export class MqttClient {
     public version = '0.0.16';
 
@@ -60,7 +73,7 @@ export class MqttClient {
 
     private networkSocket: NetworkSocket;
 
-    protected emit: (event: string, ...args: any[]) => boolean;
+    protected emit: (event: string, arg?: string | PublishPacket) => boolean;
 
     private connectionTimeOutId: number;
     private pingIntervalId: number;
@@ -322,15 +335,6 @@ export module MqttProtocol {
         const pid = String.fromCharCode(fixedPackedId >> 8, fixedPackedId & 255);
         const variable = (qos === 0) ? createString(topic) : createString(topic) + pid;
         return createPacket(byte1, variable, message);
-    }
-
-    export interface PublishPacket {
-        pid?: number;
-        topic: string;
-        message: string;
-        qos: number;
-        retain: number;
-        next?: number;
     }
 
     export function parsePublishPacket(data: string): PublishPacket {
