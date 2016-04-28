@@ -2,13 +2,13 @@
  * Test subclasses and mocks.
  */
 /// <reference path='_common.ts' />
-import { MqttClient } from '../module/micro-mqtt';
+import { MqttClient, PublishPacket } from '../module/micro-mqtt';
 import ConnectionOptions from '../module/ConnectionOptions';
 import { Network, NetworkConnectOptions, NetworkSocket } from '../module/micro-mqtt';
 
 interface EmittedEvent {
     event: string;
-    args: any[];
+    args: string | PublishPacket;
 }
 
 export class MqttClientTestSubclass extends MqttClient {
@@ -16,7 +16,7 @@ export class MqttClientTestSubclass extends MqttClient {
 
     constructor(options: ConnectionOptions, network?: Network) {
         super(options, network);
-        this.emit = (event: string, ...args: any[]) => {
+        this.emit = (event: string, args: string | PublishPacket) => {
             this.emittedEvents.push({ event: event, args: args });
             return true;
         };
@@ -24,14 +24,12 @@ export class MqttClientTestSubclass extends MqttClient {
 
     private shouldHaveEmitted(events: EmittedEvent[], text: string) {
         events.should.have.lengthOf(1);
-        events[0].args.should.have.lengthOf(1);
-        return events[0].args[0].should.equal(text);
+        return events[0].args.should.equal(text);
     }
 
-    public shouldHaveEmittedEvent(events: EmittedEvent[], assert: (text: string) => Chai.Assertion) {
+    public shouldHaveEmittedEvent(events: EmittedEvent[], assert: (arg: string | PublishPacket) => Chai.Assertion) {
         events.should.have.lengthOf(1);
-        events[0].args.should.have.lengthOf(1);
-        return assert(events[0].args[0]);
+        return assert(events[0].args);
     }
 
     public emittedDebugInfo() {

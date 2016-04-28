@@ -24,11 +24,11 @@ An MQTT client for [Espruino](http://www.espruino.com/).
 - [x] Retry when not being able to establish a network connection.
 - [x] Reconnect when not receiving a ConnAck package.
 - [x] Reconnect on lost connection.
+- [x] Create a ts example.
 - [ ] Handle not receiving PingResp packets.
 - [ ] Add retry mechanism when receiving a return code != Accepted?
 - [ ] Optimize memory usage and size.
 - [ ] Handle receiving long Publish packets.
-- [ ] Create tests for example
 
 ## Technial notes
 - About the [npm-scripts](https://docs.npmjs.com/misc/scripts)

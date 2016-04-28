@@ -2,7 +2,7 @@
  * Tests for the MQTT protocol.
  */
 /// <reference path='_common.ts' />
-import { MqttProtocol, ConnectFlags } from '../module/micro-mqtt';
+import { MqttProtocol, ConnectFlags, PublishPacket } from '../module/micro-mqtt';
 import { ConnectPacketVerifier, PublishPacketVerifier, SubscribePacketVerifier } from './ControlPacketVerifier';
 
 describe('MqttProtocol', () => {
@@ -285,7 +285,7 @@ describe('MqttProtocol', () => {
     });
 
     context('When parsing a Publish packet', () => {
-        let parsedPacket: MqttProtocol.PublishPacket;
+        let parsedPacket: PublishPacket;
 
         context('with a topic, a message, and QoS 0', () => {
             beforeEach(() => {

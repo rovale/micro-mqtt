@@ -17,8 +17,8 @@
     "remap:html": "remap-istanbul --input coverage/coverage.json --type html --output coverage/lcov-report-ts",
     "?test:watch": "Watch for changed compiled TypeScript files and perform unit tests. Press Ctrl-Shift-B in VSCode to compile TypeScript.",
     "test:watch": "mocha --watch ./bin/*/*.js",
-    "?deploy": "Runs all tests and copies the micro-mqtt.js module to the Espruino Web IDE project.",    
-    "deploy": "npm run test && ncp ./bin/module/micro-mqtt.js ./espruino/modules/micro-mqtt.js",    
+    "?deploy": "Runs all tests and copies the micro-mqtt.js module to the Espruino Web IDE project.",
+    "deploy": "npm run test && ncp ./bin/module/micro-mqtt.js ./espruino/modules/micro-mqtt.js && ncp ./bin/example/example.js ./espruino/projects/example.js",
     "?cleanall": "Removes the node_modules & typings, all compiled TypeScript files, and coverage reports.",
     "cleanall": "rimraf ./coverage ./bin ./typings ./node_modules"
   },
@@ -46,7 +46,7 @@
     "remap-istanbul": "^0.6.3",
     "rimraf": "^2.5.2",
     "sinon": "^1.17.3",
-    "tslint": "^3.7.4",
+    "tslint": "^3.8.1",
     "tslint-microsoft-contrib": "2.0.3",
     "typescript": "^1.8.10",
     "typings": "^0.8.1"

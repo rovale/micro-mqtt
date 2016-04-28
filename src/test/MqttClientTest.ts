@@ -3,7 +3,7 @@
  */
 /// <reference path='_common.ts' />
 import { ConnectFlags, ConnectReturnCode } from '../module/micro-mqtt';
-import { MqttProtocol }  from '../module/micro-mqtt';
+import { MqttProtocol, PublishPacket }  from '../module/micro-mqtt';
 import ControlPacketType from '../module/ControlPacketType';
 import { MqttClientTestSubclass, TestNetwork, TestNetworkSocket} from './TestClasses';
 import { ConnectPacketVerifier, SubscribePacketVerifier, PublishPacketVerifier,
@@ -330,8 +330,7 @@ describe('MqttClient', () => {
             it('it should emit a \'publish\' event.', () => {
                 const events = subject.emittedPublish();
                 events.should.have.lengthOf(1);
-                events[0].args.should.have.lengthOf(1);
-                <MqttProtocol.PublishPacket>(events[0].args[0]).topic.should.equal('some/topic');
+                (<PublishPacket>(events[0].args)).topic.should.equal('some/topic');
             });
         });
 
@@ -359,8 +358,7 @@ describe('MqttClient', () => {
             it('it should emit a \'publish\' event.', () => {
                 const events = subject.emittedPublish();
                 events.should.have.lengthOf(1);
-                events[0].args.should.have.lengthOf(1);
-                <MqttProtocol.PublishPacket>(events[0].args[0]).topic.should.equal('some/topic');
+                (<PublishPacket>(events[0].args)).topic.should.equal('some/topic');
             });
 
 
