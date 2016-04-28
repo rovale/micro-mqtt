@@ -120,7 +120,7 @@ describe('The MQTT client', () => {
                 .whichJustSentAConnectPacketOn(networkSocket)
                 .build();
 
-            networkSocket.receivePackage(Protocol.createSubscribePacket('Some unexpected packet', 0));
+            networkSocket.receivePackage(Protocol.createSubscribe('Some unexpected packet', 0));
         });
 
         it('it should emit some debug information.', () => {
@@ -367,7 +367,7 @@ describe('The MQTT client', () => {
                 networkSocket.sentPackages.should.have.lengthOf(1);
                 const packet = new PubAckPacketVerifier(networkSocket.sentPackages[0]);
                 packet.shouldHaveValidRemainingLength();
-                packet.shouldHavePacketId(Protocol.fixedPackedId);
+                packet.shouldHavePacketId(Protocol.Constants.FixedPackedId);
             });
         });
     });

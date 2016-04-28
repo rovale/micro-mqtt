@@ -26,8 +26,7 @@ An MQTT client for [Espruino](http://www.espruino.com/).
 - [x] Reconnect on lost connection.
 - [x] Create a ts example.
 - [ ] Handle not receiving PingResp packets.
-- [ ] Add retry mechanism when receiving a return code != Accepted?
-- [ ] Optimize memory usage and size.
+- [ ] **Optimize memory usage and size.**
 - [ ] Handle receiving long Publish packets.
 
 ## Technial notes

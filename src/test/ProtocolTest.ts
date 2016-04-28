@@ -326,7 +326,7 @@ describe('The MQTT protocol', () => {
 
         context('with QoS 0', () => {
             beforeEach(() => {
-                packet = new SubscribePacketVerifier(Protocol.createSubscribePacket('some/topic', 0));
+                packet = new SubscribePacketVerifier(Protocol.createSubscribe('some/topic', 0));
             });
 
             it('it should set the reserved bits.', () => {
@@ -348,7 +348,7 @@ describe('The MQTT protocol', () => {
 
         context('with QoS 1', () => {
             beforeEach(() => {
-                packet = new SubscribePacketVerifier(Protocol.createSubscribePacket('some/topic', 1));
+                packet = new SubscribePacketVerifier(Protocol.createSubscribe('some/topic', 1));
             });
 
             it('it should set the reserved bits.', () => {

@@ -141,7 +141,7 @@ export class SubscribePacketVerifier extends ControlPacketVerifier {
     public shouldHaveAPacketId() {
         const packetIdPosition = 2;
         const packetId = this.packet.charCodeAt(packetIdPosition) << 8 | this.packet.charCodeAt(packetIdPosition + 1);
-        return packetId.should.equal(Protocol.fixedPackedId, 'since it is currently hard coded.');
+        return packetId.should.equal(Protocol.Constants.FixedPackedId, 'since it is currently hard coded.');
     }
 }
 

@@ -47,6 +47,7 @@ export interface NetworkConnectOptions {
 export interface NetworkSocket {
     write: (data: string) => void;
     on: (event: string, listener: (data: string) => void) => void;
+    removeAllListeners: (event: string) => void;
     end: () => void;
 }
 
@@ -73,32 +74,32 @@ export interface Client {
 export class Client {
     public version = '0.0.17';
 
-    private options: ConnectionOptions;
-    private network: Network;
+    private opt: ConnectionOptions;
 
-    private networkSocket: NetworkSocket;
+    private net: Network;
+    private sct: NetworkSocket;
 
     protected emit: (event: string, arg?: string | PublishPacket) => boolean;
 
-    private connectionTimeOutId: number;
-    private pingIntervalId: number;
+    private ctId: number;
+    private piId: number;
 
-    constructor(options: ConnectionOptions, network: Network = require('net')) {
-        options.port = options.port || Constants.DefaultPort;
-        options.clientId = options.clientId || '';
+    constructor(opt: ConnectionOptions, net: Network = require('net')) {
+        opt.port = opt.port || Constants.DefaultPort;
+        opt.clientId = opt.clientId || '';
 
-        if (options.will) {
-            options.will.qos = options.will.qos || Constants.DefaultQos;
-            options.will.retain = options.will.retain || false;
+        if (opt.will) {
+            opt.will.qos = opt.will.qos || Constants.DefaultQos;
+            opt.will.retain = opt.will.retain || false;
         }
 
-        this.options = options;
-        this.network = network;
+        this.opt = opt;
+        this.net = net;
     }
 
-    private static getConnectionError(returnCode: number) {
+    private static describe(code: ConnectReturnCode) {
         let error = 'Connection refused, ';
-        switch (returnCode) {
+        switch (code) {
             case ConnectReturnCode.UnacceptableProtocolVersion:
                 error += 'unacceptable protocol version.';
                 break;
@@ -115,54 +116,61 @@ export class Client {
                 error += 'not authorized.';
                 break;
             default:
-                error += 'unknown return code: ' + returnCode + '.';
+                error += 'unknown return code: ' + code + '.';
         }
         return error;
     }
 
     public connect = () => {
-        this.emit('info', `Connecting to ${this.options.host}:${this.options.port}`);
-        this.network.connect({ host: this.options.host, port: this.options.port }, (socket) => this.onNetworkConnected(socket));
-        this.connectionTimeOutId = setTimeout(() => {
+        this.emit('info', `Connecting to ${this.opt.host}:${this.opt.port}`);
+
+        this.net.connect({ host: this.opt.host, port: this.opt.port }, (socket: NetworkSocket) => {
+            clearTimeout(this.ctId);
+            this.emit('info', 'Network connection established.');
+            this.sct = socket;
+
+            this.sct.write(Protocol.createConnect(this.opt));
+
+            this.ctId = setTimeout(() => {
+                this.emit('error', 'MQTT connection timeout. Reconnecting.');
+                this.connect();
+            }, Constants.ConnectionTimeout * 1000);
+
+            this.sct.on('data', (data: string) => {
+                const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
+                this.emit('debug', `Rcvd: ${controlPacketType}: '${data}'.`);
+                this.handleData(data);
+            });
+
+            this.sct.on('end', () => {
+                this.emit('error', 'MQTT client disconnected. Reconnecting.');
+                clearInterval(this.piId);
+                this.connect();
+            });
+
+            // Remove this handler from the memory.
+            this.sct.removeAllListeners('connect');
+        });
+
+        this.ctId = setTimeout(() => {
             this.emit('error', 'Network connection timeout. Retrying.');
             this.connect();
         }, Constants.ConnectionTimeout * 1000);
-    };
-
-    private onNetworkConnected = (socket: NetworkSocket) => {
-        clearTimeout(this.connectionTimeOutId);
-        this.emit('info', 'Network connection established.');
-        this.networkSocket = socket;
-
-        this.networkSocket.write(Protocol.createConnect(this.options));
-        this.connectionTimeOutId = setTimeout(() => {
-            this.emit('error', 'MQTT connection timeout. Reconnecting.');
-            this.connect();
-        }, Constants.ConnectionTimeout * 1000);
-
-        this.networkSocket.on('data', (data: string) => this.onNetworkData(data));
-        this.networkSocket.on('end', this.onNetworkEnd);
-    };
-
-    private onNetworkData = (data: string) => {
-        const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
-        this.emit('debug', `Rcvd: ${controlPacketType}: '${data}'.`);
-        this.handleData(data);
     };
 
     private handleData = (data: string) => {
         const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
         switch (controlPacketType) {
             case ControlPacketType.ConnAck:
-                clearTimeout(this.connectionTimeOutId);
+                clearTimeout(this.ctId);
                 const returnCode = data.charCodeAt(3);
                 if (returnCode === ConnectReturnCode.Accepted) {
                     this.emit('info', 'MQTT connection accepted.');
                     this.emit('connected');
 
-                    this.pingIntervalId = setInterval(this.ping, Constants.PingInterval * 1000);
+                    this.piId = setInterval(this.ping, Constants.PingInterval * 1000);
                 } else {
-                    const connectionError = Client.getConnectionError(returnCode);
+                    const connectionError = Client.describe(returnCode);
                     this.emit('error', connectionError);
                 }
                 break;
@@ -170,7 +178,7 @@ export class Client {
                 const parsedData = Protocol.parsePublish(data);
                 this.emit('publish', parsedData);
                 if (parsedData.qos > 0) {
-                    setTimeout(() => { this.networkSocket.write(Protocol.createPubAckPacket(parsedData.pid)); }, 0);
+                    setTimeout(() => { this.sct.write(Protocol.createPubAck(parsedData.pid)); }, 0);
                 }
                 if (parsedData.next) {
                     this.handleData(data.substr(parsedData.next));
@@ -187,24 +195,18 @@ export class Client {
         }
     };
 
-    private onNetworkEnd = () => {
-        this.emit('error', 'MQTT client disconnected. Reconnecting.');
-        clearInterval(this.pingIntervalId);
-        this.connect();
-    };
-
     /** Publish a message */
     public publish = (topic: string, message: string, qos = Constants.DefaultQos, retained = false) => {
-        this.networkSocket.write(Protocol.createPublish(topic, message, qos, true));
+        this.sct.write(Protocol.createPublish(topic, message, qos, true));
     };
 
     /** Subscribe to topic */
     public subscribe = (topic: string, qos = Constants.DefaultQos) => {
-        this.networkSocket.write(Protocol.createSubscribePacket(topic, qos));
+        this.sct.write(Protocol.createSubscribe(topic, qos));
     };
 
     private ping = () => {
-        this.networkSocket.write(Protocol.createPingReq());
+        this.sct.write(Protocol.createPingReq());
         this.emit('debug', 'Sent: Ping request.');
     };
 }
@@ -213,9 +215,11 @@ export class Client {
  * The specifics of the MQTT protocol.
  */
 export module Protocol {
-    // FIXME: The packet id is fixed.
-    export const fixedPackedId = 1;
-    const keepAlive = 60;
+    export const enum Constants {
+        // FIXME: The packet id is fixed.
+        FixedPackedId = 1,
+        KeepAlive = 60
+    }
 
     /** 
      * Remaining Length
@@ -259,14 +263,6 @@ export module Protocol {
         return [int16 >> 8, int16 & 255];
     }
 
-    /**
-     * Keep alive
-     * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349237
-     */
-    function keepAliveBytes() {
-        return getBytes(keepAlive);
-    }
-
     /** 
      * Structure of UTF-8 encoded strings
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Figure_1.1_Structure
@@ -299,7 +295,7 @@ export module Protocol {
         const protocolLevel = String.fromCharCode(4);
         const flags = String.fromCharCode(createConnectFlags(options));
 
-        const keepAlive: string = String.fromCharCode(...keepAliveBytes());
+        const keepAlive: string = String.fromCharCode(...getBytes(Constants.KeepAlive));
 
         let payload = pack(options.clientId);
 
@@ -337,7 +333,7 @@ export module Protocol {
         let byte1 = ControlPacketType.Publish << 4 | (qos << 1);
         byte1 |= (retained) ? 1 : 0;
 
-        const pid = String.fromCharCode(fixedPackedId >> 8, fixedPackedId & 255);
+        const pid = String.fromCharCode(...getBytes(Constants.FixedPackedId));
         const variable = (qos === 0) ? pack(topic) : pack(topic) + pid;
         return createPacket(byte1, variable, message);
     }
@@ -373,23 +369,22 @@ export module Protocol {
         return packet;
     }
 
-
     /** 
      * PUBACK - Publish acknowledgement
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800416
      */
-    export function createPubAckPacket(pid: number) {
+    export function createPubAck(pid: number) {
         const byte1 = ControlPacketType.PubAck << 4;
-        return createPacket(byte1, String.fromCharCode(pid >> 8, pid & 255));
+        return createPacket(byte1, String.fromCharCode(...getBytes(pid)));
     }
 
     /** 
      * SUBSCRIBE - Subscribe to topics
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800436
      */
-    export function createSubscribePacket(topic: string, qos: number) {
+    export function createSubscribe(topic: string, qos: number) {
         const byte1 = ControlPacketType.Subscribe << 4 | 2;
-        const pid = String.fromCharCode(fixedPackedId >> 8, fixedPackedId & 255);
+        const pid = String.fromCharCode(...getBytes(Constants.FixedPackedId));
         return createPacket(byte1,
             pid,
             pack(topic) +

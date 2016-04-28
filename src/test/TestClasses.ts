@@ -119,6 +119,10 @@ export class TestNetworkSocket implements NetworkSocket {
         this.eventSubscriptions.push({ event: event, listener: listener });
     };
 
+    public removeAllListeners(event: string) {
+        this.eventSubscriptions = this.eventSubscriptions.filter(s => s.event !== event);
+    };
+
     public clear() {
         this.sentPackages = [];
     }
