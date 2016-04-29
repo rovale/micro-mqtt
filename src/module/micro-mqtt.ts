@@ -2,10 +2,15 @@
 import ConnectionOptions from './ConnectionOptions';
 import ControlPacketType from './ControlPacketType';
 
-const pingInterval = 40;
-const connectionTimeout = 5;
-const defaultPort = 1883;
-const defaultQos = 0;
+/**
+ * Optimization, the TypeScript compiler replaces the constant enums.
+ */
+const enum Constants {
+    PingInterval = 40,
+    ConnectionTimeout = 5,
+    DefaultPort = 1883,
+    DefaultQos = 0
+}
 
 /**
  * Connect flags
@@ -42,6 +47,7 @@ export interface NetworkConnectOptions {
 export interface NetworkSocket {
     write: (data: string) => void;
     on: (event: string, listener: (data: string) => void) => void;
+    removeAllListeners: (event: string) => void;
     end: () => void;
 }
 
@@ -61,39 +67,39 @@ export interface PublishPacket {
 /**
  * The MQTT client.
  */
-export interface MqttClient {
+export interface Client {
     on: (event: string, listener: (arg: string | PublishPacket) => void) => void;
 }
 
-export class MqttClient {
-    public version = '0.0.16';
+export class Client {
+    public version = '0.0.17';
 
-    private options: ConnectionOptions;
-    private network: Network;
+    private opt: ConnectionOptions;
 
-    private networkSocket: NetworkSocket;
+    private net: Network;
+    private sct: NetworkSocket;
 
     protected emit: (event: string, arg?: string | PublishPacket) => boolean;
 
-    private connectionTimeOutId: number;
-    private pingIntervalId: number;
+    private ctId: number;
+    private piId: number;
 
-    constructor(options: ConnectionOptions, network: Network = require('net')) {
-        options.port = options.port || defaultPort;
-        options.clientId = options.clientId || '';
+    constructor(opt: ConnectionOptions, net: Network = require('net')) {
+        opt.port = opt.port || Constants.DefaultPort;
+        opt.clientId = opt.clientId || '';
 
-        if (options.will) {
-            options.will.qos = options.will.qos || defaultQos;
-            options.will.retain = options.will.retain || false;
+        if (opt.will) {
+            opt.will.qos = opt.will.qos || Constants.DefaultQos;
+            opt.will.retain = opt.will.retain || false;
         }
 
-        this.options = options;
-        this.network = network;
+        this.opt = opt;
+        this.net = net;
     }
 
-    private static getConnectionError(returnCode: number) {
+    private static describe(code: ConnectReturnCode) {
         let error = 'Connection refused, ';
-        switch (returnCode) {
+        switch (code) {
             case ConnectReturnCode.UnacceptableProtocolVersion:
                 error += 'unacceptable protocol version.';
                 break;
@@ -110,62 +116,69 @@ export class MqttClient {
                 error += 'not authorized.';
                 break;
             default:
-                error += 'unknown return code: ' + returnCode + '.';
+                error += 'unknown return code: ' + code + '.';
         }
         return error;
     }
 
     public connect = () => {
-        this.emit('info', `Connecting to ${this.options.host}:${this.options.port}`);
-        this.network.connect({ host: this.options.host, port: this.options.port }, (socket) => this.onNetworkConnected(socket));
-        this.connectionTimeOutId = setTimeout(() => {
+        this.emit('info', `Connecting to ${this.opt.host}:${this.opt.port}`);
+
+        this.net.connect({ host: this.opt.host, port: this.opt.port }, (socket: NetworkSocket) => {
+            clearTimeout(this.ctId);
+            this.emit('info', 'Network connection established.');
+            this.sct = socket;
+
+            this.sct.write(Protocol.createConnect(this.opt));
+
+            this.ctId = setTimeout(() => {
+                this.emit('error', 'MQTT connection timeout. Reconnecting.');
+                this.connect();
+            }, Constants.ConnectionTimeout * 1000);
+
+            this.sct.on('data', (data: string) => {
+                const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
+                this.emit('debug', `Rcvd: ${controlPacketType}: '${data}'.`);
+                this.handleData(data);
+            });
+
+            this.sct.on('end', () => {
+                this.emit('error', 'MQTT client disconnected. Reconnecting.');
+                clearInterval(this.piId);
+                this.connect();
+            });
+
+            // Remove this handler from the memory.
+            this.sct.removeAllListeners('connect');
+        });
+
+        this.ctId = setTimeout(() => {
             this.emit('error', 'Network connection timeout. Retrying.');
             this.connect();
-        }, connectionTimeout * 1000);
-    };
-
-    private onNetworkConnected = (socket: NetworkSocket) => {
-        clearTimeout(this.connectionTimeOutId);
-        this.emit('info', 'Network connection established.');
-        this.networkSocket = socket;
-
-        this.networkSocket.write(MqttProtocol.createConnectPacket(this.options));
-        this.connectionTimeOutId = setTimeout(() => {
-            this.emit('error', 'MQTT connection timeout. Reconnecting.');
-            this.connect();
-        }, connectionTimeout * 1000);
-
-        this.networkSocket.on('data', (data: string) => this.onNetworkData(data));
-        this.networkSocket.on('end', this.onNetworkEnd);
-    };
-
-    private onNetworkData = (data: string) => {
-        const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
-        this.emit('debug', `Rcvd: ${controlPacketType}: '${data}'.`);
-        this.handleData(data);
+        }, Constants.ConnectionTimeout * 1000);
     };
 
     private handleData = (data: string) => {
         const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
         switch (controlPacketType) {
             case ControlPacketType.ConnAck:
-                clearTimeout(this.connectionTimeOutId);
+                clearTimeout(this.ctId);
                 const returnCode = data.charCodeAt(3);
                 if (returnCode === ConnectReturnCode.Accepted) {
                     this.emit('info', 'MQTT connection accepted.');
                     this.emit('connected');
 
-                    this.pingIntervalId = setInterval(this.ping, pingInterval * 1000);
+                    this.piId = setInterval(this.ping, Constants.PingInterval * 1000);
                 } else {
-                    const connectionError = MqttClient.getConnectionError(returnCode);
+                    const connectionError = Client.describe(returnCode);
                     this.emit('error', connectionError);
                 }
                 break;
             case ControlPacketType.Publish:
-                const parsedData = MqttProtocol.parsePublishPacket(data);
+                const parsedData = Protocol.parsePublish(data);
                 this.emit('publish', parsedData);
                 if (parsedData.qos > 0) {
-                    setTimeout(() => { this.networkSocket.write(MqttProtocol.createPubAckPacket(parsedData.pid)); }, 0);
+                    setTimeout(() => { this.sct.write(Protocol.createPubAck(parsedData.pid)); }, 0);
                 }
                 if (parsedData.next) {
                     this.handleData(data.substr(parsedData.next));
@@ -182,24 +195,18 @@ export class MqttClient {
         }
     };
 
-    private onNetworkEnd = () => {
-        this.emit('error', 'MQTT client disconnected. Reconnecting.');
-        clearInterval(this.pingIntervalId);
-        this.connect();
-    };
-
     /** Publish a message */
-    public publish = (topic: string, message: string, qos = defaultQos, retained = false) => {
-        this.networkSocket.write(MqttProtocol.createPublishPacket(topic, message, qos, true));
+    public publish = (topic: string, message: string, qos = Constants.DefaultQos, retained = false) => {
+        this.sct.write(Protocol.createPublish(topic, message, qos, true));
     };
 
     /** Subscribe to topic */
-    public subscribe = (topic: string, qos = defaultQos) => {
-        this.networkSocket.write(MqttProtocol.createSubscribePacket(topic, qos));
+    public subscribe = (topic: string, qos = Constants.DefaultQos) => {
+        this.sct.write(Protocol.createSubscribe(topic, qos));
     };
 
     private ping = () => {
-        this.networkSocket.write(MqttProtocol.createPingReqPacket());
+        this.sct.write(Protocol.createPingReq());
         this.emit('debug', 'Sent: Ping request.');
     };
 }
@@ -207,10 +214,12 @@ export class MqttClient {
 /**
  * The specifics of the MQTT protocol.
  */
-export module MqttProtocol {
-    // FIXME: The packet id is fixed.
-    export const fixedPackedId = 1;
-    const keepAlive = 60;
+export module Protocol {
+    export const enum Constants {
+        // FIXME: The packet id is fixed.
+        FixedPackedId = 1,
+        KeepAlive = 60
+    }
 
     /** 
      * Remaining Length
@@ -254,19 +263,11 @@ export module MqttProtocol {
         return [int16 >> 8, int16 & 255];
     }
 
-    /**
-     * Keep alive
-     * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349237
-     */
-    function keepAliveBytes() {
-        return getBytes(keepAlive);
-    }
-
     /** 
      * Structure of UTF-8 encoded strings
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Figure_1.1_Structure
      */
-    function createString(s: string) {
+    function pack(s: string) {
         return String.fromCharCode(...getBytes(s.length)) + s;
     }
 
@@ -287,26 +288,26 @@ export module MqttProtocol {
      * CONNECT - Client requests a connection to a Server
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718028
      */
-    export function createConnectPacket(options: ConnectionOptions) {
+    export function createConnect(options: ConnectionOptions) {
         const byte1 = ControlPacketType.Connect << 4;
 
-        const protocolName = createString('MQTT');
+        const protocolName = pack('MQTT');
         const protocolLevel = String.fromCharCode(4);
         const flags = String.fromCharCode(createConnectFlags(options));
 
-        const keepAlive: string = String.fromCharCode(...keepAliveBytes());
+        const keepAlive: string = String.fromCharCode(...getBytes(Constants.KeepAlive));
 
-        let payload = createString(options.clientId);
+        let payload = pack(options.clientId);
 
         if (options.will) {
-            payload += createString(options.will.topic);
-            payload += createString(options.will.message);
+            payload += pack(options.will.topic);
+            payload += pack(options.will.message);
         }
 
         if (options.username) {
-            payload += createString(options.username);
+            payload += pack(options.username);
             if (options.password) {
-                payload += createString(options.password);
+                payload += pack(options.password);
             }
         }
 
@@ -320,7 +321,7 @@ export module MqttProtocol {
     /** PINGREQ - PING request
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800454
     */
-    export function createPingReqPacket() {
+    export function createPingReq() {
         return String.fromCharCode(ControlPacketType.PingReq << 4, 0);
     }
 
@@ -328,16 +329,16 @@ export module MqttProtocol {
      * PUBLISH - Publish message
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800410
      */
-    export function createPublishPacket(topic: string, message: string, qos: number, retained: boolean) {
+    export function createPublish(topic: string, message: string, qos: number, retained: boolean) {
         let byte1 = ControlPacketType.Publish << 4 | (qos << 1);
         byte1 |= (retained) ? 1 : 0;
 
-        const pid = String.fromCharCode(fixedPackedId >> 8, fixedPackedId & 255);
-        const variable = (qos === 0) ? createString(topic) : createString(topic) + pid;
+        const pid = String.fromCharCode(...getBytes(Constants.FixedPackedId));
+        const variable = (qos === 0) ? pack(topic) : pack(topic) + pid;
         return createPacket(byte1, variable, message);
     }
 
-    export function parsePublishPacket(data: string): PublishPacket {
+    export function parsePublish(data: string): PublishPacket {
         const cmd = data.charCodeAt(0);
         const qos = (cmd & 0b00000110) >> 1;
         const remainingLength = data.charCodeAt(1);
@@ -368,26 +369,25 @@ export module MqttProtocol {
         return packet;
     }
 
-
     /** 
      * PUBACK - Publish acknowledgement
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800416
      */
-    export function createPubAckPacket(pid: number) {
+    export function createPubAck(pid: number) {
         const byte1 = ControlPacketType.PubAck << 4;
-        return createPacket(byte1, String.fromCharCode(pid >> 8, pid & 255));
+        return createPacket(byte1, String.fromCharCode(...getBytes(pid)));
     }
 
     /** 
      * SUBSCRIBE - Subscribe to topics
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800436
      */
-    export function createSubscribePacket(topic: string, qos: number) {
+    export function createSubscribe(topic: string, qos: number) {
         const byte1 = ControlPacketType.Subscribe << 4 | 2;
-        const pid = String.fromCharCode(fixedPackedId >> 8, fixedPackedId & 255);
+        const pid = String.fromCharCode(...getBytes(Constants.FixedPackedId));
         return createPacket(byte1,
             pid,
-            createString(topic) +
+            pack(topic) +
             String.fromCharCode(qos));
     }
 }

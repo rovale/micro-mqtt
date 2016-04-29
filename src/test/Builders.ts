@@ -3,13 +3,13 @@
  */
 import { ConnectReturnCode  } from '../module/micro-mqtt';
 import ControlPacketType from '../module/ControlPacketType';
-import { MqttClientTestSubclass, TestNetwork, TestNetworkSocket } from './TestClasses';
+import { ClientTestSubclass, TestNetwork, TestNetworkSocket } from './TestClasses';
 
 export class MqttClientTestSubclassBuilder {
-    private client: MqttClientTestSubclass;
+    private client: ClientTestSubclass;
 
     public whichJustSentAConnectPacketOn(networkSocket: TestNetworkSocket, network: TestNetwork = new TestNetwork()) {
-        this.client = new MqttClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, network);
+        this.client = new ClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, network);
         this.client.connect();
         network.callback(networkSocket);
         this.client.clearEmittedEvents();

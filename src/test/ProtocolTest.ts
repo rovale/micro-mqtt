@@ -2,30 +2,30 @@
  * Tests for the MQTT protocol.
  */
 /// <reference path='_common.ts' />
-import { MqttProtocol, ConnectFlags, PublishPacket } from '../module/micro-mqtt';
+import { Protocol, ConnectFlags, PublishPacket } from '../module/micro-mqtt';
 import { ConnectPacketVerifier, PublishPacketVerifier, SubscribePacketVerifier } from './ControlPacketVerifier';
 
-describe('MqttProtocol', () => {
+describe('The MQTT protocol', () => {
     context('When calculating the remaining length of a packet', () => {
 
         it('it should return 1 byte for the values 0 to 127.', () => {
-            MqttProtocol.remainingLength(0).should.deep.equal([0]);
-            MqttProtocol.remainingLength(127).should.deep.equal([127]);
+            Protocol.remainingLength(0).should.deep.equal([0]);
+            Protocol.remainingLength(127).should.deep.equal([127]);
         });
 
         it('it should return 2 bytes for the values 128 to 16383.', () => {
-            MqttProtocol.remainingLength(128).should.deep.equal([128, 1]);
-            MqttProtocol.remainingLength(16383).should.deep.equal([255, 127]);
+            Protocol.remainingLength(128).should.deep.equal([128, 1]);
+            Protocol.remainingLength(16383).should.deep.equal([255, 127]);
         });
 
         it('it should return 3 bytes for the values 16384 to 2097151.', () => {
-            MqttProtocol.remainingLength(16384).should.deep.equal([128, 128, 1]);
-            MqttProtocol.remainingLength(2097151).should.deep.equal([255, 255, 127]);
+            Protocol.remainingLength(16384).should.deep.equal([128, 128, 1]);
+            Protocol.remainingLength(2097151).should.deep.equal([255, 255, 127]);
         });
 
         it('it should return 4 bytes for the values 2097152 to 268435455.', () => {
-            MqttProtocol.remainingLength(2097152).should.deep.equal([128, 128, 128, 1]);
-            MqttProtocol.remainingLength(268435455).should.deep.equal([255, 255, 255, 127]);
+            Protocol.remainingLength(2097152).should.deep.equal([128, 128, 128, 1]);
+            Protocol.remainingLength(268435455).should.deep.equal([255, 255, 255, 127]);
         });
     });
 
@@ -34,7 +34,7 @@ describe('MqttProtocol', () => {
 
         context('without username and password', () => {
             beforeEach(() => {
-                packet = new ConnectPacketVerifier(MqttProtocol.createConnectPacket({
+                packet = new ConnectPacketVerifier(Protocol.createConnect({
                     host: 'some-host',
                     clientId: 'some-client'
                 }));
@@ -67,7 +67,7 @@ describe('MqttProtocol', () => {
 
         context('with only a username', () => {
             beforeEach(() => {
-                packet = new ConnectPacketVerifier(MqttProtocol.createConnectPacket({
+                packet = new ConnectPacketVerifier(Protocol.createConnect({
                     host: 'host',
                     clientId: 'some-client',
                     username: 'some-username'
@@ -85,7 +85,7 @@ describe('MqttProtocol', () => {
 
         context('with both username and password', () => {
             beforeEach(() => {
-                packet = new ConnectPacketVerifier(MqttProtocol.createConnectPacket({
+                packet = new ConnectPacketVerifier(Protocol.createConnect({
                     host: 'host',
                     clientId: 'some-client',
                     username: 'some-username',
@@ -105,7 +105,7 @@ describe('MqttProtocol', () => {
         context('specifying the Last Will Testament', () => {
             context('With QoS 0, not retained', () => {
                 beforeEach(() => {
-                    packet = new ConnectPacketVerifier(MqttProtocol.createConnectPacket({
+                    packet = new ConnectPacketVerifier(Protocol.createConnect({
                         host: 'host',
                         clientId: 'some-client',
                         username: 'some-username',
@@ -129,7 +129,7 @@ describe('MqttProtocol', () => {
 
             context('With QoS 1, not retained', () => {
                 beforeEach(() => {
-                    packet = new ConnectPacketVerifier(MqttProtocol.createConnectPacket({
+                    packet = new ConnectPacketVerifier(Protocol.createConnect({
                         host: 'host',
                         clientId: 'some-client',
                         will: {
@@ -152,7 +152,7 @@ describe('MqttProtocol', () => {
 
             context('With QoS 2, not retained', () => {
                 beforeEach(() => {
-                    packet = new ConnectPacketVerifier(MqttProtocol.createConnectPacket({
+                    packet = new ConnectPacketVerifier(Protocol.createConnect({
                         host: 'host',
                         clientId: 'some-client',
                         will: {
@@ -175,7 +175,7 @@ describe('MqttProtocol', () => {
 
             context('With QoS 0, retained', () => {
                 beforeEach(() => {
-                    packet = new ConnectPacketVerifier(MqttProtocol.createConnectPacket({
+                    packet = new ConnectPacketVerifier(Protocol.createConnect({
                         host: 'host',
                         clientId: 'some-client',
                         will: {
@@ -203,7 +203,7 @@ describe('MqttProtocol', () => {
 
         context('with QoS 0', () => {
             beforeEach(() => {
-                packet = new PublishPacketVerifier(MqttProtocol.createPublishPacket('some/topic', 'some-message', 0, false));
+                packet = new PublishPacketVerifier(Protocol.createPublish('some/topic', 'some-message', 0, false));
             });
 
             it('it should have a valid remaining length.', () => {
@@ -229,7 +229,7 @@ describe('MqttProtocol', () => {
 
         context('with QoS 1', () => {
             beforeEach(() => {
-                packet = new PublishPacketVerifier(MqttProtocol.createPublishPacket('some/topic', 'some-message', 1, false));
+                packet = new PublishPacketVerifier(Protocol.createPublish('some/topic', 'some-message', 1, false));
             });
 
             it('it should have a valid remaining length.', () => {
@@ -259,7 +259,7 @@ describe('MqttProtocol', () => {
 
         context('with QoS 0, retained', () => {
             beforeEach(() => {
-                packet = new PublishPacketVerifier(MqttProtocol.createPublishPacket('some/topic', 'some-message', 0, true));
+                packet = new PublishPacketVerifier(Protocol.createPublish('some/topic', 'some-message', 0, true));
             });
 
             it('it should have a valid remaining length.', () => {
@@ -289,8 +289,8 @@ describe('MqttProtocol', () => {
 
         context('with a topic, a message, and QoS 0', () => {
             beforeEach(() => {
-                const packet = MqttProtocol.createPublishPacket('some/topic', 'some-message', 0, false);
-                parsedPacket = MqttProtocol.parsePublishPacket(packet);
+                const packet = Protocol.createPublish('some/topic', 'some-message', 0, false);
+                parsedPacket = Protocol.parsePublish(packet);
             });
 
             it('it should return the expected data.', () => {
@@ -305,8 +305,8 @@ describe('MqttProtocol', () => {
 
         context('with a topic, a message, and QoS 1', () => {
             beforeEach(() => {
-                const packet = MqttProtocol.createPublishPacket('some/topic', 'some-message', 1, false);
-                parsedPacket = MqttProtocol.parsePublishPacket(packet);
+                const packet = Protocol.createPublish('some/topic', 'some-message', 1, false);
+                parsedPacket = Protocol.parsePublish(packet);
             });
 
             it('it should return the expected data.', () => {
@@ -326,7 +326,7 @@ describe('MqttProtocol', () => {
 
         context('with QoS 0', () => {
             beforeEach(() => {
-                packet = new SubscribePacketVerifier(MqttProtocol.createSubscribePacket('some/topic', 0));
+                packet = new SubscribePacketVerifier(Protocol.createSubscribe('some/topic', 0));
             });
 
             it('it should set the reserved bits.', () => {
@@ -348,7 +348,7 @@ describe('MqttProtocol', () => {
 
         context('with QoS 1', () => {
             beforeEach(() => {
-                packet = new SubscribePacketVerifier(MqttProtocol.createSubscribePacket('some/topic', 1));
+                packet = new SubscribePacketVerifier(Protocol.createSubscribe('some/topic', 1));
             });
 
             it('it should set the reserved bits.', () => {
