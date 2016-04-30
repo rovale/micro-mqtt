@@ -29,7 +29,7 @@ An MQTT client for [Espruino](http://www.espruino.com/).
 - [ ] Handle not receiving PingResp packets.
 - [ ] Handle receiving long Publish packets.
 - [ ] Compiled parsePublish.
-- [ ] Remove direct dependency on 'net', reconnect logic in separate module.
+- [ ] **Remove direct dependency on 'net', reconnect logic in separate module.**
 
 ## Technial notes
 - About the [npm-scripts](https://docs.npmjs.com/misc/scripts)

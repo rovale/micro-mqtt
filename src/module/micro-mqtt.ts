@@ -1,6 +1,7 @@
 /// <reference path='_common.ts'/>
 import ConnectionOptions from './ConnectionOptions';
 import ControlPacketType from './ControlPacketType';
+import { Network, NetworkSocket } from './mqtt-net';
 
 /**
  * Optimization, the TypeScript compiler replaces the constant enums.
@@ -39,22 +40,6 @@ export const enum ConnectReturnCode {
     NotAuthorized = 5
 }
 
-export interface NetworkConnectOptions {
-    host: string;
-    port: number;
-}
-
-export interface NetworkSocket {
-    write: (data: string) => void;
-    on: (event: string, listener: (data: string) => void) => void;
-    removeAllListeners: (event: string) => void;
-    end: () => void;
-}
-
-export interface Network {
-    connect: (options: NetworkConnectOptions, callback: (socket: NetworkSocket) => void) => void;
-}
-
 export interface Message {
     pid?: number;
     topic: string;
@@ -74,17 +59,19 @@ export interface Client {
 export class Client {
     public version = '0.0.17';
 
-    private opt: ConnectionOptions;
-
     private net: Network;
     private sct: NetworkSocket;
+
+    private opt: ConnectionOptions;
 
     protected emit: (event: string, arg?: string | Message) => boolean;
 
     private ctId: number;
     private piId: number;
 
-    constructor(opt: ConnectionOptions, net: Network = require('net')) {
+    constructor(net: Network, opt: ConnectionOptions) {
+        this.net = net;
+
         opt.port = opt.port || Constants.DefaultPort;
         opt.clientId = opt.clientId || '';
 
@@ -94,7 +81,6 @@ export class Client {
         }
 
         this.opt = opt;
-        this.net = net;
     }
 
     private static describe(code: ConnectReturnCode) {
@@ -122,19 +108,15 @@ export class Client {
     }
 
     public connect = () => {
-        this.emit('info', `Connecting to ${this.opt.host}:${this.opt.port}`);
-
         this.net.connect({ host: this.opt.host, port: this.opt.port }, (socket: NetworkSocket) => {
-            clearTimeout(this.ctId);
-            this.emit('info', 'Network connection established.');
             this.sct = socket;
-
-            this.sct.write(Protocol.createConnect(this.opt));
 
             this.ctId = setTimeout(() => {
                 this.emit('error', 'MQTT connection timeout. Reconnecting.');
                 this.connect();
             }, Constants.ConnectionTimeout * 1000);
+
+            this.sct.write(Protocol.createConnect(this.opt));
 
             this.sct.on('data', (data: string) => {
                 const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
@@ -143,19 +125,9 @@ export class Client {
             });
 
             this.sct.on('end', () => {
-                this.emit('error', 'MQTT client disconnected. Reconnecting.');
                 clearInterval(this.piId);
-                this.connect();
             });
-
-            // Remove this handler from the memory.
-            this.sct.removeAllListeners('connect');
         });
-
-        this.ctId = setTimeout(() => {
-            this.emit('error', 'Network connection timeout. Retrying.');
-            this.connect();
-        }, Constants.ConnectionTimeout * 1000);
     };
 
     private handleData = (data: string) => {

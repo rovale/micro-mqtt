@@ -3,20 +3,20 @@
  */
 import { ConnectReturnCode  } from '../module/micro-mqtt';
 import ControlPacketType from '../module/ControlPacketType';
-import { ClientTestSubclass, TestNetwork, TestNetworkSocket } from './TestClasses';
+import { ClientTestSubclass, NetTestSubclass, MockNetwork, MockNetworkSocket } from './TestClasses';
 
-export class MqttClientTestSubclassBuilder {
+export class ClientTestSubclassBuilder {
     private client: ClientTestSubclass;
 
-    public whichJustSentAConnectPacketOn(networkSocket: TestNetworkSocket, network: TestNetwork = new TestNetwork()) {
-        this.client = new ClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, network);
+    public whichJustSentAConnectPacketOn(networkSocket: MockNetworkSocket, network: MockNetwork = new MockNetwork()) {
+        this.client = new ClientTestSubclass(network, { host: 'some-host', clientId: 'some-client' });
         this.client.connect();
         network.callback(networkSocket);
         this.client.clearEmittedEvents();
         return this;
     }
 
-    public whichIsConnectedOn(networkSocket: TestNetworkSocket, network: TestNetwork = new TestNetwork()) {
+    public whichIsConnectedOn(networkSocket: MockNetworkSocket, network: MockNetwork = new MockNetwork()) {
         this.whichJustSentAConnectPacketOn(networkSocket, network);
 
         const connAckPacket = new ControlPacketBuilder(ControlPacketType.ConnAck)
@@ -31,6 +31,22 @@ export class MqttClientTestSubclassBuilder {
 
     public build() {
         return this.client;
+    }
+}
+
+export class NetTestSubclassBuilder {
+    private result: NetTestSubclass;
+
+    public whichIsConnectedOn(networkSocket: MockNetworkSocket, network: MockNetwork = new MockNetwork()) {
+        this.result = new NetTestSubclass(network);
+        this.result.connect({host: 'some-host', port: 1234});
+        network.callback(networkSocket);
+        this.result.clearEmittedEvents();
+        return this;
+    }
+
+    public build() {
+        return this.result;
     }
 }
 

@@ -18,7 +18,7 @@
     "?test:watch": "Watch for changed compiled TypeScript files and perform unit tests. Press Ctrl-Shift-B in VSCode to compile TypeScript.",
     "test:watch": "mocha --watch ./bin/*/*.js",
     "?deploy": "Runs all tests and copies the micro-mqtt.js module to the Espruino Web IDE project.",
-    "deploy": "npm run test && ncp ./bin/module/micro-mqtt.js ./espruino/modules/micro-mqtt.js && ncp ./bin/example/example.js ./espruino/projects/example.js",
+    "deploy": "npm run test && ncp ./bin/module/micro-mqtt.js ./espruino/modules/micro-mqtt.js  && ncp ./bin/module/mqtt-net.js ./espruino/modules/mqtt-net.js && ncp ./bin/example/example.js ./espruino/projects/example.js",
     "?cleanall": "Removes the node_modules & typings, all compiled TypeScript files, and coverage reports.",
     "cleanall": "rimraf ./coverage ./bin ./typings ./node_modules"
   },

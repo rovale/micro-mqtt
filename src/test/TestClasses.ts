@@ -3,8 +3,9 @@
  */
 /// <reference path='_common.ts' />
 import { Client, Message } from '../module/micro-mqtt';
+import { Net } from '../module/mqtt-net';
 import ConnectionOptions from '../module/ConnectionOptions';
-import { Network, NetworkConnectOptions, NetworkSocket } from '../module/micro-mqtt';
+import { Network, NetworkConnectOptions, NetworkSocket } from '../module/mqtt-net';
 
 interface EmittedEvent {
     event: string;
@@ -14,8 +15,8 @@ interface EmittedEvent {
 export class ClientTestSubclass extends Client {
     private emittedEvents: EmittedEvent[] = [];
 
-    constructor(options: ConnectionOptions, network?: Network) {
-        super(options, network);
+    constructor(network: Network, options: ConnectionOptions) {
+        super(network, options);
         this.emit = (event: string, args: string | Message) => {
             this.emittedEvents.push({ event: event, args: args });
             return true;
@@ -73,7 +74,44 @@ export class ClientTestSubclass extends Client {
     }
 }
 
-export class TestNetwork implements Network {
+export class NetTestSubclass extends Net {
+    private emittedEvents: EmittedEvent[] = [];
+
+    constructor(net: Network) {
+        super(net);
+        this.emit = (event: string, args: string) => {
+            this.emittedEvents.push({ event: event, args: args });
+            return true;
+        };
+    }
+
+    private shouldHaveEmitted(events: EmittedEvent[], text: string) {
+        events.should.have.lengthOf(1);
+        return events[0].args.should.equal(text);
+    }
+
+    public emittedInfo() {
+        return this.emittedEvents.filter(e => e.event === 'info');
+    }
+
+    public shouldHaveEmittedInfo(info: string) {
+        return this.shouldHaveEmitted(this.emittedInfo(), info);
+    }
+
+    public emittedError() {
+        return this.emittedEvents.filter(e => e.event === 'error');
+    }
+
+    public shouldHaveEmittedError(error: string) {
+        return this.shouldHaveEmitted(this.emittedError(), error);
+    }
+
+    public clearEmittedEvents() {
+        this.emittedEvents = [];
+    }
+}
+
+export class MockNetwork implements Network {
     public connectIsCalled = false;
     public connectIsCalledTwice = false;
     public options: NetworkConnectOptions;
@@ -95,7 +133,7 @@ interface EventSubscription {
     listener: Function;
 }
 
-export class TestNetworkSocket implements NetworkSocket {
+export class MockNetworkSocket implements NetworkSocket {
     public sentPackages: string[] = [];
     public eventSubscriptions: EventSubscription[] = [];
 

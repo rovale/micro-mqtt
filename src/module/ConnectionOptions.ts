@@ -7,10 +7,10 @@ interface ConnectionOptions {
     username?: string;
     password?: string;
     clientId?: string;
-    will?: ConnectionOptionsWill;
+    will?: Will;
 }
 
-interface ConnectionOptionsWill {
+interface Will {
     topic: string;
     message: string;
     qos?: number;
