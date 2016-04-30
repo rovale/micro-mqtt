@@ -25,9 +25,11 @@ An MQTT client for [Espruino](http://www.espruino.com/).
 - [x] Reconnect when not receiving a ConnAck package.
 - [x] Reconnect on lost connection.
 - [x] Create a ts example.
+- [x] Optimize memory usage and size.
 - [ ] Handle not receiving PingResp packets.
-- [ ] **Optimize memory usage and size.**
 - [ ] Handle receiving long Publish packets.
+- [ ] Compiled parsePublish.
+- [ ] Remove direct dependency on 'net', reconnect logic in separate module.
 
 ## Technial notes
 - About the [npm-scripts](https://docs.npmjs.com/misc/scripts)

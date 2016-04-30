@@ -17,13 +17,13 @@ const enum Constants {
  * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349229
  */
 export const enum ConnectFlags {
-    UserName = 0b10000000,
-    Password = 0b01000000,
-    WillRetain = 0b00100000,
-    WillQoS2 = 0b00010000,
-    WillQoS1 = 0b00001000,
-    Will = 0b00000100,
-    CleanSession = 0b00000010
+    UserName = 128,
+    Password = 64,
+    WillRetain = 32,
+    WillQoS2 = 16,
+    WillQoS1 = 8,
+    Will = 4,
+    CleanSession = 2
 }
 
 /**
@@ -55,10 +55,10 @@ export interface Network {
     connect: (options: NetworkConnectOptions, callback: (socket: NetworkSocket) => void) => void;
 }
 
-export interface PublishPacket {
+export interface Message {
     pid?: number;
     topic: string;
-    message: string;
+    content: string;
     qos: number;
     retain: number;
     next?: number;
@@ -68,7 +68,7 @@ export interface PublishPacket {
  * The MQTT client.
  */
 export interface Client {
-    on: (event: string, listener: (arg: string | PublishPacket) => void) => void;
+    on: (event: string, listener: (arg: string | Message) => void) => void;
 }
 
 export class Client {
@@ -79,7 +79,7 @@ export class Client {
     private net: Network;
     private sct: NetworkSocket;
 
-    protected emit: (event: string, arg?: string | PublishPacket) => boolean;
+    protected emit: (event: string, arg?: string | Message) => boolean;
 
     private ctId: number;
     private piId: number;
@@ -175,13 +175,13 @@ export class Client {
                 }
                 break;
             case ControlPacketType.Publish:
-                const parsedData = Protocol.parsePublish(data);
-                this.emit('publish', parsedData);
-                if (parsedData.qos > 0) {
-                    setTimeout(() => { this.sct.write(Protocol.createPubAck(parsedData.pid)); }, 0);
+                const message = Protocol.parsePublish(data);
+                this.emit('receive', message);
+                if (message.qos > 0) {
+                    setTimeout(() => { this.sct.write(Protocol.createPubAck(message.pid)); }, 0);
                 }
-                if (parsedData.next) {
-                    this.handleData(data.substr(parsedData.next));
+                if (message.next) {
+                    this.handleData(data.substr(message.next));
                 }
 
                 break;
@@ -221,6 +221,8 @@ export module Protocol {
         KeepAlive = 60
     }
 
+    const strChr = String.fromCharCode;
+
     /** 
      * Remaining Length
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718023
@@ -228,11 +230,11 @@ export module Protocol {
     export function remainingLength(length: number) {
         const encBytes: number[] = [];
         do {
-            let encByte = length & 0b01111111;
+            let encByte = length & 127;
             length = length >> 7;
             // if there are more data to encode, set the top bit of this byte
             if (length > 0) {
-                encByte += 0b10000000;
+                encByte += 128;
             }
             encBytes.push(encByte);
         } while (length > 0);
@@ -268,7 +270,7 @@ export module Protocol {
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Figure_1.1_Structure
      */
     function pack(s: string) {
-        return String.fromCharCode(...getBytes(s.length)) + s;
+        return strChr(...getBytes(s.length)) + s;
     }
 
     /** 
@@ -278,8 +280,8 @@ export module Protocol {
     function createPacket(byte1: number, variable: string, payload: string = '') {
         const byte2 = remainingLength(variable.length + payload.length);
 
-        return String.fromCharCode(byte1) +
-            String.fromCharCode(...byte2) +
+        return strChr(byte1) +
+            strChr(...byte2) +
             variable +
             payload;
     }
@@ -292,10 +294,10 @@ export module Protocol {
         const byte1 = ControlPacketType.Connect << 4;
 
         const protocolName = pack('MQTT');
-        const protocolLevel = String.fromCharCode(4);
-        const flags = String.fromCharCode(createConnectFlags(options));
+        const protocolLevel = strChr(4);
+        const flags = strChr(createConnectFlags(options));
 
-        const keepAlive: string = String.fromCharCode(...getBytes(Constants.KeepAlive));
+        const keepAlive: string = strChr(...getBytes(Constants.KeepAlive));
 
         let payload = pack(options.clientId);
 
@@ -322,7 +324,7 @@ export module Protocol {
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800454
     */
     export function createPingReq() {
-        return String.fromCharCode(ControlPacketType.PingReq << 4, 0);
+        return strChr(ControlPacketType.PingReq << 4, 0);
     }
 
     /** 
@@ -333,12 +335,12 @@ export module Protocol {
         let byte1 = ControlPacketType.Publish << 4 | (qos << 1);
         byte1 |= (retained) ? 1 : 0;
 
-        const pid = String.fromCharCode(...getBytes(Constants.FixedPackedId));
+        const pid = strChr(...getBytes(Constants.FixedPackedId));
         const variable = (qos === 0) ? pack(topic) : pack(topic) + pid;
         return createPacket(byte1, variable, message);
     }
 
-    export function parsePublish(data: string): PublishPacket {
+    export function parsePublish(data: string): Message {
         const cmd = data.charCodeAt(0);
         const qos = (cmd & 0b00000110) >> 1;
         const remainingLength = data.charCodeAt(1);
@@ -350,23 +352,23 @@ export module Protocol {
 
         const messageLength = (remainingLength - variableLength) - 2;
 
-        let packet: PublishPacket = {
+        let message: Message = {
             topic: data.substr(4, topicLength),
-            message: data.substr(4 + variableLength, messageLength),
+            content: data.substr(4 + variableLength, messageLength),
             qos: qos,
-            retain: cmd & 0b00000001
+            retain: cmd & 1
         };
 
         if (data.charCodeAt(remainingLength + 2) > 0) {
-            packet.next = remainingLength + 2;
+            message.next = remainingLength + 2;
         }
 
         if (qos > 0) {
-            packet.pid = data.charCodeAt(4 + variableLength - 2) << 8 |
+            message.pid = data.charCodeAt(4 + variableLength - 2) << 8 |
                 data.charCodeAt(4 + variableLength - 1);
         }
 
-        return packet;
+        return message;
     }
 
     /** 
@@ -375,7 +377,7 @@ export module Protocol {
      */
     export function createPubAck(pid: number) {
         const byte1 = ControlPacketType.PubAck << 4;
-        return createPacket(byte1, String.fromCharCode(...getBytes(pid)));
+        return createPacket(byte1, strChr(...getBytes(pid)));
     }
 
     /** 
@@ -384,10 +386,10 @@ export module Protocol {
      */
     export function createSubscribe(topic: string, qos: number) {
         const byte1 = ControlPacketType.Subscribe << 4 | 2;
-        const pid = String.fromCharCode(...getBytes(Constants.FixedPackedId));
+        const pid = strChr(...getBytes(Constants.FixedPackedId));
         return createPacket(byte1,
             pid,
             pack(topic) +
-            String.fromCharCode(qos));
+            strChr(qos));
     }
 }

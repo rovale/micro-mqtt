@@ -4,7 +4,7 @@
 declare let global: any;
 
 /* tslint:disable:no-unused-variable */
-import { Client, PublishPacket } from '../module/micro-mqtt';
+import { Client, Message } from '../module/micro-mqtt';
 
 function onInit() {
     /* tslint:disable:variable-name */
@@ -27,9 +27,9 @@ function onInit() {
         client.publish('rovale/espruino/status', 'online', 1, true);
     });
 
-    client.on('publish', (pub: PublishPacket) => {
-        console.log('on publish');
-        console.log(pub);
+    client.on('receive', (message: Message) => {
+        console.log('on receive');
+        console.log(message);
     });
 
     client.on('debug', (debug: string) => {
