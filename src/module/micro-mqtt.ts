@@ -215,6 +215,9 @@ export class Client {
  * The specifics of the MQTT protocol.
  */
 export module Protocol {
+    /**
+     * Optimization, the TypeScript compiler replaces the constant enums.
+     */
     export const enum Constants {
         // FIXME: The packet id is fixed.
         FixedPackedId = 1,
