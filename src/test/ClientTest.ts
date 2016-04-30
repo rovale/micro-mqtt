@@ -3,7 +3,7 @@
  */
 /// <reference path='_common.ts' />
 import { ConnectFlags, ConnectReturnCode } from '../module/micro-mqtt';
-import { Protocol, PublishPacket }  from '../module/micro-mqtt';
+import { Protocol, Message }  from '../module/micro-mqtt';
 import ControlPacketType from '../module/ControlPacketType';
 import { ClientTestSubclass, TestNetwork, TestNetworkSocket} from './TestClasses';
 import { ConnectPacketVerifier, SubscribePacketVerifier, PublishPacketVerifier,
@@ -327,10 +327,10 @@ describe('The MQTT client', () => {
                 networkSocket.receivePackage(publishPacket);
             });
 
-            it('it should emit a \'publish\' event.', () => {
-                const events = subject.emittedPublish();
+            it('it should emit a \'receive\' event.', () => {
+                const events = subject.emittedReceive();
                 events.should.have.lengthOf(1);
-                (<PublishPacket>(events[0].args)).topic.should.equal('some/topic');
+                (<Message>(events[0].args)).topic.should.equal('some/topic');
             });
         });
 
@@ -355,10 +355,10 @@ describe('The MQTT client', () => {
                 clock.reset();
             });
 
-            it('it should emit a \'publish\' event.', () => {
-                const events = subject.emittedPublish();
+            it('it should emit a \'receive\' event.', () => {
+                const events = subject.emittedReceive();
                 events.should.have.lengthOf(1);
-                (<PublishPacket>(events[0].args)).topic.should.equal('some/topic');
+                (<Message>(events[0].args)).topic.should.equal('some/topic');
             });
 
 
@@ -568,8 +568,8 @@ describe('The MQTT client', () => {
             networkSocket.receivePackage(publishPacket + publishPacket);
         });
 
-        it('it should emit two \'publish\' events.', () => {
-            const events = subject.emittedPublish();
+        it('it should emit two \'receive\' events.', () => {
+            const events = subject.emittedReceive();
             events.should.have.lengthOf(2);
         });
     });

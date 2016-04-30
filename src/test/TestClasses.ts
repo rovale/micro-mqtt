@@ -2,13 +2,13 @@
  * Test subclasses and mocks.
  */
 /// <reference path='_common.ts' />
-import { Client, PublishPacket } from '../module/micro-mqtt';
+import { Client, Message } from '../module/micro-mqtt';
 import ConnectionOptions from '../module/ConnectionOptions';
 import { Network, NetworkConnectOptions, NetworkSocket } from '../module/micro-mqtt';
 
 interface EmittedEvent {
     event: string;
-    args: string | PublishPacket;
+    args: string | Message;
 }
 
 export class ClientTestSubclass extends Client {
@@ -16,7 +16,7 @@ export class ClientTestSubclass extends Client {
 
     constructor(options: ConnectionOptions, network?: Network) {
         super(options, network);
-        this.emit = (event: string, args: string | PublishPacket) => {
+        this.emit = (event: string, args: string | Message) => {
             this.emittedEvents.push({ event: event, args: args });
             return true;
         };
@@ -27,7 +27,7 @@ export class ClientTestSubclass extends Client {
         return events[0].args.should.equal(text);
     }
 
-    public shouldHaveEmittedEvent(events: EmittedEvent[], assert: (arg: string | PublishPacket) => Chai.Assertion) {
+    public shouldHaveEmittedEvent(events: EmittedEvent[], assert: (arg: string | Message) => Chai.Assertion) {
         events.should.have.lengthOf(1);
         return assert(events[0].args);
     }
@@ -64,8 +64,8 @@ export class ClientTestSubclass extends Client {
         return this.emittedEvents.filter(e => e.event === 'connected');
     }
 
-    public emittedPublish() {
-        return this.emittedEvents.filter(e => e.event === 'publish');
+    public emittedReceive() {
+        return this.emittedEvents.filter(e => e.event === 'receive');
     }
 
     public clearEmittedEvents() {

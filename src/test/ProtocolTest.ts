@@ -2,7 +2,7 @@
  * Tests for the MQTT protocol.
  */
 /// <reference path='_common.ts' />
-import { Protocol, ConnectFlags, PublishPacket } from '../module/micro-mqtt';
+import { Protocol, ConnectFlags, Message } from '../module/micro-mqtt';
 import { ConnectPacketVerifier, PublishPacketVerifier, SubscribePacketVerifier } from './ControlPacketVerifier';
 
 describe('The MQTT protocol', () => {
@@ -285,38 +285,43 @@ describe('The MQTT protocol', () => {
     });
 
     context('When parsing a Publish packet', () => {
-        let parsedPacket: PublishPacket;
+        let actual: Message;
+        let expected: Message;
 
         context('with a topic, a message, and QoS 0', () => {
             beforeEach(() => {
                 const packet = Protocol.createPublish('some/topic', 'some-message', 0, false);
-                parsedPacket = Protocol.parsePublish(packet);
+                actual = Protocol.parsePublish(packet);
             });
 
-            it('it should return the expected data.', () => {
-                parsedPacket.should.deep.equal({
-                    'topic': 'some/topic',
-                    'message': 'some-message',
-                    'qos': 0,
-                    'retain': 0
-                });
+            it('it should return the expected message.', () => {
+                expected = {
+                    topic: 'some/topic',
+                    content: 'some-message',
+                    qos: 0,
+                    retain: 0
+                };
+
+                actual.should.deep.equal(expected);
             });
         });
 
         context('with a topic, a message, and QoS 1', () => {
             beforeEach(() => {
                 const packet = Protocol.createPublish('some/topic', 'some-message', 1, false);
-                parsedPacket = Protocol.parsePublish(packet);
+                actual = Protocol.parsePublish(packet);
             });
 
-            it('it should return the expected data.', () => {
-                parsedPacket.should.deep.equal({
-                    'pid': 1,
-                    'topic': 'some/topic',
-                    'message': 'some-message',
-                    'qos': 1,
-                    'retain': 0
-                });
+            it('it should return the expected message.', () => {
+                expected = {
+                    pid: 1,
+                    topic: 'some/topic',
+                    content: 'some-message',
+                    qos: 1,
+                    retain: 0
+                };
+
+                actual.should.deep.equal(expected);
             });
         });
     });
