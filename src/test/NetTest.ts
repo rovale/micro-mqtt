@@ -2,23 +2,23 @@
  * Tests for the MQTT client.
  */
 /// <reference path='_common.ts' />
-import { NetworkSocket } from '../module/mqtt-net';
-import { NetTestSubclass, MockNetwork, MockNetworkSocket } from './TestClasses';
+import { Socket } from '../module/mqtt-net';
+import { NetTestSubclass, MockNet, MockSocket } from './TestClasses';
 import { NetTestSubclassBuilder } from './Builders';
 import * as sinon from 'sinon';
 
 describe('The MQTT over TCP/IP sockets', () => {
     let subject: NetTestSubclass;
-    let networkSocket: MockNetworkSocket;
+    let socket: MockSocket;
 
     context('When establishing a network connection', () => {
-        let network: MockNetwork;
+        let net: MockNet;
 
         context('to a specific host and port', () => {
             beforeEach(() => {
-                network = new MockNetwork();
-                network.connectIsCalled.should.equal(false, 'did not expect the client to connect to the network yet');
-                subject = new NetTestSubclass(network);
+                net = new MockNet();
+                net.connectIsCalled.should.equal(false, 'did not expect the client to connect to the network yet');
+                subject = new NetTestSubclass(net);
                 subject.connect({ host: 'some-host', port: 1234 });
             });
 
@@ -27,22 +27,22 @@ describe('The MQTT over TCP/IP sockets', () => {
             });
 
             it('it should try to establish a connection to the expected host and port.', () => {
-                network.connectIsCalled.should.equal(true, 'expected the client to connect to the network');
-                network.options.host.should.equal('some-host');
-                network.options.port.should.equal(1234);
+                net.connectIsCalled.should.equal(true, 'expected the client to connect to the network');
+                net.options.host.should.equal('some-host');
+                net.options.port.should.equal(1234);
             });
         });
     });
 
     context('When the network connection is not established within 5 seconds', () => {
-        let network: MockNetwork;
+        let net: MockNet;
         let clock: Sinon.SinonFakeTimers;
 
         beforeEach(() => {
             clock = sinon.useFakeTimers();
 
-            network = new MockNetwork();
-            subject = new NetTestSubclass(network);
+            net = new MockNet();
+            subject = new NetTestSubclass(net);
             subject.connect({ host: 'some-host', port: 1234 });
         });
 
@@ -56,23 +56,23 @@ describe('The MQTT over TCP/IP sockets', () => {
         });
 
         it('it should try it again.', () => {
-            network.connectIsCalledTwice.should.equal(false, 'because it is the first attempt.');
+            net.connectIsCalledTwice.should.equal(false, 'because it is the first attempt.');
             clock.tick(5000);
-            network.connectIsCalledTwice.should.equal(true, 'because it should try it again.');
+            net.connectIsCalledTwice.should.equal(true, 'because it should try it again.');
         });
     });
 
     context('When the network connection is established', () => {
-        let network: MockNetwork;
-        let expectedSocket: MockNetworkSocket;
-        let actualSocket: NetworkSocket;
+        let net: MockNet;
+        let expectedSocket: MockSocket;
+        let actualSocket: Socket;
 
         beforeEach(() => {
-            network = new MockNetwork();
-            subject = new NetTestSubclass(network);
+            net = new MockNet();
+            subject = new NetTestSubclass(net);
             subject.connect({ host: 'some-host', port: 1234 }, socket => actualSocket = socket);
-            expectedSocket = new MockNetworkSocket();
-            network.callback(expectedSocket);
+            expectedSocket = new MockSocket();
+            net.callback(expectedSocket);
         });
 
         it('it should invoke the callback.', () => {
@@ -82,18 +82,18 @@ describe('The MQTT over TCP/IP sockets', () => {
 
     context('When the network connection is lost', () => {
         let clock: Sinon.SinonFakeTimers;
-        let network: MockNetwork;
+        let net: MockNet;
 
         beforeEach(() => {
             clock = sinon.useFakeTimers();
-            network = new MockNetwork();
-            networkSocket = new MockNetworkSocket();
+            net = new MockNet();
+            socket = new MockSocket();
 
             subject = new NetTestSubclassBuilder()
-                .whichIsConnectedOn(networkSocket, network)
+                .whichIsConnectedOn(socket, net)
                 .build();
 
-            networkSocket.end();
+            socket.end();
         });
 
         afterEach(() => {
@@ -105,7 +105,7 @@ describe('The MQTT over TCP/IP sockets', () => {
         });
 
         it('it should reconnect.', () => {
-            network.connectIsCalledTwice.should.equal(true, 'because it should reconnect.');
+            net.connectIsCalledTwice.should.equal(true, 'because it should reconnect.');
         });
     });
 });

@@ -3,9 +3,9 @@
  */
 /// <reference path='_common.ts' />
 import { Client, Message } from '../module/micro-mqtt';
-import { Net } from '../module/mqtt-net';
+import { MqttNet } from '../module/mqtt-net';
 import ConnectionOptions from '../module/ConnectionOptions';
-import { Network, NetworkConnectOptions, NetworkSocket } from '../module/mqtt-net';
+import { Net, NetConnectOptions, Socket } from '../module/mqtt-net';
 
 interface EmittedEvent {
     event: string;
@@ -15,8 +15,8 @@ interface EmittedEvent {
 export class ClientTestSubclass extends Client {
     private emittedEvents: EmittedEvent[] = [];
 
-    constructor(network: Network, options: ConnectionOptions) {
-        super(network, options);
+    constructor(net: Net, options: ConnectionOptions) {
+        super(net, options);
         this.emit = (event: string, args: string | Message) => {
             this.emittedEvents.push({ event: event, args: args });
             return true;
@@ -74,10 +74,10 @@ export class ClientTestSubclass extends Client {
     }
 }
 
-export class NetTestSubclass extends Net {
+export class NetTestSubclass extends MqttNet {
     private emittedEvents: EmittedEvent[] = [];
 
-    constructor(net: Network) {
+    constructor(net: Net) {
         super(net);
         this.emit = (event: string, args: string) => {
             this.emittedEvents.push({ event: event, args: args });
@@ -111,13 +111,13 @@ export class NetTestSubclass extends Net {
     }
 }
 
-export class MockNetwork implements Network {
+export class MockNet implements Net {
     public connectIsCalled = false;
     public connectIsCalledTwice = false;
-    public options: NetworkConnectOptions;
-    public callback: (socket: NetworkSocket) => void;
+    public options: NetConnectOptions;
+    public callback: (socket: Socket) => void;
 
-    public connect(options: NetworkConnectOptions, callback: (socket: NetworkSocket) => void) {
+    public connect(options: NetConnectOptions, callback: (socket: Socket) => void) {
         if (this.connectIsCalled) {
             this.connectIsCalledTwice = true;
         } else {
@@ -133,7 +133,7 @@ interface EventSubscription {
     listener: Function;
 }
 
-export class MockNetworkSocket implements NetworkSocket {
+export class MockSocket implements Socket {
     public sentPackages: string[] = [];
     public eventSubscriptions: EventSubscription[] = [];
 

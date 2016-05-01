@@ -1,7 +1,7 @@
 /// <reference path='_common.ts'/>
 import ConnectionOptions from './ConnectionOptions';
 import ControlPacketType from './ControlPacketType';
-import { Network, NetworkSocket } from './mqtt-net';
+import { Net, Socket } from './mqtt-net';
 
 /**
  * Optimization, the TypeScript compiler replaces the constant enums.
@@ -59,8 +59,8 @@ export interface Client {
 export class Client {
     public version = '0.0.17';
 
-    private net: Network;
-    private sct: NetworkSocket;
+    private net: Net;
+    private sct: Socket;
 
     private opt: ConnectionOptions;
 
@@ -69,7 +69,7 @@ export class Client {
     private ctId: number;
     private piId: number;
 
-    constructor(net: Network, opt: ConnectionOptions) {
+    constructor(net: Net, opt: ConnectionOptions) {
         this.net = net;
 
         opt.port = opt.port || Constants.DefaultPort;
@@ -108,7 +108,7 @@ export class Client {
     }
 
     public connect() {
-        this.net.connect({ host: this.opt.host, port: this.opt.port }, (socket: NetworkSocket) => {
+        this.net.connect({ host: this.opt.host, port: this.opt.port }, (socket: Socket) => {
             this.sct = socket;
 
             this.ctId = setTimeout(() => {

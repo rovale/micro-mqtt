@@ -3,28 +3,28 @@
  */
 import { ConnectReturnCode  } from '../module/micro-mqtt';
 import ControlPacketType from '../module/ControlPacketType';
-import { ClientTestSubclass, NetTestSubclass, MockNetwork, MockNetworkSocket } from './TestClasses';
+import { ClientTestSubclass, NetTestSubclass, MockNet, MockSocket } from './TestClasses';
 
 export class ClientTestSubclassBuilder {
     private client: ClientTestSubclass;
 
-    public whichJustSentAConnectPacketOn(networkSocket: MockNetworkSocket, network: MockNetwork = new MockNetwork()) {
-        this.client = new ClientTestSubclass(network, { host: 'some-host', clientId: 'some-client' });
+    public whichJustSentAConnectPacketOn(socket: MockSocket, net: MockNet = new MockNet()) {
+        this.client = new ClientTestSubclass(net, { host: 'some-host', clientId: 'some-client' });
         this.client.connect();
-        network.callback(networkSocket);
+        net.callback(socket);
         this.client.clearEmittedEvents();
         return this;
     }
 
-    public whichIsConnectedOn(networkSocket: MockNetworkSocket, network: MockNetwork = new MockNetwork()) {
-        this.whichJustSentAConnectPacketOn(networkSocket, network);
+    public whichIsConnectedOn(socket: MockSocket, net: MockNet = new MockNet()) {
+        this.whichJustSentAConnectPacketOn(socket, net);
 
         const connAckPacket = new ControlPacketBuilder(ControlPacketType.ConnAck)
             .withConnectReturnCode(ConnectReturnCode.Accepted)
             .build();
 
-        networkSocket.receivePackage(connAckPacket);
-        networkSocket.clear();
+        socket.receivePackage(connAckPacket);
+        socket.clear();
         this.client.clearEmittedEvents();
         return this;
     }
@@ -37,10 +37,10 @@ export class ClientTestSubclassBuilder {
 export class NetTestSubclassBuilder {
     private result: NetTestSubclass;
 
-    public whichIsConnectedOn(networkSocket: MockNetworkSocket, network: MockNetwork = new MockNetwork()) {
-        this.result = new NetTestSubclass(network);
+    public whichIsConnectedOn(socket: MockSocket, net: MockNet = new MockNet()) {
+        this.result = new NetTestSubclass(net);
         this.result.connect({host: 'some-host', port: 1234});
-        network.callback(networkSocket);
+        net.callback(socket);
         this.result.clearEmittedEvents();
         return this;
     }

@@ -4,18 +4,18 @@
 declare let global: any;
 
 /* tslint:disable:no-unused-variable */
-import { Net } from '../module/mqtt-net';
+import { MqttNet } from '../module/mqtt-net';
 import { Client, Message } from '../module/micro-mqtt';
 
 function onInit() {
     /* tslint:disable:variable-name */
-    const Net = require('mqtt-net').Net;
+    const MqttNet = require('mqtt-net').MqttNet;
     const Client = require('micro-mqtt').Client;
     /* tslint:enable:no-unused-variable variable-name */
-    const net = new Net();
+    const mqttNet = new MqttNet();
 
     const client: Client = new Client(
-        net,
+        mqttNet,
         {
             host: '192.168.2.4',
             clientId: 'espruino',
@@ -29,11 +29,11 @@ function onInit() {
         }
     );
 
-    net.on('info', (info: string) => {
+    mqttNet.on('info', (info: string) => {
         console.log('[net - info] ' + info);
     });
 
-    net.on('error', (error: string) => {
+    mqttNet.on('error', (error: string) => {
         console.log('[net - error] ' + error);
     });
 
@@ -60,6 +60,6 @@ function onInit() {
     });
 
     client.connect();
-
+    eval('delete onInit');
     global.client = client;
 }
