@@ -36,7 +36,7 @@ export class Net implements Network {
         this.net = net;
     }
 
-    public connect = (options: NetworkConnectOptions, callback?: (socket: NetworkSocket) => void) => {
+    public connect(options: NetworkConnectOptions, callback?: (socket: NetworkSocket) => void) {
         this.emit('info', `Connecting to ${options.host}:${options.port}`);
 
         this.ctId = setTimeout(() => {

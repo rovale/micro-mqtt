@@ -107,7 +107,7 @@ export class Client {
         return error;
     }
 
-    public connect = () => {
+    public connect() {
         this.net.connect({ host: this.opt.host, port: this.opt.port }, (socket: NetworkSocket) => {
             this.sct = socket;
 
@@ -140,7 +140,10 @@ export class Client {
                     this.emit('info', 'MQTT connection accepted.');
                     this.emit('connected');
 
-                    this.piId = setInterval(this.ping, Constants.PingInterval * 1000);
+                    this.piId = setInterval(() => {
+                        this.sct.write(Protocol.createPingReq());
+                        this.emit('debug', 'Sent: Ping request.');
+                    }, Constants.PingInterval * 1000);
                 } else {
                     const connectionError = Client.describe(returnCode);
                     this.emit('error', connectionError);
@@ -168,18 +171,13 @@ export class Client {
     };
 
     /** Publish a message */
-    public publish = (topic: string, message: string, qos = Constants.DefaultQos, retained = false) => {
+    public publish(topic: string, message: string, qos: number = Constants.DefaultQos, retained: boolean = false) {
         this.sct.write(Protocol.createPublish(topic, message, qos, true));
     };
 
     /** Subscribe to topic */
-    public subscribe = (topic: string, qos = Constants.DefaultQos) => {
+    public subscribe(topic: string, qos: number = Constants.DefaultQos) {
         this.sct.write(Protocol.createSubscribe(topic, qos));
-    };
-
-    private ping = () => {
-        this.sct.write(Protocol.createPingReq());
-        this.emit('debug', 'Sent: Ping request.');
     };
 }
 
