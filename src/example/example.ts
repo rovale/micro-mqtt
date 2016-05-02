@@ -4,7 +4,8 @@
 declare let global: any;
 
 /* tslint:disable:no-unused-variable */
-import { Client, Message } from '../module/micro-mqtt';
+import { Client } from '../module/micro-mqtt';
+import Message from '../module/Message';
 
 function onInit() {
     /* tslint:disable:variable-name */
@@ -47,4 +48,6 @@ function onInit() {
     client.connect();
 
     global.client = client;
+
+    eval('delete onInit');
 }

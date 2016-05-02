@@ -2,9 +2,10 @@
  * Test subclasses and mocks.
  */
 /// <reference path='_common.ts' />
-import { Client, Message } from '../module/micro-mqtt';
+import { Client } from '../module/micro-mqtt';
 import ConnectionOptions from '../module/ConnectionOptions';
-import { Network, NetworkConnectOptions, NetworkSocket } from '../module/micro-mqtt';
+import Message from '../module/Message';
+import { Net, NetConnectOptions, Socket } from '../module/Net';
 
 interface EmittedEvent {
     event: string;
@@ -14,7 +15,7 @@ interface EmittedEvent {
 export class ClientTestSubclass extends Client {
     private emittedEvents: EmittedEvent[] = [];
 
-    constructor(options: ConnectionOptions, network?: Network) {
+    constructor(options: ConnectionOptions, network?: Net) {
         super(options, network);
         this.emit = (event: string, args: string | Message) => {
             this.emittedEvents.push({ event: event, args: args });
@@ -73,13 +74,13 @@ export class ClientTestSubclass extends Client {
     }
 }
 
-export class TestNetwork implements Network {
+export class MockNet implements Net {
     public connectIsCalled = false;
     public connectIsCalledTwice = false;
-    public options: NetworkConnectOptions;
-    public callback: (socket: NetworkSocket) => void;
+    public options: NetConnectOptions;
+    public callback: (socket: Socket) => void;
 
-    public connect(options: NetworkConnectOptions, callback: (socket: NetworkSocket) => void) {
+    public connect(options: NetConnectOptions, callback: (socket: Socket) => void) {
         if (this.connectIsCalled) {
             this.connectIsCalledTwice = true;
         } else {
@@ -95,7 +96,7 @@ interface EventSubscription {
     listener: Function;
 }
 
-export class TestNetworkSocket implements NetworkSocket {
+export class MockSocket implements Socket {
     public sentPackages: string[] = [];
     public eventSubscriptions: EventSubscription[] = [];
 

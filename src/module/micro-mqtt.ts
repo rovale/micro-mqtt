@@ -1,6 +1,10 @@
 /// <reference path='_common.ts'/>
 import ConnectionOptions from './ConnectionOptions';
+import ConnectFlags from './ConnectFlags';
+import ConnectReturnCode from './ConnectReturnCode';
 import ControlPacketType from './ControlPacketType';
+import Message from './Message';
+import { Net, Socket } from './Net';
 
 /**
  * Optimization, the TypeScript compiler replaces the constant enums.
@@ -13,78 +17,23 @@ const enum Constants {
 }
 
 /**
- * Connect flags
- * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349229
- */
-export const enum ConnectFlags {
-    UserName = 128,
-    Password = 64,
-    WillRetain = 32,
-    WillQoS2 = 16,
-    WillQoS1 = 8,
-    Will = 4,
-    CleanSession = 2
-}
-
-/**
- * Connect Return code
- * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349256
- */
-export const enum ConnectReturnCode {
-    Accepted = 0,
-    UnacceptableProtocolVersion = 1,
-    IdentifierRejected = 2,
-    ServerUnavailable = 3,
-    BadUserNameOrPassword = 4,
-    NotAuthorized = 5
-}
-
-export interface NetworkConnectOptions {
-    host: string;
-    port: number;
-}
-
-export interface NetworkSocket {
-    write: (data: string) => void;
-    on: (event: string, listener: (data: string) => void) => void;
-    removeAllListeners: (event: string) => void;
-    end: () => void;
-}
-
-export interface Network {
-    connect: (options: NetworkConnectOptions, callback: (socket: NetworkSocket) => void) => void;
-}
-
-export interface Message {
-    pid?: number;
-    topic: string;
-    content: string;
-    qos: number;
-    retain: number;
-    next?: number;
-}
-
-/**
  * The MQTT client.
  */
-export interface Client {
-    on: (event: string, listener: (arg: string | Message) => void) => void;
-}
-
 export class Client {
     public version = '0.0.17';
 
     private opt: ConnectionOptions;
 
-    private net: Network;
-    private sct: NetworkSocket;
+    private net: Net;
+    private sct: Socket;
 
     protected emit: (event: string, arg?: string | Message) => boolean;
+    public on: (event: string, listener: (arg: string | Message) => void) => void;
 
     private ctId: number;
     private piId: number;
 
-    constructor(opt: ConnectionOptions, net: Network = require('net')) {
+    constructor(opt: ConnectionOptions, net: Net = require('net')) {
         opt.port = opt.port || Constants.DefaultPort;
         opt.clientId = opt.clientId || '';
 
@@ -121,10 +70,10 @@ export class Client {
         return error;
     }
 
-    public connect = () => {
+    public connect() {
         this.emit('info', `Connecting to ${this.opt.host}:${this.opt.port}`);
 
-        this.net.connect({ host: this.opt.host, port: this.opt.port }, (socket: NetworkSocket) => {
+        this.net.connect({ host: this.opt.host, port: this.opt.port }, (socket: Socket) => {
             clearTimeout(this.ctId);
             this.emit('info', 'Network connection established.');
             this.sct = socket;
@@ -196,12 +145,12 @@ export class Client {
     };
 
     /** Publish a message */
-    public publish = (topic: string, message: string, qos = Constants.DefaultQos, retained = false) => {
+    public publish(topic: string, message: string, qos: number = Constants.DefaultQos, retained: boolean = false) {
         this.sct.write(Protocol.createPublish(topic, message, qos, true));
     };
 
     /** Subscribe to topic */
-    public subscribe = (topic: string, qos = Constants.DefaultQos) => {
+    public subscribe(topic: string, qos: number = Constants.DefaultQos) {
         this.sct.write(Protocol.createSubscribe(topic, qos));
     };
 
