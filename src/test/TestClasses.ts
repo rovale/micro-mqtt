@@ -4,8 +4,8 @@
 /// <reference path='_common.ts' />
 import { Client, Message } from '../module/micro-mqtt';
 import { MqttNet } from '../module/mqtt-net';
-import ConnectionOptions from '../module/ConnectionOptions';
 import { Net, NetConnectOptions, Socket } from '../module/mqtt-net';
+import ConnectionOptions from '../module/ConnectionOptions';
 
 interface EmittedEvent {
     event: string;
@@ -15,8 +15,8 @@ interface EmittedEvent {
 export class ClientTestSubclass extends Client {
     private emittedEvents: EmittedEvent[] = [];
 
-    constructor(net: Net, options: ConnectionOptions) {
-        super(net, options);
+    constructor(mqttNet: MqttNet, options: ConnectionOptions) {
+        super(mqttNet, options);
         this.emit = (event: string, args: string | Message) => {
             this.emittedEvents.push({ event: event, args: args });
             return true;
@@ -74,11 +74,13 @@ export class ClientTestSubclass extends Client {
     }
 }
 
-export class NetTestSubclass extends MqttNet {
+export class MqttNetTestSubclass extends MqttNet {
+    private mockNet: MockNet;
     private emittedEvents: EmittedEvent[] = [];
 
-    constructor(net: Net) {
-        super(net);
+    constructor(host: string, port?: number, mockNet: MockNet = new MockNet()) {
+        super(host, port, mockNet);
+        this.mockNet = mockNet;
         this.emit = (event: string, args: string) => {
             this.emittedEvents.push({ event: event, args: args });
             return true;
@@ -108,6 +110,14 @@ export class NetTestSubclass extends MqttNet {
 
     public clearEmittedEvents() {
         this.emittedEvents = [];
+    }
+
+    public callback(socket: Socket) {
+        this.mockNet.callback(socket);
+    }
+
+    public connectIsCalledTwice() {
+        return this.mockNet.connectIsCalledTwice;
     }
 }
 

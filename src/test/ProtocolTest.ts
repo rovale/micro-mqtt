@@ -35,7 +35,6 @@ describe('The MQTT protocol', () => {
         context('without username and password', () => {
             beforeEach(() => {
                 packet = new ConnectPacketVerifier(Protocol.createConnect({
-                    host: 'some-host',
                     clientId: 'some-client'
                 }));
             });
@@ -68,7 +67,6 @@ describe('The MQTT protocol', () => {
         context('with only a username', () => {
             beforeEach(() => {
                 packet = new ConnectPacketVerifier(Protocol.createConnect({
-                    host: 'host',
                     clientId: 'some-client',
                     username: 'some-username'
                 }));
@@ -86,7 +84,6 @@ describe('The MQTT protocol', () => {
         context('with both username and password', () => {
             beforeEach(() => {
                 packet = new ConnectPacketVerifier(Protocol.createConnect({
-                    host: 'host',
                     clientId: 'some-client',
                     username: 'some-username',
                     password: 'some-password'
@@ -106,7 +103,6 @@ describe('The MQTT protocol', () => {
             context('With QoS 0, not retained', () => {
                 beforeEach(() => {
                     packet = new ConnectPacketVerifier(Protocol.createConnect({
-                        host: 'host',
                         clientId: 'some-client',
                         username: 'some-username',
                         will: {
@@ -130,7 +126,6 @@ describe('The MQTT protocol', () => {
             context('With QoS 1, not retained', () => {
                 beforeEach(() => {
                     packet = new ConnectPacketVerifier(Protocol.createConnect({
-                        host: 'host',
                         clientId: 'some-client',
                         will: {
                             topic: 'some/willTopic',
@@ -153,7 +148,6 @@ describe('The MQTT protocol', () => {
             context('With QoS 2, not retained', () => {
                 beforeEach(() => {
                     packet = new ConnectPacketVerifier(Protocol.createConnect({
-                        host: 'host',
                         clientId: 'some-client',
                         will: {
                             topic: 'some/willTopic',
@@ -176,7 +170,6 @@ describe('The MQTT protocol', () => {
             context('With QoS 0, retained', () => {
                 beforeEach(() => {
                     packet = new ConnectPacketVerifier(Protocol.createConnect({
-                        host: 'host',
                         clientId: 'some-client',
                         will: {
                             topic: 'some/willTopic',

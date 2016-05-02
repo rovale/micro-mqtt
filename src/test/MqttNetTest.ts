@@ -3,12 +3,12 @@
  */
 /// <reference path='_common.ts' />
 import { Socket } from '../module/mqtt-net';
-import { NetTestSubclass, MockNet, MockSocket } from './TestClasses';
+import { MqttNetTestSubclass, MockNet, MockSocket } from './TestClasses';
 import { NetTestSubclassBuilder } from './Builders';
 import * as sinon from 'sinon';
 
 describe('The MQTT over TCP/IP sockets', () => {
-    let subject: NetTestSubclass;
+    let subject: MqttNetTestSubclass;
     let socket: MockSocket;
 
     context('When establishing a network connection', () => {
@@ -18,8 +18,8 @@ describe('The MQTT over TCP/IP sockets', () => {
             beforeEach(() => {
                 net = new MockNet();
                 net.connectIsCalled.should.equal(false, 'did not expect the client to connect to the network yet');
-                subject = new NetTestSubclass(net);
-                subject.connect({ host: 'some-host', port: 1234 });
+                subject = new MqttNetTestSubclass('some-host', 1234, net);
+                subject.connect();
             });
 
             it('it should emit information about this action.', () => {
@@ -32,6 +32,18 @@ describe('The MQTT over TCP/IP sockets', () => {
                 net.options.port.should.equal(1234);
             });
         });
+
+        context('without specifying the port', () => {
+            beforeEach(() => {
+                net = new MockNet();
+                subject = new MqttNetTestSubclass('some-host', undefined, net);
+                subject.connect();
+            });
+
+            it('it should default to port 1883.', () => {
+                net.options.port.should.equal(1883);
+            });
+        });
     });
 
     context('When the network connection is not established within 5 seconds', () => {
@@ -42,8 +54,8 @@ describe('The MQTT over TCP/IP sockets', () => {
             clock = sinon.useFakeTimers();
 
             net = new MockNet();
-            subject = new NetTestSubclass(net);
-            subject.connect({ host: 'some-host', port: 1234 });
+            subject = new MqttNetTestSubclass('some-host', 1234, net);
+            subject.connect();
         });
 
         afterEach(() => {
@@ -69,8 +81,8 @@ describe('The MQTT over TCP/IP sockets', () => {
 
         beforeEach(() => {
             net = new MockNet();
-            subject = new NetTestSubclass(net);
-            subject.connect({ host: 'some-host', port: 1234 }, socket => actualSocket = socket);
+            subject = new MqttNetTestSubclass('some-host', 1234, net);
+            subject.connect(socket => actualSocket = socket);
             expectedSocket = new MockSocket();
             net.callback(expectedSocket);
         });

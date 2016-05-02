@@ -5,55 +5,22 @@
 import { ConnectFlags, ConnectReturnCode } from '../module/micro-mqtt';
 import { Protocol, Message }  from '../module/micro-mqtt';
 import ControlPacketType from '../module/ControlPacketType';
-import { ClientTestSubclass, MockNet, MockSocket} from './TestClasses';
+import { ClientTestSubclass, MqttNetTestSubclass, MockSocket} from './TestClasses';
 import { ConnectPacketVerifier, SubscribePacketVerifier, PublishPacketVerifier,
     PubAckPacketVerifier, GenericControlPacketVerifier } from './ControlPacketVerifier';
-import { ControlPacketBuilder, ClientTestSubclassBuilder } from './Builders';
+import { ControlPacketBuilder, ClientTestSubclassBuilder, NetTestSubclassBuilder } from './Builders';
 import * as sinon from 'sinon';
 
 describe('The MQTT client', () => {
     let subject: ClientTestSubclass;
     let socket: MockSocket;
 
-    context('When establishing a network connection', () => {
-        let net: MockNet;
-
-        context('to a specific host and port', () => {
-            beforeEach(() => {
-                net = new MockNet();
-                net.connectIsCalled.should.equal(false, 'did not expect the client to connect to the network yet');
-                subject = new ClientTestSubclass(net, { host: 'some-host', port: 1234 });
-                subject.connect();
-            });
-
-            it('it should try to establish a connection to the expected host and port.', () => {
-                net.connectIsCalled.should.equal(true, 'expected the client to connect to the network');
-                net.options.host.should.equal('some-host');
-                net.options.port.should.equal(1234);
-            });
-        });
-
-        context('without specifying the port', () => {
-            beforeEach(() => {
-                net = new MockNet();
-                subject = new ClientTestSubclass(net, { host: 'some-host' });
-                subject.connect();
-            });
-
-            it('it should default to port 1883.', () => {
-                net.options.port.should.equal(1883);
-            });
-        });
-    });
-
     context('When the network connection is established', () => {
-        let net: MockNet;
-
         beforeEach(() => {
-            net = new MockNet();
-            subject = new ClientTestSubclass(net,
+            let mqttNet = new MqttNetTestSubclass('some-host', 1234);
+
+            subject = new ClientTestSubclass(mqttNet,
                 {
-                    host: 'host',
                     clientId: 'some-client',
                     username: 'some-username',
                     password: 'some-password',
@@ -65,7 +32,7 @@ describe('The MQTT client', () => {
 
             socket = new MockSocket();
             subject.connect();
-            net.callback(socket);
+            mqttNet.callback(socket);
         });
 
         it('it should send a Connect packet.', () => {
@@ -99,16 +66,16 @@ describe('The MQTT client', () => {
 
     context('When not receiving a ConnAck packet within 5 seconds', () => {
         let clock: Sinon.SinonFakeTimers;
-        let net: MockNet;
+        let mqttNet: MqttNetTestSubclass;
 
         beforeEach(() => {
             clock = sinon.useFakeTimers();
 
-            net = new MockNet();
+            mqttNet = new MqttNetTestSubclass('some-host');
             socket = new MockSocket();
 
             subject = new ClientTestSubclassBuilder()
-                .whichJustSentAConnectPacketOn(socket, net)
+                .whichJustSentAConnectPacketOn(socket, mqttNet)
                 .build();
         });
 
@@ -122,9 +89,9 @@ describe('The MQTT client', () => {
         });
 
         it('it should reconnect.', () => {
-            net.connectIsCalledTwice.should.equal(false, 'because it is the first attempt.');
+            mqttNet.connectIsCalledTwice().should.equal(false, 'because it is the first attempt.');
             clock.tick(5000);
-            net.connectIsCalledTwice.should.equal(true, 'because it should reconnect.');
+            mqttNet.connectIsCalledTwice().should.equal(true, 'because it should reconnect.');
         });
     });
 
@@ -487,15 +454,19 @@ describe('The MQTT client', () => {
 
     context('When the network connection is lost', () => {
         let clock: Sinon.SinonFakeTimers;
-        let net: MockNet;
+        let mqttNet: MqttNetTestSubclass;
 
         beforeEach(() => {
             clock = sinon.useFakeTimers();
-            net = new MockNet();
+
             socket = new MockSocket();
 
+            mqttNet = new NetTestSubclassBuilder()
+                .whichIsConnectedOn(socket)
+                .build();
+
             subject = new ClientTestSubclassBuilder()
-                .whichIsConnectedOn(socket, net)
+                .whichIsConnectedOn(socket, mqttNet)
                 .build();
 
             socket.end();

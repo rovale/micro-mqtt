@@ -12,12 +12,11 @@ function onInit() {
     const MqttNet = require('mqtt-net').MqttNet;
     const Client = require('micro-mqtt').Client;
     /* tslint:enable:no-unused-variable variable-name */
-    const mqttNet = new MqttNet();
+    const mqttNet = new MqttNet('192.168.2.4');
 
     const client: Client = new Client(
         mqttNet,
         {
-            host: '192.168.2.4',
             clientId: 'espruino',
             username: 'username', password: 'password',
             will: {

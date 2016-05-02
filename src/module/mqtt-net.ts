@@ -5,12 +5,17 @@
  * Optimization, the TypeScript compiler replaces the constant enums.
  */
 const enum Constants {
-    ConnectionTimeout = 5
+    ConnectionTimeout = 5,
+    DefaultPort = 1883
 }
 
 export interface NetConnectOptions {
     host: string;
     port: number;
+}
+
+export interface Net {
+    connect: (options: NetConnectOptions, callback: (socket: Socket) => void) => void;
 }
 
 export interface Socket {
@@ -20,11 +25,10 @@ export interface Socket {
     end: () => void;
 }
 
-export interface Net {
-    connect: (options: NetConnectOptions, callback: (socket: Socket) => void) => void;
-}
+export class MqttNet {
+    private host: string;
+    private port: number;
 
-export class MqttNet implements Net {
     private net: Net;
     private sct: Socket;
 
@@ -32,19 +36,21 @@ export class MqttNet implements Net {
 
     protected emit: (event: string, arg?: string) => boolean;
 
-    constructor(net: Net = require('net')) {
+    constructor(host: string, port: number = Constants.DefaultPort, net: Net = require('net')) {
+        this.host = host;
+        this.port = port;
         this.net = net;
     }
 
-    public connect(options: NetConnectOptions, callback?: (socket: Socket) => void) {
-        this.emit('info', `Connecting to ${options.host}:${options.port}`);
+    public connect(callback?: (socket: Socket) => void) {
+        this.emit('info', `Connecting to ${this.host}:${this.port}`);
 
         this.ctId = setTimeout(() => {
             this.emit('error', 'Network connection timeout. Retrying.');
-            this.connect(options, callback);
+            this.connect(callback);
         }, Constants.ConnectionTimeout * 1000);
 
-        this.net.connect({ host: options.host, port: options.port }, (socket: Socket) => {
+        this.net.connect({ host: this.host, port: this.port }, (socket: Socket) => {
             clearTimeout(this.ctId);
             this.emit('info', 'Network connection established.');
             this.sct = socket;
@@ -55,7 +61,7 @@ export class MqttNet implements Net {
 
             this.sct.on('end', () => {
                 this.emit('error', 'Connection lost. Reconnecting.');
-                this.connect(options, callback);
+                this.connect(callback);
             });
 
             // Remove this handler from the memory.

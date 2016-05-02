@@ -3,21 +3,21 @@
  */
 import { ConnectReturnCode  } from '../module/micro-mqtt';
 import ControlPacketType from '../module/ControlPacketType';
-import { ClientTestSubclass, NetTestSubclass, MockNet, MockSocket } from './TestClasses';
+import { ClientTestSubclass, MqttNetTestSubclass, MockNet, MockSocket } from './TestClasses';
 
 export class ClientTestSubclassBuilder {
     private client: ClientTestSubclass;
 
-    public whichJustSentAConnectPacketOn(socket: MockSocket, net: MockNet = new MockNet()) {
-        this.client = new ClientTestSubclass(net, { host: 'some-host', clientId: 'some-client' });
+    public whichJustSentAConnectPacketOn(socket: MockSocket, mqttNet: MqttNetTestSubclass = new MqttNetTestSubclass('some-host')) {
+        this.client = new ClientTestSubclass(mqttNet, { clientId: 'some-client' });
         this.client.connect();
-        net.callback(socket);
+        mqttNet.callback(socket);
         this.client.clearEmittedEvents();
         return this;
     }
 
-    public whichIsConnectedOn(socket: MockSocket, net: MockNet = new MockNet()) {
-        this.whichJustSentAConnectPacketOn(socket, net);
+    public whichIsConnectedOn(socket: MockSocket, mqttNet: MqttNetTestSubclass = new MqttNetTestSubclass('some-host')) {
+        this.whichJustSentAConnectPacketOn(socket, mqttNet);
 
         const connAckPacket = new ControlPacketBuilder(ControlPacketType.ConnAck)
             .withConnectReturnCode(ConnectReturnCode.Accepted)
@@ -35,11 +35,11 @@ export class ClientTestSubclassBuilder {
 }
 
 export class NetTestSubclassBuilder {
-    private result: NetTestSubclass;
+    private result: MqttNetTestSubclass;
 
     public whichIsConnectedOn(socket: MockSocket, net: MockNet = new MockNet()) {
-        this.result = new NetTestSubclass(net);
-        this.result.connect({host: 'some-host', port: 1234});
+        this.result = new MqttNetTestSubclass('some-host', 1234, net);
+        this.result.connect();
         net.callback(socket);
         this.result.clearEmittedEvents();
         return this;
