@@ -99,6 +99,7 @@ interface EventSubscription {
 export class MockSocket implements Socket {
     public sentPackages: string[] = [];
     public eventSubscriptions: EventSubscription[] = [];
+    public ended = false;
 
     public write(data: string) {
         this.sentPackages.push(data);
@@ -110,10 +111,14 @@ export class MockSocket implements Socket {
         listeners.forEach(s => s.listener(data));
     };
 
-    public end() {
+    public looseConnection() {
         const listeners = this.eventSubscriptions.filter(s => s.event === 'end');
         listeners.should.have.length.greaterThan(0);
         listeners.forEach(s => s.listener());
+    };
+
+    public end() {
+        this.ended = true;
     };
 
     public on(event: string, listener: Function) {

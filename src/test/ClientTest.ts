@@ -536,7 +536,8 @@ describe('The MQTT client', () => {
                 .whichIsConnectedOn(socket, net)
                 .build();
 
-            socket.end();
+            socket.looseConnection();
+            socket.ended.should.equal(true, 'because it is still open.');
         });
 
         afterEach(() => {
@@ -550,6 +551,10 @@ describe('The MQTT client', () => {
         it('it should not send PingReq packets anymore.', () => {
             clock.tick(40 * 1000 * 10);
             socket.sentPackages.should.have.lengthOf(0);
+        });
+
+        it('it should close the current socket.', () => {
+            socket.ended.should.equal(true, 'because it should close the socket.');
         });
 
         it('it should reconnect.', () => {

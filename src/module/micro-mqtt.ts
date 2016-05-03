@@ -71,6 +71,10 @@ export class Client {
     }
 
     public connect() {
+        if (this.sct) {
+            this.sct.end();
+        }
+
         this.emit('info', `Connecting to ${this.opt.host}:${this.opt.port}`);
 
         this.net.connect({ host: this.opt.host, port: this.opt.port }, (socket: Socket) => {
