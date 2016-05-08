@@ -2,7 +2,9 @@
  * Tests for the MQTT protocol.
  */
 /// <reference path='_common.ts' />
-import { Protocol, ConnectFlags, Message } from '../module/micro-mqtt';
+import { Protocol } from '../module/micro-mqtt';
+import ConnectFlags from '../module/ConnectFlags';
+import Message from '../module/Message';
 import { ConnectPacketVerifier, PublishPacketVerifier, SubscribePacketVerifier } from './ControlPacketVerifier';
 
 describe('The MQTT protocol', () => {

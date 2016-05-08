@@ -1,30 +1,31 @@
 /**
  * Builders.
  */
-import { ConnectReturnCode  } from '../module/micro-mqtt';
+import ConnectReturnCode from '../module/ConnectReturnCode';
 import ControlPacketType from '../module/ControlPacketType';
-import { ClientTestSubclass, TestNetwork, TestNetworkSocket } from './TestClasses';
+import { ClientTestSubclass, MockNet, MockSocket } from './TestClasses';
 
 export class MqttClientTestSubclassBuilder {
     private client: ClientTestSubclass;
 
-    public whichJustSentAConnectPacketOn(networkSocket: TestNetworkSocket, network: TestNetwork = new TestNetwork()) {
-        this.client = new ClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, network);
+    public whichJustSentAConnectPacketOn(net: MockNet = new MockNet(new MockSocket())) {
+        this.client = new ClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, net);
         this.client.connect();
-        network.callback(networkSocket);
+        net.callback();
         this.client.clearEmittedEvents();
         return this;
     }
 
-    public whichIsConnectedOn(networkSocket: TestNetworkSocket, network: TestNetwork = new TestNetwork()) {
-        this.whichJustSentAConnectPacketOn(networkSocket, network);
+    public whichIsConnectedOn(net: MockNet = new MockNet(new MockSocket())) {
+        this.whichJustSentAConnectPacketOn(net);
 
         const connAckPacket = new ControlPacketBuilder(ControlPacketType.ConnAck)
             .withConnectReturnCode(ConnectReturnCode.Accepted)
             .build();
 
-        networkSocket.receivePackage(connAckPacket);
-        networkSocket.clear();
+        let socket = net.socket;
+        socket.receivePackage(connAckPacket);
+        socket.clear();
         this.client.clearEmittedEvents();
         return this;
     }

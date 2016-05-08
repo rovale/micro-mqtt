@@ -2,20 +2,29 @@
  * Test subclasses and mocks.
  */
 /// <reference path='_common.ts' />
-import { Client, Message } from '../module/micro-mqtt';
+import { Client } from '../module/micro-mqtt';
 import ConnectionOptions from '../module/ConnectionOptions';
-import { Network, NetworkConnectOptions, NetworkSocket } from '../module/micro-mqtt';
+import Message from '../module/Message';
+import { Net, NetConnectOptions, Socket, Wifi } from '../module/Net';
 
 interface EmittedEvent {
     event: string;
     args: string | Message;
 }
 
+class ConnectedWifi implements Wifi {
+    public getStatus() { return { station: 'connected' }; }
+}
+
+export class NotConnectedWifi implements Wifi {
+    public getStatus() { return { station: 'off' }; }
+}
+
 export class ClientTestSubclass extends Client {
     private emittedEvents: EmittedEvent[] = [];
 
-    constructor(options: ConnectionOptions, network?: Network) {
-        super(options, network);
+    constructor(options: ConnectionOptions, net?: Net, wifi: Wifi = new ConnectedWifi()) {
+        super(options, net, wifi);
         this.emit = (event: string, args: string | Message) => {
             this.emittedEvents.push({ event: event, args: args });
             return true;
@@ -73,13 +82,18 @@ export class ClientTestSubclass extends Client {
     }
 }
 
-export class TestNetwork implements Network {
+export class MockNet implements Net {
     public connectIsCalled = false;
     public connectIsCalledTwice = false;
-    public options: NetworkConnectOptions;
-    public callback: (socket: NetworkSocket) => void;
+    public options: NetConnectOptions;
+    public callback: () => void;
+    public socket: MockSocket;
 
-    public connect(options: NetworkConnectOptions, callback: (socket: NetworkSocket) => void) {
+    constructor(socket: MockSocket = new MockSocket()) {
+        this.socket = socket;
+    }
+
+    public connect(options: NetConnectOptions, callback: () => void) {
         if (this.connectIsCalled) {
             this.connectIsCalledTwice = true;
         } else {
@@ -87,6 +101,8 @@ export class TestNetwork implements Network {
         }
         this.options = options;
         this.callback = callback;
+
+        return this.socket;
     };
 }
 
@@ -95,9 +111,10 @@ interface EventSubscription {
     listener: Function;
 }
 
-export class TestNetworkSocket implements NetworkSocket {
+export class MockSocket implements Socket {
     public sentPackages: string[] = [];
     public eventSubscriptions: EventSubscription[] = [];
+    public ended = false;
 
     public write(data: string) {
         this.sentPackages.push(data);
@@ -109,10 +126,20 @@ export class TestNetworkSocket implements NetworkSocket {
         listeners.forEach(s => s.listener(data));
     };
 
-    public end() {
-        const listeners = this.eventSubscriptions.filter(s => s.event === 'end');
+    public close() {
+        const listeners = this.eventSubscriptions.filter(s => s.event === 'close');
         listeners.should.have.length.greaterThan(0);
         listeners.forEach(s => s.listener());
+    };
+
+    public emitError(code: number, message: string) {
+        const listeners = this.eventSubscriptions.filter(s => s.event === 'error');
+        listeners.should.have.length.greaterThan(0);
+        listeners.forEach(s => s.listener({ code: code, message: message }));
+    };
+
+    public end() {
+        this.ended = true;
     };
 
     public on(event: string, listener: Function) {
