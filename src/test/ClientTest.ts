@@ -5,108 +5,39 @@
 import { ConnectFlags, ConnectReturnCode } from '../module/micro-mqtt';
 import { Protocol, Message }  from '../module/micro-mqtt';
 import ControlPacketType from '../module/ControlPacketType';
-import { ClientTestSubclass, TestNetwork, TestNetworkSocket} from './TestClasses';
+import { ClientTestSubclass, MqttNetTestSubclass, MockSocket} from './TestClasses';
 import { ConnectPacketVerifier, SubscribePacketVerifier, PublishPacketVerifier,
     PubAckPacketVerifier, GenericControlPacketVerifier } from './ControlPacketVerifier';
-import { ControlPacketBuilder, MqttClientTestSubclassBuilder } from './Builders';
+import { ControlPacketBuilder, ClientTestSubclassBuilder, NetTestSubclassBuilder } from './Builders';
 import * as sinon from 'sinon';
 
 describe('The MQTT client', () => {
     let subject: ClientTestSubclass;
-    let networkSocket: TestNetworkSocket;
-
-    context('When establishing a network connection', () => {
-        let network: TestNetwork;
-
-        context('to a specific host and port', () => {
-            beforeEach(() => {
-                network = new TestNetwork();
-                network.connectIsCalled.should.equal(false, 'did not expect the client to connect to the network yet');
-                subject = new ClientTestSubclass({ host: 'some-host', port: 1234 }, network);
-                subject.connect();
-            });
-
-            it('it should emit information about this action.', () => {
-                subject.shouldHaveEmittedInfo('Connecting to some-host:1234');
-            });
-
-            it('it should try to establish a connection to the expected host and port.', () => {
-                network.connectIsCalled.should.equal(true, 'expected the client to connect to the network');
-                network.options.host.should.equal('some-host');
-                network.options.port.should.equal(1234);
-            });
-        });
-
-        context('without specifying the port', () => {
-            beforeEach(() => {
-                network = new TestNetwork();
-                subject = new ClientTestSubclass({ host: 'some-host' }, network);
-                subject.connect();
-            });
-
-            it('it should default to port 1883.', () => {
-                network.options.port.should.equal(1883);
-            });
-        });
-    });
-
-    context('When the network connection is not established within 5 seconds', () => {
-        let network: TestNetwork;
-        let clock: Sinon.SinonFakeTimers;
-
-        beforeEach(() => {
-            clock = sinon.useFakeTimers();
-
-            network = new TestNetwork();
-            subject = new ClientTestSubclass({
-                host: 'host',
-                clientId: 'some-client'
-            }, network);
-
-            networkSocket = new TestNetworkSocket();
-            subject.connect();
-        });
-
-        afterEach(() => {
-            clock.reset();
-        });
-
-        it('it should emit an error.', () => {
-            clock.tick(5000);
-            subject.shouldHaveEmittedError('Network connection timeout. Retrying.');
-        });
-
-        it('it should try it again.', () => {
-            network.connectIsCalledTwice.should.equal(false, 'because it is the first attempt.');
-            clock.tick(5000);
-            network.connectIsCalledTwice.should.equal(true, 'because it should try it again.');
-        });
-    });
+    let socket: MockSocket;
 
     context('When the network connection is established', () => {
-        let network: TestNetwork;
-
         beforeEach(() => {
-            network = new TestNetwork();
-            subject = new ClientTestSubclass({
-                host: 'host',
-                clientId: 'some-client',
-                username: 'some-username',
-                password: 'some-password',
-                will: {
-                    topic: 'some/willTopic',
-                    message: 'offline'
-                }
-            }, network);
+            let mqttNet = new MqttNetTestSubclass('some-host', 1234);
 
-            networkSocket = new TestNetworkSocket();
+            subject = new ClientTestSubclass(mqttNet,
+                {
+                    clientId: 'some-client',
+                    username: 'some-username',
+                    password: 'some-password',
+                    will: {
+                        topic: 'some/willTopic',
+                        message: 'offline'
+                    }
+                });
+
+            socket = new MockSocket();
             subject.connect();
-            network.callback(networkSocket);
+            mqttNet.callback(socket);
         });
 
         it('it should send a Connect packet.', () => {
-            networkSocket.sentPackages.should.have.lengthOf(1);
-            const packet = new ConnectPacketVerifier(networkSocket.sentPackages[0]);
+            socket.sentPackages.should.have.lengthOf(1);
+            const packet = new ConnectPacketVerifier(socket.sentPackages[0]);
             packet.shouldHaveConnectFlags(ConnectFlags.UserName | ConnectFlags.Password | ConnectFlags.CleanSession | ConnectFlags.Will);
             packet.shouldHavePayload('some-client', 'some/willTopic', 'offline', 'some-username', 'some-password');
         });
@@ -114,13 +45,13 @@ describe('The MQTT client', () => {
 
     context('When receiving an unexpected packet', () => {
         beforeEach(() => {
-            networkSocket = new TestNetworkSocket();
+            socket = new MockSocket();
 
-            subject = new MqttClientTestSubclassBuilder()
-                .whichJustSentAConnectPacketOn(networkSocket)
+            subject = new ClientTestSubclassBuilder()
+                .whichJustSentAConnectPacketOn(socket)
                 .build();
 
-            networkSocket.receivePackage(Protocol.createSubscribe('Some unexpected packet', 0));
+            socket.receivePackage(Protocol.createSubscribe('Some unexpected packet', 0));
         });
 
         it('it should emit some debug information.', () => {
@@ -135,16 +66,16 @@ describe('The MQTT client', () => {
 
     context('When not receiving a ConnAck packet within 5 seconds', () => {
         let clock: Sinon.SinonFakeTimers;
-        let network: TestNetwork;
+        let mqttNet: MqttNetTestSubclass;
 
         beforeEach(() => {
             clock = sinon.useFakeTimers();
 
-            network = new TestNetwork();
-            networkSocket = new TestNetworkSocket();
+            mqttNet = new MqttNetTestSubclass('some-host');
+            socket = new MockSocket();
 
-            subject = new MqttClientTestSubclassBuilder()
-                .whichJustSentAConnectPacketOn(networkSocket, network)
+            subject = new ClientTestSubclassBuilder()
+                .whichJustSentAConnectPacketOn(socket, mqttNet)
                 .build();
         });
 
@@ -158,18 +89,18 @@ describe('The MQTT client', () => {
         });
 
         it('it should reconnect.', () => {
-            network.connectIsCalledTwice.should.equal(false, 'because it is the first attempt.');
+            mqttNet.connectIsCalledTwice().should.equal(false, 'because it is the first attempt.');
             clock.tick(5000);
-            network.connectIsCalledTwice.should.equal(true, 'because it should reconnect.');
+            mqttNet.connectIsCalledTwice().should.equal(true, 'because it should reconnect.');
         });
     });
 
     context('When receiving a ConnAck packet', () => {
         beforeEach(() => {
-            networkSocket = new TestNetworkSocket();
+            socket = new MockSocket();
 
-            subject = new MqttClientTestSubclassBuilder()
-                .whichJustSentAConnectPacketOn(networkSocket)
+            subject = new ClientTestSubclassBuilder()
+                .whichJustSentAConnectPacketOn(socket)
                 .build();
         });
 
@@ -179,7 +110,7 @@ describe('The MQTT client', () => {
                     .withConnectReturnCode(ConnectReturnCode.UnacceptableProtocolVersion)
                     .build();
 
-                networkSocket.receivePackage(connAckPacket);
+                socket.receivePackage(connAckPacket);
             });
 
             it('it should emit an error.', () => {
@@ -193,7 +124,7 @@ describe('The MQTT client', () => {
                     .withConnectReturnCode(ConnectReturnCode.IdentifierRejected)
                     .build();
 
-                networkSocket.receivePackage(connAckPacket);
+                socket.receivePackage(connAckPacket);
             });
 
             it('it should emit an error.', () => {
@@ -208,7 +139,7 @@ describe('The MQTT client', () => {
                     .withConnectReturnCode(ConnectReturnCode.ServerUnavailable)
                     .build();
 
-                networkSocket.receivePackage(connAckPacket);
+                socket.receivePackage(connAckPacket);
             });
 
             it('it should emit an error.', () => {
@@ -222,7 +153,7 @@ describe('The MQTT client', () => {
                     .withConnectReturnCode(ConnectReturnCode.BadUserNameOrPassword)
                     .build();
 
-                networkSocket.receivePackage(connAckPacket);
+                socket.receivePackage(connAckPacket);
             });
 
             it('it should emit an error.', () => {
@@ -236,7 +167,7 @@ describe('The MQTT client', () => {
                     .withConnectReturnCode(ConnectReturnCode.NotAuthorized)
                     .build();
 
-                networkSocket.receivePackage(connAckPacket);
+                socket.receivePackage(connAckPacket);
             });
 
             it('it should emit an error.', () => {
@@ -250,7 +181,7 @@ describe('The MQTT client', () => {
                     .withConnectReturnCode(<ConnectReturnCode>111)
                     .build();
 
-                networkSocket.receivePackage(connAckPacket);
+                socket.receivePackage(connAckPacket);
             });
 
             it('it should emit an error.', () => {
@@ -268,7 +199,7 @@ describe('The MQTT client', () => {
                     .withConnectReturnCode(ConnectReturnCode.Accepted)
                     .build();
 
-                networkSocket.receivePackage(connAckPacket);
+                socket.receivePackage(connAckPacket);
             });
 
             afterEach(() => {
@@ -290,25 +221,25 @@ describe('The MQTT client', () => {
 
             it('it should send the first PingReq packet after 40 seconds.', () => {
                 subject.clearEmittedEvents();
-                networkSocket.clear();
+                socket.clear();
 
                 clock.tick(40 * 1000);
 
                 subject.shouldHaveEmittedDebugInfo('Sent: Ping request.');
 
-                networkSocket.sentPackages.should.have.lengthOf(1);
-                new GenericControlPacketVerifier(networkSocket.sentPackages[0], ControlPacketType.PingReq)
+                socket.sentPackages.should.have.lengthOf(1);
+                new GenericControlPacketVerifier(socket.sentPackages[0], ControlPacketType.PingReq)
                     .verify();
             });
 
             it('it should send PingReq packets every 40 seconds.', () => {
                 subject.clearEmittedEvents();
-                networkSocket.clear();
+                socket.clear();
 
                 const expectedNumberOfPingReqPackets = 10;
                 clock.tick(expectedNumberOfPingReqPackets * 40 * 1000);
 
-                networkSocket.sentPackages.should.have.lengthOf(expectedNumberOfPingReqPackets);
+                socket.sentPackages.should.have.lengthOf(expectedNumberOfPingReqPackets);
             });
         });
     });
@@ -316,15 +247,15 @@ describe('The MQTT client', () => {
     context('When receiving a Publish packet', () => {
         context('With QoS 0', () => {
             beforeEach(() => {
-                networkSocket = new TestNetworkSocket();
+                socket = new MockSocket();
 
-                subject = new MqttClientTestSubclassBuilder()
-                    .whichIsConnectedOn(networkSocket)
+                subject = new ClientTestSubclassBuilder()
+                    .whichIsConnectedOn(socket)
                     .build();
 
                 const publishPacket = Protocol.createPublish('some/topic', 'some-message', 0, false);
 
-                networkSocket.receivePackage(publishPacket);
+                socket.receivePackage(publishPacket);
             });
 
             it('it should emit a \'receive\' event.', () => {
@@ -340,15 +271,15 @@ describe('The MQTT client', () => {
             beforeEach(() => {
                 clock = sinon.useFakeTimers();
 
-                networkSocket = new TestNetworkSocket();
+                socket = new MockSocket();
 
-                subject = new MqttClientTestSubclassBuilder()
-                    .whichIsConnectedOn(networkSocket)
+                subject = new ClientTestSubclassBuilder()
+                    .whichIsConnectedOn(socket)
                     .build();
 
                 const publishPacket = Protocol.createPublish('some/topic', 'some-message', 1, false);
 
-                networkSocket.receivePackage(publishPacket);
+                socket.receivePackage(publishPacket);
             });
 
             afterEach(() => {
@@ -364,8 +295,8 @@ describe('The MQTT client', () => {
 
             it('it should send a PubAck packet.', () => {
                 clock.tick(1);
-                networkSocket.sentPackages.should.have.lengthOf(1);
-                const packet = new PubAckPacketVerifier(networkSocket.sentPackages[0]);
+                socket.sentPackages.should.have.lengthOf(1);
+                const packet = new PubAckPacketVerifier(socket.sentPackages[0]);
                 packet.shouldHaveValidRemainingLength();
                 packet.shouldHavePacketId(Protocol.Constants.FixedPackedId);
             });
@@ -374,13 +305,13 @@ describe('The MQTT client', () => {
 
     context('When receiving a PingResp packet', () => {
         beforeEach(() => {
-            networkSocket = new TestNetworkSocket();
+            socket = new MockSocket();
 
-            subject = new MqttClientTestSubclassBuilder()
-                .whichJustSentAConnectPacketOn(networkSocket)
+            subject = new ClientTestSubclassBuilder()
+                .whichJustSentAConnectPacketOn(socket)
                 .build();
 
-            networkSocket.receivePackage(new ControlPacketBuilder(ControlPacketType.PingResp).build());
+            socket.receivePackage(new ControlPacketBuilder(ControlPacketType.PingResp).build());
         });
 
         it('it should not emit errors.', () => {
@@ -390,13 +321,13 @@ describe('The MQTT client', () => {
 
     context('When receiving a PubAck packet', () => {
         beforeEach(() => {
-            networkSocket = new TestNetworkSocket();
+            socket = new MockSocket();
 
-            subject = new MqttClientTestSubclassBuilder()
-                .whichJustSentAConnectPacketOn(networkSocket)
+            subject = new ClientTestSubclassBuilder()
+                .whichJustSentAConnectPacketOn(socket)
                 .build();
 
-            networkSocket.receivePackage(new ControlPacketBuilder(ControlPacketType.PubAck).build());
+            socket.receivePackage(new ControlPacketBuilder(ControlPacketType.PubAck).build());
         });
 
         it('it should not emit errors.', () => {
@@ -406,13 +337,13 @@ describe('The MQTT client', () => {
 
     context('When receiving a SubAck packet', () => {
         beforeEach(() => {
-            networkSocket = new TestNetworkSocket();
+            socket = new MockSocket();
 
-            subject = new MqttClientTestSubclassBuilder()
-                .whichJustSentAConnectPacketOn(networkSocket)
+            subject = new ClientTestSubclassBuilder()
+                .whichJustSentAConnectPacketOn(socket)
                 .build();
 
-            networkSocket.receivePackage(new ControlPacketBuilder(ControlPacketType.SubAck).build());
+            socket.receivePackage(new ControlPacketBuilder(ControlPacketType.SubAck).build());
         });
 
         it('it should not emit errors.', () => {
@@ -422,10 +353,10 @@ describe('The MQTT client', () => {
 
     context('When subscribing to a topic', () => {
         beforeEach(() => {
-            networkSocket = new TestNetworkSocket();
+            socket = new MockSocket();
 
-            subject = new MqttClientTestSubclassBuilder()
-                .whichIsConnectedOn(networkSocket)
+            subject = new ClientTestSubclassBuilder()
+                .whichIsConnectedOn(socket)
                 .build();
         });
 
@@ -435,8 +366,8 @@ describe('The MQTT client', () => {
             });
 
             it('it should send a Subscribe packet with QoS 0.', () => {
-                networkSocket.sentPackages.should.have.lengthOf(1);
-                const packet = new SubscribePacketVerifier(networkSocket.sentPackages[0]);
+                socket.sentPackages.should.have.lengthOf(1);
+                const packet = new SubscribePacketVerifier(socket.sentPackages[0]);
                 packet.shouldHaveQoS0();
             });
         });
@@ -447,8 +378,8 @@ describe('The MQTT client', () => {
             });
 
             it('it should send a Subscribe packet with QoS 1.', () => {
-                networkSocket.sentPackages.should.have.lengthOf(1);
-                const packet = new SubscribePacketVerifier(networkSocket.sentPackages[0]);
+                socket.sentPackages.should.have.lengthOf(1);
+                const packet = new SubscribePacketVerifier(socket.sentPackages[0]);
                 packet.shouldHaveQoS1();
             });
         });
@@ -456,10 +387,10 @@ describe('The MQTT client', () => {
 
     context('When publishing a message', () => {
         beforeEach(() => {
-            networkSocket = new TestNetworkSocket();
+            socket = new MockSocket();
 
-            subject = new MqttClientTestSubclassBuilder()
-                .whichIsConnectedOn(networkSocket)
+            subject = new ClientTestSubclassBuilder()
+                .whichIsConnectedOn(socket)
                 .build();
 
             subject.publish('some/topic', 'some-message');
@@ -467,54 +398,54 @@ describe('The MQTT client', () => {
 
         context('without specifying the QoS', () => {
             beforeEach(() => {
-                networkSocket = new TestNetworkSocket();
+                socket = new MockSocket();
 
-                subject = new MqttClientTestSubclassBuilder()
-                    .whichIsConnectedOn(networkSocket)
+                subject = new ClientTestSubclassBuilder()
+                    .whichIsConnectedOn(socket)
                     .build();
 
                 subject.publish('some/topic', 'some-message');
             });
 
             it('it should send a Publish packet with QoS 0.', () => {
-                networkSocket.sentPackages.should.have.lengthOf(1);
-                const packet = new PublishPacketVerifier(networkSocket.sentPackages[0]);
+                socket.sentPackages.should.have.lengthOf(1);
+                const packet = new PublishPacketVerifier(socket.sentPackages[0]);
                 packet.shouldHaveQoS0();
             });
         });
 
         context('with QoS 1.', () => {
             beforeEach(() => {
-                networkSocket = new TestNetworkSocket();
+                socket = new MockSocket();
 
-                subject = new MqttClientTestSubclassBuilder()
-                    .whichIsConnectedOn(networkSocket)
+                subject = new ClientTestSubclassBuilder()
+                    .whichIsConnectedOn(socket)
                     .build();
 
                 subject.publish('some/topic', 'some-message', 1);
             });
 
             it('it should send a Publish packet with QoS 1.', () => {
-                networkSocket.sentPackages.should.have.lengthOf(1);
-                const packet = new PublishPacketVerifier(networkSocket.sentPackages[0]);
+                socket.sentPackages.should.have.lengthOf(1);
+                const packet = new PublishPacketVerifier(socket.sentPackages[0]);
                 packet.shouldHaveQoS1();
             });
         });
 
         context('with QoS 1, retained.', () => {
             beforeEach(() => {
-                networkSocket = new TestNetworkSocket();
+                socket = new MockSocket();
 
-                subject = new MqttClientTestSubclassBuilder()
-                    .whichIsConnectedOn(networkSocket)
+                subject = new ClientTestSubclassBuilder()
+                    .whichIsConnectedOn(socket)
                     .build();
 
                 subject.publish('some/topic', 'some-message', 1, true);
             });
 
             it('it should send a Publish packet with QoS 1, retained.', () => {
-                networkSocket.sentPackages.should.have.lengthOf(1);
-                const packet = new PublishPacketVerifier(networkSocket.sentPackages[0]);
+                socket.sentPackages.should.have.lengthOf(1);
+                const packet = new PublishPacketVerifier(socket.sentPackages[0]);
                 packet.shouldHaveQoS1();
                 packet.shouldBeRetained();
             });
@@ -523,49 +454,45 @@ describe('The MQTT client', () => {
 
     context('When the network connection is lost', () => {
         let clock: Sinon.SinonFakeTimers;
-        let network: TestNetwork;
+        let mqttNet: MqttNetTestSubclass;
 
         beforeEach(() => {
             clock = sinon.useFakeTimers();
-            network = new TestNetwork();
-            networkSocket = new TestNetworkSocket();
 
-            subject = new MqttClientTestSubclassBuilder()
-                .whichIsConnectedOn(networkSocket, network)
+            socket = new MockSocket();
+
+            mqttNet = new NetTestSubclassBuilder()
+                .whichIsConnectedOn(socket)
                 .build();
 
-            networkSocket.end();
+            subject = new ClientTestSubclassBuilder()
+                .whichIsConnectedOn(socket, mqttNet)
+                .build();
+
+            socket.end();
         });
 
         afterEach(() => {
             clock.restore();
         });
 
-        it('it should emit an error.', () => {
-            subject.shouldHaveEmittedError('MQTT client disconnected. Reconnecting.');
-        });
-
         it('it should not send PingReq packets anymore.', () => {
             clock.tick(40 * 1000 * 10);
-            networkSocket.sentPackages.should.have.lengthOf(0);
-        });
-
-        it('it should reconnect.', () => {
-            network.connectIsCalledTwice.should.equal(true, 'because it should reconnect.');
+            socket.sentPackages.should.have.lengthOf(0);
         });
     });
 
     context('When receiving two Publish packets at once', () => {
         beforeEach(() => {
-            networkSocket = new TestNetworkSocket();
+            socket = new MockSocket();
 
-            subject = new MqttClientTestSubclassBuilder()
-                .whichIsConnectedOn(networkSocket)
+            subject = new ClientTestSubclassBuilder()
+                .whichIsConnectedOn(socket)
                 .build();
 
             const publishPacket = Protocol.createPublish('some/topic', 'some-message', 0, false);
 
-            networkSocket.receivePackage(publishPacket + publishPacket);
+            socket.receivePackage(publishPacket + publishPacket);
         });
 
         it('it should emit two \'receive\' events.', () => {

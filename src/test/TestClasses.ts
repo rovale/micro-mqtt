@@ -3,8 +3,9 @@
  */
 /// <reference path='_common.ts' />
 import { Client, Message } from '../module/micro-mqtt';
+import { MqttNet } from '../module/mqtt-net';
+import { Net, NetConnectOptions, Socket } from '../module/mqtt-net';
 import ConnectionOptions from '../module/ConnectionOptions';
-import { Network, NetworkConnectOptions, NetworkSocket } from '../module/micro-mqtt';
 
 interface EmittedEvent {
     event: string;
@@ -14,8 +15,8 @@ interface EmittedEvent {
 export class ClientTestSubclass extends Client {
     private emittedEvents: EmittedEvent[] = [];
 
-    constructor(options: ConnectionOptions, network?: Network) {
-        super(options, network);
+    constructor(mqttNet: MqttNet, options: ConnectionOptions) {
+        super(mqttNet, options);
         this.emit = (event: string, args: string | Message) => {
             this.emittedEvents.push({ event: event, args: args });
             return true;
@@ -73,13 +74,60 @@ export class ClientTestSubclass extends Client {
     }
 }
 
-export class TestNetwork implements Network {
+export class MqttNetTestSubclass extends MqttNet {
+    private mockNet: MockNet;
+    private emittedEvents: EmittedEvent[] = [];
+
+    constructor(host: string, port?: number, mockNet: MockNet = new MockNet()) {
+        super(host, port, mockNet);
+        this.mockNet = mockNet;
+        this.emit = (event: string, args: string) => {
+            this.emittedEvents.push({ event: event, args: args });
+            return true;
+        };
+    }
+
+    private shouldHaveEmitted(events: EmittedEvent[], text: string) {
+        events.should.have.lengthOf(1);
+        return events[0].args.should.equal(text);
+    }
+
+    public emittedInfo() {
+        return this.emittedEvents.filter(e => e.event === 'info');
+    }
+
+    public shouldHaveEmittedInfo(info: string) {
+        return this.shouldHaveEmitted(this.emittedInfo(), info);
+    }
+
+    public emittedError() {
+        return this.emittedEvents.filter(e => e.event === 'error');
+    }
+
+    public shouldHaveEmittedError(error: string) {
+        return this.shouldHaveEmitted(this.emittedError(), error);
+    }
+
+    public clearEmittedEvents() {
+        this.emittedEvents = [];
+    }
+
+    public callback(socket: Socket) {
+        this.mockNet.callback(socket);
+    }
+
+    public connectIsCalledTwice() {
+        return this.mockNet.connectIsCalledTwice;
+    }
+}
+
+export class MockNet implements Net {
     public connectIsCalled = false;
     public connectIsCalledTwice = false;
-    public options: NetworkConnectOptions;
-    public callback: (socket: NetworkSocket) => void;
+    public options: NetConnectOptions;
+    public callback: (socket: Socket) => void;
 
-    public connect(options: NetworkConnectOptions, callback: (socket: NetworkSocket) => void) {
+    public connect(options: NetConnectOptions, callback: (socket: Socket) => void) {
         if (this.connectIsCalled) {
             this.connectIsCalledTwice = true;
         } else {
@@ -95,7 +143,7 @@ interface EventSubscription {
     listener: Function;
 }
 
-export class TestNetworkSocket implements NetworkSocket {
+export class MockSocket implements Socket {
     public sentPackages: string[] = [];
     public eventSubscriptions: EventSubscription[] = [];
 

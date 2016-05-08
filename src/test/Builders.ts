@@ -3,34 +3,50 @@
  */
 import { ConnectReturnCode  } from '../module/micro-mqtt';
 import ControlPacketType from '../module/ControlPacketType';
-import { ClientTestSubclass, TestNetwork, TestNetworkSocket } from './TestClasses';
+import { ClientTestSubclass, MqttNetTestSubclass, MockNet, MockSocket } from './TestClasses';
 
-export class MqttClientTestSubclassBuilder {
+export class ClientTestSubclassBuilder {
     private client: ClientTestSubclass;
 
-    public whichJustSentAConnectPacketOn(networkSocket: TestNetworkSocket, network: TestNetwork = new TestNetwork()) {
-        this.client = new ClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, network);
+    public whichJustSentAConnectPacketOn(socket: MockSocket, mqttNet: MqttNetTestSubclass = new MqttNetTestSubclass('some-host')) {
+        this.client = new ClientTestSubclass(mqttNet, { clientId: 'some-client' });
         this.client.connect();
-        network.callback(networkSocket);
+        mqttNet.callback(socket);
         this.client.clearEmittedEvents();
         return this;
     }
 
-    public whichIsConnectedOn(networkSocket: TestNetworkSocket, network: TestNetwork = new TestNetwork()) {
-        this.whichJustSentAConnectPacketOn(networkSocket, network);
+    public whichIsConnectedOn(socket: MockSocket, mqttNet: MqttNetTestSubclass = new MqttNetTestSubclass('some-host')) {
+        this.whichJustSentAConnectPacketOn(socket, mqttNet);
 
         const connAckPacket = new ControlPacketBuilder(ControlPacketType.ConnAck)
             .withConnectReturnCode(ConnectReturnCode.Accepted)
             .build();
 
-        networkSocket.receivePackage(connAckPacket);
-        networkSocket.clear();
+        socket.receivePackage(connAckPacket);
+        socket.clear();
         this.client.clearEmittedEvents();
         return this;
     }
 
     public build() {
         return this.client;
+    }
+}
+
+export class NetTestSubclassBuilder {
+    private result: MqttNetTestSubclass;
+
+    public whichIsConnectedOn(socket: MockSocket, net: MockNet = new MockNet()) {
+        this.result = new MqttNetTestSubclass('some-host', 1234, net);
+        this.result.connect();
+        net.callback(socket);
+        this.result.clearEmittedEvents();
+        return this;
+    }
+
+    public build() {
+        return this.result;
     }
 }
 

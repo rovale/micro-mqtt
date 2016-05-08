@@ -4,22 +4,36 @@
 declare let global: any;
 
 /* tslint:disable:no-unused-variable */
+import { MqttNet } from '../module/mqtt-net';
 import { Client, Message } from '../module/micro-mqtt';
 
 function onInit() {
     /* tslint:disable:variable-name */
+    const MqttNet = require('mqtt-net').MqttNet;
     const Client = require('micro-mqtt').Client;
     /* tslint:enable:no-unused-variable variable-name */
-    const client: Client = new Client({
-        host: '192.168.2.4',
-        clientId: 'espruino',
-        username: 'username', password: 'password',
-        will: {
-            topic: 'rovale/espruino/status',
-            message: 'offline',
-            qos: 1,
-            retain: true
+    const mqttNet = new MqttNet('192.168.2.4');
+
+    const client: Client = new Client(
+        mqttNet,
+        {
+            clientId: 'espruino',
+            username: 'username', password: 'password',
+            will: {
+                topic: 'rovale/espruino/status',
+                message: 'offline',
+                qos: 1,
+                retain: true
+            }
         }
+    );
+
+    mqttNet.on('info', (info: string) => {
+        console.log('[net - info] ' + info);
+    });
+
+    mqttNet.on('error', (error: string) => {
+        console.log('[net - error] ' + error);
     });
 
     client.on('connected', () => {
@@ -33,18 +47,18 @@ function onInit() {
     });
 
     client.on('debug', (debug: string) => {
-        console.log('[debug] ' + debug);
+        console.log('[client - debug] ' + debug);
     });
 
     client.on('info', (info: string) => {
-        console.log('[info] ' + info);
+        console.log('[client - info] ' + info);
     });
 
     client.on('error', (error: string) => {
-        console.log('[error] ' + error);
+        console.log('[client - error] ' + error);
     });
 
     client.connect();
-
+    eval('delete onInit');
     global.client = client;
 }
