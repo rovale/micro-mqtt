@@ -7,7 +7,7 @@ import ConnectReturnCode from '../module/ConnectReturnCode';
 import ControlPacketType from '../module/ControlPacketType';
 import Message from '../module/Message';
 import { Protocol }  from '../module/micro-mqtt';
-import { ClientTestSubclass, MockNet, MockSocket} from './TestClasses';
+import { ClientTestSubclass, MockNet, MockSocket, NotConnectedWifi} from './TestClasses';
 import { ConnectPacketVerifier, SubscribePacketVerifier, PublishPacketVerifier,
     PubAckPacketVerifier, GenericControlPacketVerifier } from './ControlPacketVerifier';
 import { ControlPacketBuilder, MqttClientTestSubclassBuilder } from './Builders';
@@ -75,7 +75,7 @@ describe('The MQTT client', () => {
 
         it('it should emit an error.', () => {
             clock.tick(5000);
-            subject.shouldHaveEmittedError('Network connection timeout. Retrying.');
+            subject.shouldHaveEmittedError('No connection. Retrying.');
         });
 
         it('it should try it again.', () => {
@@ -85,11 +85,32 @@ describe('The MQTT client', () => {
         });
     });
 
-    context('When the network connection is established', () => {
+    context('When there is no wifi connection', () => {
         let net: MockNet;
 
         beforeEach(() => {
             net = new MockNet();
+            subject = new ClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, net, new NotConnectedWifi());
+
+            socket = new MockSocket();
+            subject.connect();
+        });
+
+        it('it should emit an error.', () => {
+            subject.shouldHaveEmittedError('No wifi connection.');
+        });
+
+        it('it should try it again.', () => {
+            net.connectIsCalled.should.equal(false, 'because it should not try to connect.');
+        });
+    });
+
+    context('When the network connection is established', () => {
+        let net: MockNet;
+
+        beforeEach(() => {
+            socket = new MockSocket();
+            net = new MockNet(socket);
             subject = new ClientTestSubclass({
                 host: 'host',
                 clientId: 'some-client',
@@ -101,9 +122,8 @@ describe('The MQTT client', () => {
                 }
             }, net);
 
-            socket = new MockSocket();
             subject.connect();
-            net.callback(socket);
+            net.callback();
         });
 
         it('it should send a Connect packet.', () => {
@@ -119,7 +139,7 @@ describe('The MQTT client', () => {
             socket = new MockSocket();
 
             subject = new MqttClientTestSubclassBuilder()
-                .whichJustSentAConnectPacketOn(socket)
+                .whichJustSentAConnectPacketOn(new MockNet(socket))
                 .build();
 
             socket.receivePackage(Protocol.createSubscribe('Some unexpected packet', 0));
@@ -142,11 +162,11 @@ describe('The MQTT client', () => {
         beforeEach(() => {
             clock = sinon.useFakeTimers();
 
-            net = new MockNet();
             socket = new MockSocket();
+            net = new MockNet(socket);
 
             subject = new MqttClientTestSubclassBuilder()
-                .whichJustSentAConnectPacketOn(socket, net)
+                .whichJustSentAConnectPacketOn(net)
                 .build();
         });
 
@@ -154,15 +174,10 @@ describe('The MQTT client', () => {
             clock.reset();
         });
 
-        it('it should emit an error.', () => {
+        it('it should close the connection.', () => {
+            socket.ended.should.equal(false, 'because currently should still be connected.');
             clock.tick(5000);
-            subject.shouldHaveEmittedError('MQTT connection timeout. Reconnecting.');
-        });
-
-        it('it should reconnect.', () => {
-            net.connectIsCalledTwice.should.equal(false, 'because it is the first attempt.');
-            clock.tick(5000);
-            net.connectIsCalledTwice.should.equal(true, 'because it should reconnect.');
+            socket.ended.should.equal(true, 'because now it should be closed.');
         });
     });
 
@@ -171,7 +186,7 @@ describe('The MQTT client', () => {
             socket = new MockSocket();
 
             subject = new MqttClientTestSubclassBuilder()
-                .whichJustSentAConnectPacketOn(socket)
+                .whichJustSentAConnectPacketOn(new MockNet(socket))
                 .build();
         });
 
@@ -321,7 +336,7 @@ describe('The MQTT client', () => {
                 socket = new MockSocket();
 
                 subject = new MqttClientTestSubclassBuilder()
-                    .whichIsConnectedOn(socket)
+                    .whichIsConnectedOn(new MockNet(socket))
                     .build();
 
                 const publishPacket = Protocol.createPublish('some/topic', 'some-message', 0, false);
@@ -345,7 +360,7 @@ describe('The MQTT client', () => {
                 socket = new MockSocket();
 
                 subject = new MqttClientTestSubclassBuilder()
-                    .whichIsConnectedOn(socket)
+                    .whichIsConnectedOn(new MockNet(socket))
                     .build();
 
                 const publishPacket = Protocol.createPublish('some/topic', 'some-message', 1, false);
@@ -379,7 +394,7 @@ describe('The MQTT client', () => {
             socket = new MockSocket();
 
             subject = new MqttClientTestSubclassBuilder()
-                .whichJustSentAConnectPacketOn(socket)
+                .whichJustSentAConnectPacketOn(new MockNet(socket))
                 .build();
 
             socket.receivePackage(new ControlPacketBuilder(ControlPacketType.PingResp).build());
@@ -395,7 +410,7 @@ describe('The MQTT client', () => {
             socket = new MockSocket();
 
             subject = new MqttClientTestSubclassBuilder()
-                .whichJustSentAConnectPacketOn(socket)
+                .whichJustSentAConnectPacketOn(new MockNet(socket))
                 .build();
 
             socket.receivePackage(new ControlPacketBuilder(ControlPacketType.PubAck).build());
@@ -411,7 +426,7 @@ describe('The MQTT client', () => {
             socket = new MockSocket();
 
             subject = new MqttClientTestSubclassBuilder()
-                .whichJustSentAConnectPacketOn(socket)
+                .whichJustSentAConnectPacketOn(new MockNet(socket))
                 .build();
 
             socket.receivePackage(new ControlPacketBuilder(ControlPacketType.SubAck).build());
@@ -427,7 +442,7 @@ describe('The MQTT client', () => {
             socket = new MockSocket();
 
             subject = new MqttClientTestSubclassBuilder()
-                .whichIsConnectedOn(socket)
+                .whichIsConnectedOn(new MockNet(socket))
                 .build();
         });
 
@@ -461,7 +476,7 @@ describe('The MQTT client', () => {
             socket = new MockSocket();
 
             subject = new MqttClientTestSubclassBuilder()
-                .whichIsConnectedOn(socket)
+                .whichIsConnectedOn(new MockNet(socket))
                 .build();
 
             subject.publish('some/topic', 'some-message');
@@ -472,7 +487,7 @@ describe('The MQTT client', () => {
                 socket = new MockSocket();
 
                 subject = new MqttClientTestSubclassBuilder()
-                    .whichIsConnectedOn(socket)
+                    .whichIsConnectedOn(new MockNet(socket))
                     .build();
 
                 subject.publish('some/topic', 'some-message');
@@ -490,7 +505,7 @@ describe('The MQTT client', () => {
                 socket = new MockSocket();
 
                 subject = new MqttClientTestSubclassBuilder()
-                    .whichIsConnectedOn(socket)
+                    .whichIsConnectedOn(new MockNet(socket))
                     .build();
 
                 subject.publish('some/topic', 'some-message', 1);
@@ -508,7 +523,7 @@ describe('The MQTT client', () => {
                 socket = new MockSocket();
 
                 subject = new MqttClientTestSubclassBuilder()
-                    .whichIsConnectedOn(socket)
+                    .whichIsConnectedOn(new MockNet(socket))
                     .build();
 
                 subject.publish('some/topic', 'some-message', 1, true);
@@ -529,15 +544,15 @@ describe('The MQTT client', () => {
 
         beforeEach(() => {
             clock = sinon.useFakeTimers();
-            net = new MockNet();
             socket = new MockSocket();
+            net = new MockNet(socket);
 
             subject = new MqttClientTestSubclassBuilder()
-                .whichIsConnectedOn(socket, net)
+                .whichIsConnectedOn(net)
                 .build();
 
-            socket.looseConnection();
-            socket.ended.should.equal(true, 'because it is still open.');
+            socket.close();
+            socket.ended.should.equal(false, 'because it is still open.');
         });
 
         afterEach(() => {
@@ -545,7 +560,7 @@ describe('The MQTT client', () => {
         });
 
         it('it should emit an error.', () => {
-            subject.shouldHaveEmittedError('MQTT client disconnected. Reconnecting.');
+            subject.shouldHaveEmittedError('Disconnected.');
         });
 
         it('it should not send PingReq packets anymore.', () => {
@@ -554,10 +569,12 @@ describe('The MQTT client', () => {
         });
 
         it('it should close the current socket.', () => {
+            clock.tick(5000);
             socket.ended.should.equal(true, 'because it should close the socket.');
         });
 
         it('it should reconnect.', () => {
+            clock.tick(5000);
             net.connectIsCalledTwice.should.equal(true, 'because it should reconnect.');
         });
     });
@@ -567,7 +584,7 @@ describe('The MQTT client', () => {
             socket = new MockSocket();
 
             subject = new MqttClientTestSubclassBuilder()
-                .whichIsConnectedOn(socket)
+                .whichIsConnectedOn(new MockNet(socket))
                 .build();
 
             const publishPacket = Protocol.createPublish('some/topic', 'some-message', 0, false);

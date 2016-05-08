@@ -4,16 +4,17 @@ import ConnectFlags from './ConnectFlags';
 import ConnectReturnCode from './ConnectReturnCode';
 import ControlPacketType from './ControlPacketType';
 import Message from './Message';
-import { Net, Socket } from './Net';
+import { Net, Socket, Wifi } from './Net';
 
 /**
  * Optimization, the TypeScript compiler replaces the constant enums.
  */
 const enum Constants {
     PingInterval = 40,
-    ConnectionTimeout = 5,
+    WatchDogInterval = 5,
     DefaultPort = 1883,
-    DefaultQos = 0
+    DefaultQos = 0,
+    Uninitialized = -123
 }
 
 /**
@@ -30,10 +31,13 @@ export class Client {
     protected emit: (event: string, arg?: string | Message) => boolean;
     public on: (event: string, listener: (arg: string | Message) => void) => void;
 
-    private ctId: number;
-    private piId: number;
+    private wdId: number = Constants.Uninitialized;
+    private piId: number = Constants.Uninitialized;
 
-    constructor(opt: ConnectionOptions, net: Net = require('net')) {
+    private wifi: Wifi;
+    private connected: boolean = false;
+
+    constructor(opt: ConnectionOptions, net: Net = require('net'), wifi: Wifi = require('Wifi')) {
         opt.port = opt.port || Constants.DefaultPort;
         opt.clientId = opt.clientId || '';
 
@@ -44,6 +48,7 @@ export class Client {
 
         this.opt = opt;
         this.net = net;
+        this.wifi = wifi;
     }
 
     private static describe(code: ConnectReturnCode) {
@@ -71,56 +76,62 @@ export class Client {
     }
 
     public connect() {
-        if (this.sct) {
-            this.sct.end();
-        }
-
         this.emit('info', `Connecting to ${this.opt.host}:${this.opt.port}`);
 
-        this.net.connect({ host: this.opt.host, port: this.opt.port }, (socket: Socket) => {
-            clearTimeout(this.ctId);
+        if (this.wdId === Constants.Uninitialized) {
+            this.wdId = setInterval(() => {
+                if (!this.connected) {
+                    this.emit('error', 'No connection. Retrying.');
+
+                    if (this.piId !== Constants.Uninitialized) {
+                        clearInterval(this.piId);
+                        this.piId = Constants.Uninitialized;
+                    }
+
+                    if (this.sct) {
+                        this.sct.removeAllListeners('connect');
+                        this.sct.removeAllListeners('data');
+                        this.sct.removeAllListeners('close');
+                        this.sct.end();
+                    }
+
+                    this.connect();
+                }
+            }, Constants.WatchDogInterval * 1000);
+        }
+
+        if (this.wifi.getStatus().station !== 'connected') {
+            this.emit('error', 'No wifi connection.');
+            return;
+        }
+
+        this.sct = this.net.connect({ host: this.opt.host, port: this.opt.port }, () => {
             this.emit('info', 'Network connection established.');
-            this.sct = socket;
-
             this.sct.write(Protocol.createConnect(this.opt));
-
-            this.ctId = setTimeout(() => {
-                this.emit('error', 'MQTT connection timeout. Reconnecting.');
-                this.connect();
-            }, Constants.ConnectionTimeout * 1000);
-
-            this.sct.on('data', (data: string) => {
-                const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
-                this.emit('debug', `Rcvd: ${controlPacketType}: '${data}'.`);
-                this.handleData(data);
-            });
-
-            this.sct.on('end', () => {
-                this.emit('error', 'MQTT client disconnected. Reconnecting.');
-                clearInterval(this.piId);
-                this.connect();
-            });
-
-            // Remove this handler from the memory.
             this.sct.removeAllListeners('connect');
         });
 
-        this.ctId = setTimeout(() => {
-            this.emit('error', 'Network connection timeout. Retrying.');
-            this.connect();
-        }, Constants.ConnectionTimeout * 1000);
+        this.sct.on('data', (data: string) => {
+            const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
+            this.emit('debug', `Rcvd: ${controlPacketType}: '${data}'.`);
+            this.handleData(data);
+        });
+
+        this.sct.on('close', () => {
+            this.emit('error', 'Disconnected.');
+            this.connected = false;
+        });
     };
 
     private handleData = (data: string) => {
         const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
         switch (controlPacketType) {
             case ControlPacketType.ConnAck:
-                clearTimeout(this.ctId);
                 const returnCode = data.charCodeAt(3);
                 if (returnCode === ConnectReturnCode.Accepted) {
                     this.emit('info', 'MQTT connection accepted.');
                     this.emit('connected');
-
+                    this.connected = true;
                     this.piId = setInterval(this.ping, Constants.PingInterval * 1000);
                 } else {
                     const connectionError = Client.describe(returnCode);

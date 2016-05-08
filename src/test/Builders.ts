@@ -8,23 +8,24 @@ import { ClientTestSubclass, MockNet, MockSocket } from './TestClasses';
 export class MqttClientTestSubclassBuilder {
     private client: ClientTestSubclass;
 
-    public whichJustSentAConnectPacketOn(networkSocket: MockSocket, net: MockNet = new MockNet()) {
+    public whichJustSentAConnectPacketOn(net: MockNet = new MockNet(new MockSocket())) {
         this.client = new ClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, net);
         this.client.connect();
-        net.callback(networkSocket);
+        net.callback();
         this.client.clearEmittedEvents();
         return this;
     }
 
-    public whichIsConnectedOn(networkSocket: MockSocket, net: MockNet = new MockNet()) {
-        this.whichJustSentAConnectPacketOn(networkSocket, net);
+    public whichIsConnectedOn(net: MockNet = new MockNet(new MockSocket())) {
+        this.whichJustSentAConnectPacketOn(net);
 
         const connAckPacket = new ControlPacketBuilder(ControlPacketType.ConnAck)
             .withConnectReturnCode(ConnectReturnCode.Accepted)
             .build();
 
-        networkSocket.receivePackage(connAckPacket);
-        networkSocket.clear();
+        let socket = net.socket;
+        socket.receivePackage(connAckPacket);
+        socket.clear();
         this.client.clearEmittedEvents();
         return this;
     }
