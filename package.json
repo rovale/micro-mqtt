@@ -37,18 +37,18 @@
   },
   "homepage": "https://github.com/rovale/micro-mqtt#readme",
   "devDependencies": {
-    "chai": "^3.5.0",
-    "coveralls": "^2.11.9",
-    "istanbul": "^0.4.3",
-    "mocha": "^2.4.5",
-    "ncp": "^2.0.0",
-    "npm-scripts-info": "^0.3.6",
-    "remap-istanbul": "^0.6.3",
-    "rimraf": "^2.5.2",
-    "sinon": "^1.17.3",
-    "tslint": "^3.8.1",
+    "chai": "3.5.0",
+    "coveralls": "2.11.9",
+    "istanbul": "0.4.3",
+    "mocha": "2.4.5",
+    "ncp": "2.0.0",
+    "npm-scripts-info": "0.3.6",
+    "remap-istanbul": "0.6.3",
+    "rimraf": "2.5.2",
+    "sinon": "1.17.3",
+    "tslint": "3.8.1",
     "tslint-microsoft-contrib": "2.0.3",
-    "typescript": "^1.8.10",
-    "typings": "^0.8.1"
+    "typescript": "1.8.10",
+    "typings": "0.8.1"
   }
 }
