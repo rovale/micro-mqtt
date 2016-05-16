@@ -47,7 +47,7 @@
     "rimraf": "2.5.2",
     "sinon": "1.17.4",
     "tslint": "3.10.2",
-    "tslint-microsoft-contrib": "2.0.5",
+    "tslint-microsoft-contrib": "2.0.6",
     "typescript": "1.8.10",
     "typings": "0.8.1"
   }
