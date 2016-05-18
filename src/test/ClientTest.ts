@@ -12,6 +12,7 @@ import { ConnectPacketVerifier, SubscribePacketVerifier, PublishPacketVerifier,
     PubAckPacketVerifier, GenericControlPacketVerifier } from './ControlPacketVerifier';
 import { ControlPacketBuilder, MqttClientTestSubclassBuilder } from './Builders';
 import * as sinon from 'sinon';
+import { SinonFakeTimers } from 'sinon';
 
 describe('The MQTT client', () => {
     let subject: ClientTestSubclass;
@@ -54,7 +55,7 @@ describe('The MQTT client', () => {
 
     context('When the network connection is not established within 5 seconds', () => {
         let net: MockNet;
-        let clock: Sinon.SinonFakeTimers;
+        let clock: SinonFakeTimers;
 
         beforeEach(() => {
             clock = sinon.useFakeTimers();
@@ -156,7 +157,7 @@ describe('The MQTT client', () => {
     });
 
     context('When not receiving a ConnAck packet within 5 seconds', () => {
-        let clock: Sinon.SinonFakeTimers;
+        let clock: SinonFakeTimers;
         let net: MockNet;
 
         beforeEach(() => {
@@ -276,7 +277,7 @@ describe('The MQTT client', () => {
         });
 
         context('with ConnectReturnCode Accepted', () => {
-            let clock: Sinon.SinonFakeTimers;
+            let clock: SinonFakeTimers;
 
             beforeEach(() => {
                 clock = sinon.useFakeTimers();
@@ -352,7 +353,7 @@ describe('The MQTT client', () => {
         });
 
         context('With QoS 1', () => {
-            let clock: Sinon.SinonFakeTimers;
+            let clock: SinonFakeTimers;
 
             beforeEach(() => {
                 clock = sinon.useFakeTimers();
@@ -539,7 +540,7 @@ describe('The MQTT client', () => {
     });
 
     context('When the network connection is lost', () => {
-        let clock: Sinon.SinonFakeTimers;
+        let clock: SinonFakeTimers;
         let net: MockNet;
 
         beforeEach(() => {

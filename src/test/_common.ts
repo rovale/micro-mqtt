@@ -1,6 +1,6 @@
 /**
  * Common file for all tests.
  */
-/// <reference path='../../typings/main.d.ts' />
+/// <reference path='../../typings/index.d.ts' />
 import { should } from 'chai';
 should();
