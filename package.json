@@ -40,7 +40,7 @@
     "chai": "3.5.0",
     "coveralls": "2.11.9",
     "istanbul": "0.4.3",
-    "mocha": "2.4.5",
+    "mocha": "2.5.2",
     "ncp": "2.0.0",
     "npm-scripts-info": "0.3.6",
     "remap-istanbul": "0.6.4",
