@@ -49,6 +49,6 @@
     "tslint": "3.11.0",
     "tslint-microsoft-contrib": "2.0.7",
     "typescript": "1.8.10",
-    "typings": "1.0.4"
+    "typings": "1.1.0"
   }
 }
