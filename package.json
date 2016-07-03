@@ -44,7 +44,7 @@
     "ncp": "2.0.0",
     "npm-scripts-info": "0.3.6",
     "remap-istanbul": "0.6.4",
-    "rimraf": "2.5.2",
+    "rimraf": "2.5.3",
     "sinon": "1.17.4",
     "tslint": "3.13.0",
     "tslint-microsoft-contrib": "2.0.8",
