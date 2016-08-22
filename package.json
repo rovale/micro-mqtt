@@ -39,7 +39,7 @@
   "devDependencies": {
     "chai": "3.5.0",
     "coveralls": "2.11.12",
-    "istanbul": "0.4.4",
+    "istanbul": "0.4.5",
     "mocha": "3.0.2",
     "ncp": "2.0.0",
     "npm-scripts-info": "0.3.6",
