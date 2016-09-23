@@ -3,4 +3,3 @@
 /espruino/**/*.js
 /coverage
 /node_modules
-/typings

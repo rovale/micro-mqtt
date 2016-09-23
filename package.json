@@ -5,7 +5,6 @@
   "main": "./modules/micro-mqtt.ts",
   "scripts": {
     "info": "npm-scripts-info",
-    "postinstall": "typings install",
     "pretest": "npm run clean && npm run tslint && npm run compile",
     "clean": "rimraf ./coverage ./bin",
     "tslint": "tslint ./src/**/*.ts",
@@ -19,8 +18,8 @@
     "test:watch": "mocha --watch ./bin/*/*.js",
     "?deploy": "Runs all tests and copies the micro-mqtt.js module to the Espruino Web IDE project.",
     "deploy": "npm run test && ncp ./bin/module/micro-mqtt.js ./espruino/modules/micro-mqtt.js && ncp ./bin/example/example.js ./espruino/projects/example.js",
-    "?cleanall": "Removes the node_modules & typings, all compiled TypeScript files, and coverage reports.",
-    "cleanall": "rimraf ./coverage ./bin ./typings ./node_modules"
+    "?cleanall": "Removes the node_modules, all compiled TypeScript files, and coverage reports.",
+    "cleanall": "rimraf ./coverage ./bin ./node_modules"
   },
   "repository": {
     "type": "git",
@@ -37,6 +36,9 @@
   },
   "homepage": "https://github.com/rovale/micro-mqtt#readme",
   "devDependencies": {
+    "@types/chai": "^3.4.33",
+    "@types/mocha": "^2.2.32",
+    "@types/sinon": "^1.16.30",
     "chai": "3.5.0",
     "coveralls": "2.11.14",
     "istanbul": "0.4.5",
@@ -48,7 +50,6 @@
     "sinon": "1.17.6",
     "tslint": "3.15.1",
     "tslint-microsoft-contrib": "2.0.12",
-    "typescript": "2.0.3",
-    "typings": "1.4.0"
+    "typescript": "2.0.3"
   }
 }
