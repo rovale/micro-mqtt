@@ -3,7 +3,7 @@
  */
 export interface NetConnectOptions {
     host: string;
-    port: number;
+    port?: number;
 }
 
 export interface Socket {

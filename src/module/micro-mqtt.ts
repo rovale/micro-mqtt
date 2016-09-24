@@ -142,7 +142,7 @@ export class Client {
                 const message = Protocol.parsePublish(data);
                 this.emit('receive', message);
                 if (message.qos > 0) {
-                    setTimeout(() => { this.sct.write(Protocol.createPubAck(message.pid)); }, 0);
+                    setTimeout(() => { this.sct.write(Protocol.createPubAck(message.pid || 0)); }, 0);
                 }
                 if (message.next) {
                     this.handleData(data.substr(message.next));

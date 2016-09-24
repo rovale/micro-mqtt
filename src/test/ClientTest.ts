@@ -25,7 +25,7 @@ describe('The MQTT client', () => {
             beforeEach(() => {
                 net = new MockNet();
                 net.connectIsCalled.should.equal(false, 'did not expect the client to connect to the network yet');
-                subject = new ClientTestSubclass({ host: 'some-host', port: 1234 }, net);
+                subject = new ClientTestSubclass({ host: 'some-host', port: 1234, clientId: 'some-clientId' }, net);
                 subject.connect();
             });
 
@@ -36,19 +36,19 @@ describe('The MQTT client', () => {
             it('it should try to establish a connection to the expected host and port.', () => {
                 net.connectIsCalled.should.equal(true, 'expected the client to connect to the network');
                 net.options.host.should.equal('some-host');
-                net.options.port.should.equal(1234);
+                (net.options.port || 0).should.equal(1234);
             });
         });
 
         context('without specifying the port', () => {
             beforeEach(() => {
                 net = new MockNet();
-                subject = new ClientTestSubclass({ host: 'some-host' }, net);
+                subject = new ClientTestSubclass({ host: 'some-host', clientId: 'some-clientId' }, net);
                 subject.connect();
             });
 
             it('it should default to port 1883.', () => {
-                net.options.port.should.equal(1883);
+                (net.options.port || 0).should.equal(1883);
             });
         });
     });

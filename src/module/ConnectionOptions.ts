@@ -6,7 +6,7 @@ interface ConnectionOptions {
     port?: number;
     username?: string;
     password?: string;
-    clientId?: string;
+    clientId: string;
     will?: ConnectionOptionsWill;
 }
 
