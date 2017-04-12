@@ -7,7 +7,7 @@
     "info": "npm-scripts-info",
     "pretest": "npm run clean && npm run tslint && npm run compile",
     "clean": "rimraf ./coverage ./bin",
-    "tslint": "tslint ./src/**/*.ts",
+    "tslint": "tslint --type-check --project tsconfig.json ./src/**/*.ts",
     "compile": "tsc --pretty",
     "?test": "Run TSLint, compile TypeScript, run unit tests, and create coverage reports.",
     "test": "istanbul cover ./node_modules/mocha/bin/_mocha -- --reporter spec ./bin/test/*.js",

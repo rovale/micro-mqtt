@@ -1,4 +1,4 @@
-import ControlPacketType from '../module/ControlPacketType';
+import { ControlPacketType } from '../module/ControlPacketType';
 import { Protocol } from '../module/micro-mqtt';
 
 /**
@@ -86,7 +86,7 @@ export class PublishPacketVerifier extends ControlPacketVerifier {
     }
 
     public shouldHaveAPacketId() {
-        let topicLength = this.packet.charCodeAt(2) << 8 | this.packet.charCodeAt(3);
+        const topicLength = this.packet.charCodeAt(2) << 8 | this.packet.charCodeAt(3);
         const packetIdPosition = 2 + 2 + topicLength;
         const packetId = this.packet.charCodeAt(packetIdPosition) << 8 | this.packet.charCodeAt(packetIdPosition + 1);
         return packetId.should.equal(1, 'since it is currently hard coded.');

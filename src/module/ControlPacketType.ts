@@ -2,7 +2,7 @@
  * MQTT Control Packet type
  * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc353481061
  */
-const enum ControlPacketType {
+export enum ControlPacketType {
     Connect = 1,
     ConnAck = 2,
     Publish = 3,
@@ -18,5 +18,3 @@ const enum ControlPacketType {
     PingResp = 13,
     Disconnect = 14
 }
-
-export default ControlPacketType;
