@@ -114,7 +114,7 @@ export class SubscribePacketVerifier extends ControlPacketVerifier {
     }
 
     /**
-     * [MQTT-3.8.1-1] Bits 3,2,1 and 0 of the fixed header of the SUBSCRIBE Control Packet are reserved 
+     * [MQTT-3.8.1-1] Bits 3,2,1 and 0 of the fixed header of the SUBSCRIBE Control Packet are reserved
      * and MUST be set to 0,0,1 and 0 respectively. The Server MUST treat any other value as malformed and
      * close the Network Connection.
      */

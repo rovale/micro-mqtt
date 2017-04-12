@@ -103,7 +103,7 @@ export class MockNet implements Net {
         this.callback = callback;
 
         return this.socket;
-    };
+    }
 }
 
 interface EventSubscription {
@@ -118,37 +118,37 @@ export class MockSocket implements Socket {
 
     public write(data: string) {
         this.sentPackages.push(data);
-    };
+    }
 
     public receivePackage(data: string) {
         const listeners = this.eventSubscriptions.filter(s => s.event === 'data');
         listeners.should.have.length.greaterThan(0);
         listeners.forEach(s => s.listener(data));
-    };
+    }
 
     public close() {
         const listeners = this.eventSubscriptions.filter(s => s.event === 'close');
         listeners.should.have.length.greaterThan(0);
         listeners.forEach(s => s.listener());
-    };
+    }
 
     public emitError(code: number, message: string) {
         const listeners = this.eventSubscriptions.filter(s => s.event === 'error');
         listeners.should.have.length.greaterThan(0);
         listeners.forEach(s => s.listener({ code: code, message: message }));
-    };
+    }
 
     public end() {
         this.ended = true;
-    };
+    }
 
     public on(event: string, listener: Function) {
         this.eventSubscriptions.push({ event: event, listener: listener });
-    };
+    }
 
     public removeAllListeners(event: string) {
         this.eventSubscriptions = this.eventSubscriptions.filter(s => s.event !== event);
-    };
+    }
 
     public clear() {
         this.sentPackages = [];

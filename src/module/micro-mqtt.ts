@@ -121,7 +121,7 @@ export class Client {
             this.emit('error', 'Disconnected.');
             this.connected = false;
         });
-    };
+    }
 
     private handleData = (data: string) => {
         const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
@@ -157,22 +157,22 @@ export class Client {
                 this.emit('error', `MQTT unexpected packet type: ${controlPacketType}.`);
                 break;
         }
-    };
+    }
 
     /** Publish a message */
     public publish(topic: string, message: string, qos: number = Constants.DefaultQos, retained: boolean = false) {
         this.sct.write(Protocol.createPublish(topic, message, qos, true));
-    };
+    }
 
     /** Subscribe to topic */
     public subscribe(topic: string, qos: number = Constants.DefaultQos) {
         this.sct.write(Protocol.createSubscribe(topic, qos));
-    };
+    }
 
     private ping = () => {
         this.sct.write(Protocol.createPingReq());
         this.emit('debug', 'Sent: Ping request.');
-    };
+    }
 }
 
 /**
@@ -190,7 +190,7 @@ export module Protocol {
 
     const strChr = String.fromCharCode;
 
-    /** 
+    /**
      * Remaining Length
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718023
      */
@@ -220,7 +220,7 @@ export module Protocol {
 
         if (options.will) {
             flags |= ConnectFlags.Will;
-            flags |= options.will.qos << 3;
+            flags |= (options.will.qos || 0) << 3;
             flags |= (options.will.retain) ? ConnectFlags.WillRetain : 0;
         }
 
@@ -232,7 +232,7 @@ export module Protocol {
         return [int16 >> 8, int16 & 255];
     }
 
-    /** 
+    /**
      * Structure of UTF-8 encoded strings
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Figure_1.1_Structure
      */
@@ -240,7 +240,7 @@ export module Protocol {
         return strChr(...getBytes(s.length)) + s;
     }
 
-    /** 
+    /**
      * Structure of an MQTT Control Packet
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800392
      */
@@ -294,7 +294,7 @@ export module Protocol {
         return strChr(ControlPacketType.PingReq << 4, 0);
     }
 
-    /** 
+    /**
      * PUBLISH - Publish message
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800410
      */
@@ -338,7 +338,7 @@ export module Protocol {
         return message;
     }
 
-    /** 
+    /**
      * PUBACK - Publish acknowledgement
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800416
      */
@@ -347,7 +347,7 @@ export module Protocol {
         return createPacket(byte1, strChr(...getBytes(pid)));
     }
 
-    /** 
+    /**
      * SUBSCRIBE - Subscribe to topics
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800436
      */
