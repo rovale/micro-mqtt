@@ -4,6 +4,8 @@
 [![devDependency Status](https://david-dm.org/rovale/micro-mqtt/dev-status.svg)](https://david-dm.org/rovale/micro-mqtt#info=devDependencies)
 # micro-mqtt
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/rovale/micro-mqtt.svg)](https://greenkeeper.io/)
+
 An MQTT client for [Espruino](http://www.espruino.com/).
 ## TODO list
 - [x] Convert to TypeScript and restructure.
