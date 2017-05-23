@@ -4,7 +4,11 @@
         "sourceMap": true,
         "noImplicitAny": true,
         "strictNullChecks": true,
-        "outDir": "./bin"
+        "outDir": "./bin",
+        "lib": [
+            "dom",
+            "es2015"
+        ]
     },
     "exclude": [
         "node_modules"
