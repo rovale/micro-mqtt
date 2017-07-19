@@ -33,7 +33,7 @@ export class MqttClientTestSubclassBuilder {
     public whichJustSentAConnectPacketOn(net: MockNet = new MockNet(new MockSocket())) {
         this.client = new ClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, net);
         this.client.connect();
-        net.callback();
+        net.callback(new MockSocket());
         this.client.clearEmittedEvents();
         return this;
     }
