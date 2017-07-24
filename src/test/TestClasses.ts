@@ -131,14 +131,14 @@ export class MockNet implements Net {
     public connectIsCalled: boolean = false;
     public connectIsCalledTwice: boolean = false;
     public options: NetConnectOptions;
-    public callback: () => void;
+    public callback: (socket: Socket) => void;
     public socket: MockSocket;
 
     constructor(socket: MockSocket = new MockSocket()) {
         this.socket = socket;
     }
 
-    public connect(options: NetConnectOptions, callback: () => void) {
+    public connect(options: NetConnectOptions, callback: (socket: Socket) => void) {
         if (this.connectIsCalled) {
             this.connectIsCalledTwice = true;
         } else {

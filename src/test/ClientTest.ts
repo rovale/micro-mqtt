@@ -125,7 +125,7 @@ describe('The MQTT client', () => {
             }, net);
 
             subject.connect();
-            net.callback();
+            net.callback(socket);
         });
 
         it('it should send a Connect packet.', () => {

@@ -36,9 +36,9 @@
   },
   "homepage": "https://github.com/rovale/micro-mqtt#readme",
   "devDependencies": {
-    "@types/chai": "3.5.2",
+    "@types/chai": "4.0.1",
     "@types/mocha": "2.2.41",
-    "@types/sinon": "2.3.0",
+    "@types/sinon": "2.3.2",
     "chai": "4.0.2",
     "coveralls": "2.13.1",
     "istanbul": "0.4.5",
@@ -46,10 +46,11 @@
     "ncp": "2.0.0",
     "npm-scripts-info": "0.3.6",
     "remap-istanbul": "0.9.5",
-    "sinon": "2.3.5",
     "rimraf": "2.6.1",
+    "sinon": "2.3.6",
     "tslint": "5.5.0",
-    "tslint-microsoft-contrib": "5.0.0",
-    "typescript": "2.3.4"
+    "tslint-microsoft-contrib": "5.0.1",
+    "tsutils": "^2.7.1",
+    "typescript": "2.4.2"
   }
 }
