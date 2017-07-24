@@ -47,7 +47,7 @@
     "npm-scripts-info": "0.3.6",
     "remap-istanbul": "0.9.5",
     "rimraf": "2.6.1",
-    "sinon": "2.3.5",
+    "sinon": "2.3.6",
     "tslint": "5.4.3",
     "tslint-microsoft-contrib": "5.0.0",
     "tsutils": "^2.7.1",
