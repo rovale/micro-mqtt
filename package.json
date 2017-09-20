@@ -48,7 +48,7 @@
     "remap-istanbul": "0.9.5",
     "rimraf": "2.6.1",
     "sinon": "3.0.0",
-    "tslint": "5.5.0",
+    "tslint": "5.6.0",
     "tslint-microsoft-contrib": "5.0.1",
     "tsutils": "^2.7.1",
     "typescript": "2.4.2"
