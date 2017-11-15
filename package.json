@@ -36,7 +36,7 @@
   },
   "homepage": "https://github.com/rovale/micro-mqtt#readme",
   "devDependencies": {
-    "@types/chai": "4.0.2",
+    "@types/chai": "4.0.5",
     "@types/mocha": "2.2.42",
     "@types/sinon": "2.3.4",
     "chai": "4.1.1",
