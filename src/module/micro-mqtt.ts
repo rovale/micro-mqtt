@@ -322,11 +322,6 @@ export class Client {
             clearInterval(this.wdId);
             this.wdId = Constants.Uninitialized;
         }
-
-        if (this.piId !== Constants.Uninitialized) {
-            clearInterval(this.piId);
-            this.piId = Constants.Uninitialized;
-        }
     }
 
     private handleData = (data: string) => {
