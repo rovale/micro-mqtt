@@ -38,19 +38,18 @@
   "devDependencies": {
     "@types/chai": "4.0.2",
     "@types/mocha": "2.2.42",
-    "@types/sinon": "2.3.4",
+    "@types/sinon": "2.3.6",
     "chai": "4.1.1",
-    "coveralls": "2.13.1",
+    "coveralls": "2.13.2",
     "istanbul": "0.4.5",
-    "mocha": "3.5.1",
+    "mocha": "4.0.0",
     "ncp": "2.0.0",
     "npm-scripts-info": "0.3.6",
     "remap-istanbul": "0.9.5",
     "rimraf": "2.6.2",
-    "sinon": "3.0.0",
     "tslint": "5.8.0",
     "tslint-microsoft-contrib": "5.0.1",
     "tsutils": "^2.7.1",
-    "typescript": "2.5.2"
+    "typescript": "2.5.3"
   }
 }
