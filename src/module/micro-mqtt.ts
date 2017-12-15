@@ -310,6 +310,20 @@ export class Client {
         });
     }
 
+    public disconnect() {
+        if (this.sct) {
+            this.sct.removeAllListeners('connect');
+            this.sct.removeAllListeners('data');
+            this.sct.removeAllListeners('close');
+            this.sct.end();
+        }
+
+        if (this.wdId !== Constants.Uninitialized) {
+            clearInterval(this.wdId);
+            this.wdId = Constants.Uninitialized;
+        }
+    }
+
     private handleData = (data: string) => {
         const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
         switch (controlPacketType) {
