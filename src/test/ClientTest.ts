@@ -30,6 +30,10 @@ describe('The MQTT client', () => {
                 subject.connect();
             });
 
+            afterEach(() => {
+                subject.disconnect();
+            });
+
             it('it should emit information about this action.', () => {
                 subject.shouldHaveEmittedInfo('Connecting to some-host:1234');
             });
@@ -46,6 +50,10 @@ describe('The MQTT client', () => {
                 net = new MockNet();
                 subject = new ClientTestSubclass({ host: 'some-host', clientId: 'some-clientId' }, net);
                 subject.connect();
+            });
+
+            afterEach(() => {
+                subject.disconnect();
             });
 
             it('it should default to port 1883.', () => {
@@ -73,6 +81,7 @@ describe('The MQTT client', () => {
 
         afterEach(() => {
             clock.reset();
+            subject.disconnect();
         });
 
         it('it should emit an error.', () => {
@@ -96,6 +105,10 @@ describe('The MQTT client', () => {
 
             socket = new MockSocket();
             subject.connect();
+        });
+
+        afterEach(() => {
+            subject.disconnect();
         });
 
         it('it should emit an error.', () => {
@@ -126,6 +139,10 @@ describe('The MQTT client', () => {
 
             subject.connect();
             net.callback(socket);
+        });
+
+        afterEach(() => {
+            subject.disconnect();
         });
 
         it('it should send a Connect packet.', () => {
