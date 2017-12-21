@@ -2,8 +2,7 @@
     "compileOnSave": false,
     "compilerOptions": {
         "sourceMap": true,
-        "noImplicitAny": true,
-        "strictNullChecks": true,
+        "strict": true,
         "outDir": "./bin",
         "lib": [
             "dom",
