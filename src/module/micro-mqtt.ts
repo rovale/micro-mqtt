@@ -1,11 +1,11 @@
 // tslint:disable-next-line:no-reference
-/// <reference path='_common.ts'/>
 import { ConnectionOptions } from './ConnectionOptions';
 import { ConnectFlags } from './ConnectFlags';
 import { ConnectReturnCode } from './ConnectReturnCode';
 import { ControlPacketType } from './ControlPacketType';
 import { Message } from './Message';
-import { Net, Socket, Wifi } from './Net';
+import { Socket } from './Net';
+import { EventEmitter } from 'events';
 
 /**
  * Optimization, the TypeScript compiler replaces the constant enums.
@@ -207,25 +207,22 @@ export module Protocol {
 /**
  * The MQTT client.
  */
-export class Client {
+export class Client extends EventEmitter {
     public version: string = '0.0.17';
 
     private opt: ConnectionOptions;
 
-    private net: Net;
-    private sct: Socket;
+    private socket: Socket;
 
-    protected emit: (event: string, arg?: string | Message) => boolean;
-    public on: (event: string, listener: (arg: string | Message) => void) => void;
+    private wdId?: NodeJS.Timer;
+    private piId?: NodeJS.Timer;
 
-    private wdId: number = Constants.Uninitialized;
-    private piId: number = Constants.Uninitialized;
-
-    private wifi: Wifi;
     private connected: boolean = false;
 
-    constructor(opt: ConnectionOptions, net: Net = require('net'), wifi: Wifi = require('Wifi')) {
-        opt.port = opt.port || Constants.DefaultPort;
+    constructor(opt: ConnectionOptions, socket: Socket) {
+        super();
+
+        opt.port = opt.port;
         opt.clientId = opt.clientId || '';
 
         if (opt.will) {
@@ -234,8 +231,7 @@ export class Client {
         }
 
         this.opt = opt;
-        this.net = net;
-        this.wifi = wifi;
+        this.socket = socket;
     }
 
     private static describe(code: ConnectReturnCode) {
@@ -265,21 +261,21 @@ export class Client {
     public connect() {
         this.emit('info', `Connecting to ${this.opt.host}:${this.opt.port}`);
 
-        if (this.wdId === Constants.Uninitialized) {
+        if (!this.wdId) {
             this.wdId = setInterval(() => {
                 if (!this.connected) {
                     this.emit('error', 'No connection. Retrying.');
 
-                    if (this.piId !== Constants.Uninitialized) {
+                    if (!!this.piId) {
                         clearInterval(this.piId);
-                        this.piId = Constants.Uninitialized;
+                        this.piId = undefined;
                     }
 
-                    if (this.sct) {
-                        this.sct.removeAllListeners('connect');
-                        this.sct.removeAllListeners('data');
-                        this.sct.removeAllListeners('close');
-                        this.sct.end();
+                    if (this.socket) {
+                        this.socket.removeAllListeners('connect');
+                        this.socket.removeAllListeners('data');
+                        this.socket.removeAllListeners('close');
+                        this.socket.end();
                     }
 
                     this.connect();
@@ -287,40 +283,35 @@ export class Client {
             }, Constants.WatchDogInterval * 1000);
         }
 
-        if (this.wifi.getStatus().station !== 'connected') {
-            this.emit('error', 'No wifi connection.');
-            return;
-        }
-
-        this.sct = this.net.connect({ host: this.opt.host, port: this.opt.port }, () => {
+        this.socket.connect(this.opt.port || Constants.DefaultPort, this.opt.host, () => {
             this.emit('info', 'Network connection established.');
-            this.sct.write(Protocol.createConnect(this.opt));
-            this.sct.removeAllListeners('connect');
+            this.socket.write(Protocol.createConnect(this.opt));
+            this.socket.removeAllListeners('connect');
         });
 
-        this.sct.on('data', (data: string) => {
+        this.socket.on('data', (data: string) => {
             const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
             this.emit('debug', `Rcvd: ${controlPacketType}: '${data}'.`);
             this.handleData(data);
         });
 
-        this.sct.on('close', () => {
+        this.socket.on('close', () => {
             this.emit('error', 'Disconnected.');
             this.connected = false;
         });
     }
 
     public disconnect() {
-        if (this.sct) {
-            this.sct.removeAllListeners('connect');
-            this.sct.removeAllListeners('data');
-            this.sct.removeAllListeners('close');
-            this.sct.end();
+        if (this.socket) {
+            this.socket.removeAllListeners('connect');
+            this.socket.removeAllListeners('data');
+            this.socket.removeAllListeners('close');
+            this.socket.end();
         }
 
-        if (this.wdId !== Constants.Uninitialized) {
+        if (this.wdId) {
             clearInterval(this.wdId);
-            this.wdId = Constants.Uninitialized;
+            this.wdId = undefined;
         }
     }
 
@@ -343,7 +334,7 @@ export class Client {
                 const message = Protocol.parsePublish(data);
                 this.emit('receive', message);
                 if (message.qos > 0) {
-                    setTimeout(() => { this.sct.write(Protocol.createPubAck(message.pid || 0)); }, 0);
+                    setTimeout(() => { this.socket.write(Protocol.createPubAck(message.pid || 0)); }, 0);
                 }
                 if (message.next) {
                     this.handleData(data.substr(message.next));
@@ -362,16 +353,16 @@ export class Client {
 
     /** Publish a message */
     public publish(topic: string, message: string, qos: number = Constants.DefaultQos, retained: boolean = false) {
-        this.sct.write(Protocol.createPublish(topic, message, qos, true));
+        this.socket.write(Protocol.createPublish(topic, message, qos, true));
     }
 
     /** Subscribe to topic */
     public subscribe(topic: string, qos: number = Constants.DefaultQos) {
-        this.sct.write(Protocol.createSubscribe(topic, qos));
+        this.socket.write(Protocol.createSubscribe(topic, qos));
     }
 
     private ping = () => {
-        this.sct.write(Protocol.createPingReq());
+        this.socket.write(Protocol.createPingReq());
         this.emit('debug', 'Sent: Ping request.');
     }
 }

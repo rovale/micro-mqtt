@@ -7,7 +7,7 @@
     "info": "npm-scripts-info",
     "pretest": "npm run clean && npm run tslint && npm run compile",
     "clean": "rimraf ./coverage ./bin",
-    "tslint": "tslint --type-check --project tsconfig.json ./src/**/*.ts",
+    "tslint": "tslint --project tsconfig.json ./src/**/*.ts",
     "compile": "tsc --pretty",
     "?test": "Run TSLint, compile TypeScript, run unit tests, and create coverage reports.",
     "test": "istanbul cover ./node_modules/mocha/bin/_mocha -- --reporter spec ./bin/test/*.js",
@@ -38,6 +38,7 @@
   "devDependencies": {
     "@types/chai": "4.0.5",
     "@types/mocha": "2.2.44",
+    "@types/node": "^8.5.2",
     "@types/sinon": "2.3.6",
     "chai": "4.1.1",
     "coveralls": "2.13.2",
@@ -47,10 +48,13 @@
     "npm-scripts-info": "0.3.6",
     "remap-istanbul": "0.9.5",
     "rimraf": "2.6.2",
-    "sinon": "3.0.0",    
+    "sinon": "3.0.0",
     "tslint": "5.8.0",
     "tslint-microsoft-contrib": "5.0.1",
     "tsutils": "^2.13.1",
     "typescript": "2.5.3"
+  },
+  "dependencies": {
+    "net": "^1.0.2"
   }
 }

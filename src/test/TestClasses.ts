@@ -6,27 +6,19 @@
 import { Client } from '../module/micro-mqtt';
 import { ConnectionOptions } from '../module/ConnectionOptions';
 import { Message } from '../module/Message';
-import { Net, NetConnectOptions, Socket, Wifi } from '../module/Net';
+import { Socket } from '../module/Net';
 
 interface EmittedEvent {
     event: string;
-    args: string | Message;
-}
-
-class ConnectedWifi implements Wifi {
-    public getStatus() { return { station: 'connected' }; }
-}
-
-export class NotConnectedWifi implements Wifi {
-    public getStatus() { return { station: 'off' }; }
+    args?: string | Message;
 }
 
 export class ClientTestSubclass extends Client {
     private emittedEvents: EmittedEvent[] = [];
 
-    constructor(options: ConnectionOptions, net?: Net, wifi: Wifi = new ConnectedWifi()) {
-        super(options, net, wifi);
-        this.emit = (event: string, args: string | Message) => {
+    constructor(options: ConnectionOptions, socket: Socket) {
+        super(options, socket);
+        this.emit = (event: string, args?: string | Message) => {
             this.emittedEvents.push({ event: event, args: args });
             return true;
         };
@@ -34,12 +26,12 @@ export class ClientTestSubclass extends Client {
 
     private shouldHaveEmitted(events: EmittedEvent[], text: string) {
         events.should.have.lengthOf(1);
-        return events[0].args.should.equal(text);
+        return (events[0].args || '').should.equal(text);
     }
 
     public shouldHaveEmittedEvent(events: EmittedEvent[], assert: (arg: string | Message) => Chai.Assertion) {
         events.should.have.lengthOf(1);
-        return assert(events[0].args);
+        return assert(events[0].args || '');
     }
 
     public emittedDebugInfo() {
@@ -88,6 +80,13 @@ export class MockSocket implements Socket {
     public eventSubscriptions: EventSubscription[] = [];
     public ended: boolean = false;
 
+    public connectIsCalled: boolean = false;
+    public connectIsCalledTwice: boolean = false;
+
+    public host: string;
+    public port: number;
+    public connectionListener: Function;
+
     public write(data: string) {
         this.sentPackages.push(data);
     }
@@ -125,29 +124,19 @@ export class MockSocket implements Socket {
     public clear() {
         this.sentPackages = [];
     }
-}
 
-export class MockNet implements Net {
-    public connectIsCalled: boolean = false;
-    public connectIsCalledTwice: boolean = false;
-    public options: NetConnectOptions;
-    public callback: (socket: Socket) => void;
-    public socket: MockSocket;
-
-    constructor(socket: MockSocket = new MockSocket()) {
-        this.socket = socket;
-    }
-
-    public connect(options: NetConnectOptions, callback: (socket: Socket) => void) {
+    public connect(port: number, host: string, connectionListener: Function = () => { return null; } ) {
         if (this.connectIsCalled) {
             this.connectIsCalledTwice = true;
         } else {
             this.connectIsCalled = true;
         }
-        this.options = options;
-        this.callback = callback;
 
-        return this.socket;
+        this.port = port;
+        this.host = host;
+        this.connectionListener = connectionListener;
+
+        return this;
     }
 }
 

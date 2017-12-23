@@ -1,53 +1,46 @@
 /**
  * Example usage of the MqttClient.
  */
-declare const global: any;
-
-/* tslint:disable:no-unused-variable */
 import { Client } from '../module/micro-mqtt';
 import { Message } from '../module/Message';
+import { Socket } from 'net';
 
 function onInit() {
-    /* tslint:disable:variable-name */
-    const Client = require('micro-mqtt').Client;
-    /* tslint:enable:no-unused-variable variable-name */
     const client: Client = new Client({
         host: '192.168.2.4',
-        clientId: 'espruino',
+        clientId: 'clientId',
         username: 'username', password: 'password',
         will: {
-            topic: 'rovale/espruino/status',
+            topic: 'rovale/clientId/status',
             message: 'offline',
             qos: 1,
             retain: true
         }
-    });
+    }, new Socket());
 
     client.on('connected', () => {
         client.subscribe('rovale/#', 1);
-        client.publish('rovale/espruino/status', 'online', 1, true);
+        client.publish('rovale/clientId/status', 'online', 1, true);
     });
 
-    client.on('receive', (message: Message) => {
+    client.on('receive', (message: string | Message) => {
         console.log('on receive');
         console.log(message);
     });
 
-    client.on('debug', (debug: string) => {
+    client.on('debug', (debug: string | Message) => {
         console.log('[debug] ' + debug);
     });
 
-    client.on('info', (info: string) => {
+    client.on('info', (info: string | Message) => {
         console.log('[info] ' + info);
     });
 
-    client.on('error', (error: string) => {
+    client.on('error', (error: string | Message) => {
         console.log('[error] ' + error);
     });
 
     client.connect();
-
-    global.client = client;
-
-    eval('delete onInit');
 }
+
+onInit();
