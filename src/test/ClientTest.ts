@@ -579,7 +579,7 @@ describe('The MQTT client', () => {
 
             const publishPacket = Protocol.createPublish('some/topic', 'some-message', 0, false);
 
-            socket.receivePackage(publishPacket + publishPacket);
+            socket.receivePackage(Buffer.concat([publishPacket, publishPacket], publishPacket.length * 2));
         });
 
         it('it should emit two \'receive\' events.', () => {

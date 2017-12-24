@@ -14,8 +14,7 @@ const enum Constants {
     PingInterval = 40,
     WatchDogInterval = 5,
     DefaultPort = 1883,
-    DefaultQos = 0,
-    Uninitialized = -123
+    DefaultQos = 0
 }
 
 /**
@@ -83,6 +82,26 @@ export module Protocol {
         return strChr(...getBytes(s.length)) + s;
     }
 
+    export function toBuffer(packet : string) {
+        const buffer = Buffer.alloc(packet.length);
+
+        for (let i = 0; i < packet.length; i = i + 1) {
+            buffer.fill(packet.charCodeAt(i), i);
+        }
+
+        return buffer;
+    }
+
+    export function toString(buffer: Buffer) {
+        let packet = '';
+
+        for (let i = 0; i < buffer.length; i = i + 1) {
+            packet = packet + String.fromCharCode(buffer[i]);
+        }
+
+        return packet;
+    }
+
     /**
      * Structure of an MQTT Control Packet
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800392
@@ -90,10 +109,10 @@ export module Protocol {
     function createPacket(byte1: number, variable: string, payload: string = '') {
         const byte2 = remainingLength(variable.length + payload.length);
 
-        return strChr(byte1) +
+        return toBuffer(strChr(byte1) +
             strChr(...byte2) +
             variable +
-            payload;
+            payload);
     }
 
     /**
@@ -134,7 +153,7 @@ export module Protocol {
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800454
     */
     export function createPingReq() {
-        return strChr(ControlPacketType.PingReq << 4, 0);
+        return toBuffer(strChr(ControlPacketType.PingReq << 4, 0));
     }
 
     /**
@@ -222,7 +241,7 @@ export class Client extends EventEmitter {
     constructor(opt: ConnectionOptions, socket: Socket) {
         super();
 
-        opt.port = opt.port;
+        opt.port = opt.port || Constants.DefaultPort;
         opt.clientId = opt.clientId || '';
 
         if (opt.will) {
@@ -232,6 +251,23 @@ export class Client extends EventEmitter {
 
         this.opt = opt;
         this.socket = socket;
+
+        this.socket.on('data', (dataBytes: Buffer) => {
+            const data = Protocol.toString(dataBytes);
+            const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
+            this.emit('debug', `Rcvd: ${controlPacketType}: '${data}'.`);
+            this.handleData(data);
+        });
+
+        this.socket.on('close', () => {
+            this.emit('error', 'Disconnected.');
+            this.connected = false;
+        });
+
+        this.socket.on('connect', () => {
+            this.emit('info', 'Network connection established.');
+            this.socket.write(Protocol.createConnect(this.opt));
+        });
     }
 
     private static describe(code: ConnectReturnCode) {
@@ -260,6 +296,7 @@ export class Client extends EventEmitter {
 
     public connect() {
         this.emit('info', `Connecting to ${this.opt.host}:${this.opt.port}`);
+        this.socket.connect(this.opt.port || -1, this.opt.host);
 
         if (!this.wdId) {
             this.wdId = setInterval(() => {
@@ -271,48 +308,19 @@ export class Client extends EventEmitter {
                         this.piId = undefined;
                     }
 
-                    if (this.socket) {
-                        this.socket.removeAllListeners('connect');
-                        this.socket.removeAllListeners('data');
-                        this.socket.removeAllListeners('close');
-                        this.socket.end();
-                    }
-
+                    this.socket.end();
                     this.connect();
                 }
             }, Constants.WatchDogInterval * 1000);
         }
-
-        this.socket.connect(this.opt.port || Constants.DefaultPort, this.opt.host, () => {
-            this.emit('info', 'Network connection established.');
-            this.socket.write(Protocol.createConnect(this.opt));
-            this.socket.removeAllListeners('connect');
-        });
-
-        this.socket.on('data', (data: string) => {
-            const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
-            this.emit('debug', `Rcvd: ${controlPacketType}: '${data}'.`);
-            this.handleData(data);
-        });
-
-        this.socket.on('close', () => {
-            this.emit('error', 'Disconnected.');
-            this.connected = false;
-        });
     }
 
     public disconnect() {
-        if (this.socket) {
-            this.socket.removeAllListeners('connect');
-            this.socket.removeAllListeners('data');
-            this.socket.removeAllListeners('close');
-            this.socket.end();
-        }
-
         if (this.wdId) {
             clearInterval(this.wdId);
             this.wdId = undefined;
         }
+        this.socket.end();
     }
 
     private handleData = (data: string) => {

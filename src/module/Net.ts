@@ -1,11 +1,11 @@
+import { EventEmitter } from 'events';
+
 /**
  * Interface for socket.
  */
 
-export interface Socket {
-    write(data: string) : void;
-    on(event: string, listener: (args: string) => void): void;
-    removeAllListeners(event: string): void;
+export interface Socket extends EventEmitter {
+    write(data: Buffer) : void;
     end(): void;
     connect(port: number, host: string, connectionListener?: Function) : Socket;
 }
