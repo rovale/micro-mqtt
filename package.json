@@ -45,7 +45,7 @@
     "istanbul": "0.4.5",
     "mocha": "5.0.1",
     "ncp": "2.0.0",
-    "npm-scripts-info": "0.3.6",
+    "npm-scripts-info": "0.3.7",
     "remap-istanbul": "0.10.1",
     "rimraf": "2.6.2",
     "sinon": "4.2.3",
