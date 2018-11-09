@@ -1210,9 +1210,9 @@ tslint@5.11.0:
     tslib "^1.8.0"
     tsutils "^2.27.2"
 
-tsutils@3.3.1:
-  version "3.3.1"
-  resolved "https://registry.yarnpkg.com/tsutils/-/tsutils-3.3.1.tgz#b7f34e23efbff41f729a712f0bfc628550c7119c"
+tsutils@3.4.0:
+  version "3.4.0"
+  resolved "https://registry.yarnpkg.com/tsutils/-/tsutils-3.4.0.tgz#72a56f2a9eebd9bb8a38d018485ab529aa0cb113"
   dependencies:
     tslib "^1.8.1"
 
