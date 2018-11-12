@@ -15,6 +15,6 @@ A lightweight MQTT client. I keep it to stay up to date with TypeScript. Don't u
         
 - [TSLint](https://www.npmjs.com/package/tslint) works in [Visual Studio Code](https://code.visualstudio.com/) when the [extension](https://marketplace.visualstudio.com/items?itemName=eg2.tslint) is installed. The tslint.json initially taken from https://github.com/Microsoft/tslint-microsoft-contrib.
 
--The unit tests can be debugged in [Visual Studio Code](https://code.visualstudio.com/). The .vscode/launch.json is configured for this project, just put a breakpoint in the TypeScript code and press F5.
+- The unit tests can be debugged in [Visual Studio Code](https://code.visualstudio.com/). The .vscode/launch.json is configured for this project, just put a breakpoint in the TypeScript code and press F5.
 
 Based on the [Espruino MQTT.js module](https://github.com/espruino/EspruinoDocs/blob/master/modules/MQTT.md) by Lars Toft Jacobsen (boxed.dk), Gordon Williams. License: MIT.
