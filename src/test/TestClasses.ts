@@ -84,8 +84,8 @@ export class MockSocket extends EventEmitter implements Socket  {
     public connectIsCalled: boolean = false;
     public connectIsCalledTwice: boolean = false;
 
-    public host: string = 'some-host';
-    public port: number = 1883;
+    public host: string;
+    public port: number;
 
     public connectionListener() {
         this.emit('connect');

@@ -3,12 +3,13 @@
  */
 import { ConnectReturnCode } from '../module/ConnectReturnCode';
 import { ControlPacketType } from '../module/ControlPacketType';
+import { Socket } from '../module/Net';
 import { ClientTestSubclass, MockSocket } from './TestClasses';
 import { Protocol } from '../module/micro-mqtt';
 
 export class ControlPacketBuilder {
     private controlPacketType: ControlPacketType;
-    private connectReturnCode: ConnectReturnCode = ConnectReturnCode.Accepted;
+    private connectReturnCode: ConnectReturnCode;
 
     constructor(controlPacketType: ControlPacketType) {
         this.controlPacketType = controlPacketType;
@@ -30,7 +31,7 @@ export class ControlPacketBuilder {
 }
 
 export class MqttClientTestSubclassBuilder {
-    private client: ClientTestSubclass = new ClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, new MockSocket());
+    private client: ClientTestSubclass;
 
     public whichJustSentAConnectPacketOn(socket: MockSocket = new MockSocket()) {
         this.client = new ClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, socket);
@@ -49,10 +50,7 @@ export class MqttClientTestSubclassBuilder {
 
         socket.receivePackage(connAckPacket);
         socket.clear();
-        if (this.client) {
-            this.client.clearEmittedEvents();
-        }
-
+        this.client.clearEmittedEvents();
         return this;
     }
 
