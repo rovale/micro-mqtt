@@ -1,11 +1,11 @@
 /**
  * Example usage of the MqttClient.
  */
-declare const global: any;
+declare let global: any;
 
 /* tslint:disable:no-unused-variable */
 import { Client } from '../module/micro-mqtt';
-import { Message } from '../module/Message';
+import Message from '../module/Message';
 
 function onInit() {
     /* tslint:disable:variable-name */

@@ -1,11 +1,10 @@
 /**
  * Tests for the MQTT protocol.
  */
-// tslint:disable-next-line:no-reference
-/// <reference path='_common.ts'/>
+/// <reference path='_common.ts' />
 import { Protocol } from '../module/micro-mqtt';
-import { ConnectFlags } from '../module/ConnectFlags';
-import { Message } from '../module/Message';
+import ConnectFlags from '../module/ConnectFlags';
+import Message from '../module/Message';
 import { ConnectPacketVerifier, PublishPacketVerifier, SubscribePacketVerifier } from './ControlPacketVerifier';
 
 describe('The MQTT protocol', () => {
@@ -32,7 +31,6 @@ describe('The MQTT protocol', () => {
         });
     });
 
-    // tslint:disable-next-line:max-func-body-length
     context('When creating a Connect packet', () => {
         let packet: ConnectPacketVerifier;
 

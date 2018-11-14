@@ -1,7 +1,7 @@
 /**
  * A message received in a Publish packet.
  */
-export interface Message {
+interface Message {
     pid?: number;
     topic: string;
     content: string;
@@ -9,3 +9,5 @@ export interface Message {
     retain: number;
     next?: number;
 }
+
+export default Message;

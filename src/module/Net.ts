@@ -7,14 +7,14 @@ export interface NetConnectOptions {
 }
 
 export interface Socket {
-    write(data: string) : void;
-    on(event: string, listener: (args: string) => void): void;
-    removeAllListeners(event: string): void;
-    end(): void;
+    write: (data: string) => void;
+    on: (event: string, listener: (args: string) => void) => void;
+    removeAllListeners: (event: string) => void;
+    end: () => void;
 }
 
 export interface Net {
-    connect(options: NetConnectOptions, callback: (socket: Socket) => void): Socket;
+    connect: (options: NetConnectOptions, callback: (socket: Socket) => void) => Socket;
 }
 
 interface WifiStatus {
@@ -22,5 +22,5 @@ interface WifiStatus {
 }
 
 export interface Wifi {
-    getStatus(): WifiStatus;
+    getStatus: () => WifiStatus;
 }

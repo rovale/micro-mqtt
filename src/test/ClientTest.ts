@@ -1,13 +1,12 @@
 /**
  * Tests for the MQTT client.
  */
-// tslint:disable-next-line:no-reference
-/// <reference path='_common.ts'/>
-import { ConnectFlags } from '../module/ConnectFlags';
-import { ConnectReturnCode } from '../module/ConnectReturnCode';
-import { ControlPacketType } from '../module/ControlPacketType';
-import { Message } from '../module/Message';
-import { Protocol } from '../module/micro-mqtt';
+/// <reference path='_common.ts' />
+import ConnectFlags from '../module/ConnectFlags';
+import ConnectReturnCode from '../module/ConnectReturnCode';
+import ControlPacketType from '../module/ControlPacketType';
+import Message from '../module/Message';
+import { Protocol }  from '../module/micro-mqtt';
 import { ClientTestSubclass, MockNet, MockSocket, NotConnectedWifi} from './TestClasses';
 import { ConnectPacketVerifier, SubscribePacketVerifier, PublishPacketVerifier,
     PubAckPacketVerifier, GenericControlPacketVerifier } from './ControlPacketVerifier';
@@ -200,7 +199,6 @@ describe('The MQTT client', () => {
         });
     });
 
-    // tslint:disable-next-line:max-func-body-length
     context('When receiving a ConnAck packet', () => {
         beforeEach(() => {
             socket = new MockSocket();
@@ -237,6 +235,7 @@ describe('The MQTT client', () => {
                 subject.shouldHaveEmittedError('Connection refused, identifier rejected.');
             });
         });
+
 
         context('with ConnectReturnCode ServerUnavailable', () => {
             beforeEach(() => {
@@ -396,6 +395,7 @@ describe('The MQTT client', () => {
                 events.should.have.lengthOf(1);
                 (<Message>(events[0].args)).topic.should.equal('some/topic');
             });
+
 
             it('it should send a PubAck packet.', () => {
                 clock.tick(1);

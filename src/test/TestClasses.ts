@@ -1,11 +1,10 @@
 /**
  * Test subclasses and mocks.
  */
-// tslint:disable-next-line:no-reference
-/// <reference path='_common.ts'/>
+/// <reference path='_common.ts' />
 import { Client } from '../module/micro-mqtt';
-import { ConnectionOptions } from '../module/ConnectionOptions';
-import { Message } from '../module/Message';
+import ConnectionOptions from '../module/ConnectionOptions';
+import Message from '../module/Message';
 import { Net, NetConnectOptions, Socket, Wifi } from '../module/Net';
 
 interface EmittedEvent {
@@ -83,10 +82,39 @@ export class ClientTestSubclass extends Client {
     }
 }
 
+export class MockNet implements Net {
+    public connectIsCalled = false;
+    public connectIsCalledTwice = false;
+    public options: NetConnectOptions;
+    public callback: () => void;
+    public socket: MockSocket;
+
+    constructor(socket: MockSocket = new MockSocket()) {
+        this.socket = socket;
+    }
+
+    public connect(options: NetConnectOptions, callback: () => void) {
+        if (this.connectIsCalled) {
+            this.connectIsCalledTwice = true;
+        } else {
+            this.connectIsCalled = true;
+        }
+        this.options = options;
+        this.callback = callback;
+
+        return this.socket;
+    }
+}
+
+interface EventSubscription {
+    event: string;
+    listener: Function;
+}
+
 export class MockSocket implements Socket {
     public sentPackages: string[] = [];
     public eventSubscriptions: EventSubscription[] = [];
-    public ended: boolean = false;
+    public ended = false;
 
     public write(data: string) {
         this.sentPackages.push(data);
@@ -125,33 +153,4 @@ export class MockSocket implements Socket {
     public clear() {
         this.sentPackages = [];
     }
-}
-
-export class MockNet implements Net {
-    public connectIsCalled: boolean = false;
-    public connectIsCalledTwice: boolean = false;
-    public options: NetConnectOptions;
-    public callback: () => void;
-    public socket: MockSocket;
-
-    constructor(socket: MockSocket = new MockSocket()) {
-        this.socket = socket;
-    }
-
-    public connect(options: NetConnectOptions, callback: () => void) {
-        if (this.connectIsCalled) {
-            this.connectIsCalledTwice = true;
-        } else {
-            this.connectIsCalled = true;
-        }
-        this.options = options;
-        this.callback = callback;
-
-        return this.socket;
-    }
-}
-
-interface EventSubscription {
-    event: string;
-    listener: Function;
 }

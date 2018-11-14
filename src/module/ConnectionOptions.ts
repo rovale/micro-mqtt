@@ -1,7 +1,7 @@
 /**
  * The options used to connect to the MQTT broker.
  */
-export interface ConnectionOptions {
+interface ConnectionOptions {
     host: string;
     port?: number;
     username?: string;
@@ -16,3 +16,5 @@ interface ConnectionOptionsWill {
     qos?: number;
     retain?: boolean;
 }
+
+export default ConnectionOptions;
