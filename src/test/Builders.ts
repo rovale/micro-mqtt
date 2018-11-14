@@ -5,7 +5,6 @@ import { ConnectReturnCode } from '../module/ConnectReturnCode';
 import { ControlPacketType } from '../module/ControlPacketType';
 import { Socket } from '../module/Net';
 import { ClientTestSubclass, MockSocket } from './TestClasses';
-import { Protocol } from '../module/micro-mqtt';
 
 export class ControlPacketBuilder {
     private controlPacketType: ControlPacketType;
@@ -21,12 +20,11 @@ export class ControlPacketBuilder {
     }
 
     public build() {
-        let packet = String.fromCharCode(this.controlPacketType << 4);
-        packet += String.fromCharCode(0);
-        packet += String.fromCharCode(0);
-        packet += String.fromCharCode(this.connectReturnCode);
-
-        return Protocol.toBuffer(packet);
+        let result = String.fromCharCode(this.controlPacketType << 4);
+        result += String.fromCharCode(0);
+        result += String.fromCharCode(0);
+        result += String.fromCharCode(this.connectReturnCode);
+        return result;
     }
 }
 

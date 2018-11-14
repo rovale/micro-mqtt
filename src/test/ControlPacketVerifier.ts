@@ -8,8 +8,8 @@ abstract class ControlPacketVerifier {
     protected packet: string;
     protected packetType: ControlPacketType;
 
-    constructor(packet: Buffer, packetType: ControlPacketType) {
-        this.packet = Protocol.toString(packet);
+    constructor(packet: string, packetType: ControlPacketType) {
+        this.packet = packet;
         this.packetType = packetType;
         this.shouldHaveTheCorrectType();
     }
@@ -32,13 +32,13 @@ abstract class ControlPacketVerifier {
 }
 
 export class GenericControlPacketVerifier extends ControlPacketVerifier {
-    constructor(packet: Buffer, packetType: ControlPacketType) {
+    constructor(packet: string, packetType: ControlPacketType) {
         super(packet, packetType);
     }
 }
 
 export class PublishPacketVerifier extends ControlPacketVerifier {
-    constructor(packet: Buffer) {
+    constructor(packet: string) {
         super(packet, ControlPacketType.Publish);
     }
 
@@ -94,7 +94,7 @@ export class PublishPacketVerifier extends ControlPacketVerifier {
 }
 
 export class PubAckPacketVerifier extends ControlPacketVerifier {
-    constructor(packet: Buffer) {
+    constructor(packet: string) {
         super(packet, ControlPacketType.PubAck);
     }
 
@@ -109,7 +109,7 @@ export class PubAckPacketVerifier extends ControlPacketVerifier {
 }
 
 export class SubscribePacketVerifier extends ControlPacketVerifier {
-    constructor(packet: Buffer) {
+    constructor(packet: string) {
         super(packet, ControlPacketType.Subscribe);
     }
 
@@ -146,7 +146,7 @@ export class SubscribePacketVerifier extends ControlPacketVerifier {
 }
 
 export class ConnectPacketVerifier extends ControlPacketVerifier {
-    constructor(packet: Buffer) {
+    constructor(packet: string) {
         super(packet, ControlPacketType.Connect);
     }
 

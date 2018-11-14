@@ -295,7 +295,7 @@ describe('The MQTT protocol', () => {
         context('with a topic, a message, and QoS 0', () => {
             beforeEach(() => {
                 const packet = Protocol.createPublish('some/topic', 'some-message', 0, false);
-                actual = Protocol.parsePublish(Protocol.toString(packet));
+                actual = Protocol.parsePublish(packet);
             });
 
             it('it should return the expected message.', () => {
@@ -313,7 +313,7 @@ describe('The MQTT protocol', () => {
         context('with a topic, a message, and QoS 1', () => {
             beforeEach(() => {
                 const packet = Protocol.createPublish('some/topic', 'some-message', 1, false);
-                actual = Protocol.parsePublish(Protocol.toString(packet));
+                actual = Protocol.parsePublish(packet);
             });
 
             it('it should return the expected message.', () => {
