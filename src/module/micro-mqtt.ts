@@ -1,11 +1,11 @@
 // tslint:disable-next-line:no-reference
+/// <reference path='_common.ts'/>
 import { ConnectionOptions } from './ConnectionOptions';
 import { ConnectFlags } from './ConnectFlags';
 import { ConnectReturnCode } from './ConnectReturnCode';
 import { ControlPacketType } from './ControlPacketType';
 import { Message } from './Message';
-import { Socket } from './Net';
-import { EventEmitter } from 'events';
+import { Net, Socket, Wifi } from './Net';
 
 /**
  * Optimization, the TypeScript compiler replaces the constant enums.
@@ -207,22 +207,25 @@ export module Protocol {
 /**
  * The MQTT client.
  */
-export class Client extends EventEmitter {
+export class Client {
     public version: string = '0.0.17';
 
     private opt: ConnectionOptions;
 
-    private socket: Socket;
+    private net: Net;
+    private sct: Socket;
 
-    private wdId?: NodeJS.Timer;
-    private piId?: NodeJS.Timer;
+    protected emit: (event: string, arg?: string | Message) => boolean;
+    public on: (event: string, listener: (arg: string | Message) => void) => void;
 
+    private wdId: number = Constants.Uninitialized;
+    private piId: number = Constants.Uninitialized;
+
+    private wifi: Wifi;
     private connected: boolean = false;
 
-    constructor(opt: ConnectionOptions, socket: Socket) {
-        super();
-
-        opt.port = opt.port;
+    constructor(opt: ConnectionOptions, net: Net = require('net'), wifi: Wifi = require('Wifi')) {
+        opt.port = opt.port || Constants.DefaultPort;
         opt.clientId = opt.clientId || '';
 
         if (opt.will) {
@@ -231,7 +234,8 @@ export class Client extends EventEmitter {
         }
 
         this.opt = opt;
-        this.socket = socket;
+        this.net = net;
+        this.wifi = wifi;
     }
 
     private static describe(code: ConnectReturnCode) {
@@ -261,21 +265,21 @@ export class Client extends EventEmitter {
     public connect() {
         this.emit('info', `Connecting to ${this.opt.host}:${this.opt.port}`);
 
-        if (!this.wdId) {
+        if (this.wdId === Constants.Uninitialized) {
             this.wdId = setInterval(() => {
                 if (!this.connected) {
                     this.emit('error', 'No connection. Retrying.');
 
-                    if (!!this.piId) {
+                    if (this.piId !== Constants.Uninitialized) {
                         clearInterval(this.piId);
-                        this.piId = undefined;
+                        this.piId = Constants.Uninitialized;
                     }
 
-                    if (this.socket) {
-                        this.socket.removeAllListeners('connect');
-                        this.socket.removeAllListeners('data');
-                        this.socket.removeAllListeners('close');
-                        this.socket.end();
+                    if (this.sct) {
+                        this.sct.removeAllListeners('connect');
+                        this.sct.removeAllListeners('data');
+                        this.sct.removeAllListeners('close');
+                        this.sct.end();
                     }
 
                     this.connect();
@@ -283,35 +287,40 @@ export class Client extends EventEmitter {
             }, Constants.WatchDogInterval * 1000);
         }
 
-        this.socket.connect(this.opt.port || Constants.DefaultPort, this.opt.host, () => {
+        if (this.wifi.getStatus().station !== 'connected') {
+            this.emit('error', 'No wifi connection.');
+            return;
+        }
+
+        this.sct = this.net.connect({ host: this.opt.host, port: this.opt.port }, () => {
             this.emit('info', 'Network connection established.');
-            this.socket.write(Protocol.createConnect(this.opt));
-            this.socket.removeAllListeners('connect');
+            this.sct.write(Protocol.createConnect(this.opt));
+            this.sct.removeAllListeners('connect');
         });
 
-        this.socket.on('data', (data: string) => {
+        this.sct.on('data', (data: string) => {
             const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
             this.emit('debug', `Rcvd: ${controlPacketType}: '${data}'.`);
             this.handleData(data);
         });
 
-        this.socket.on('close', () => {
+        this.sct.on('close', () => {
             this.emit('error', 'Disconnected.');
             this.connected = false;
         });
     }
 
     public disconnect() {
-        if (this.socket) {
-            this.socket.removeAllListeners('connect');
-            this.socket.removeAllListeners('data');
-            this.socket.removeAllListeners('close');
-            this.socket.end();
+        if (this.sct) {
+            this.sct.removeAllListeners('connect');
+            this.sct.removeAllListeners('data');
+            this.sct.removeAllListeners('close');
+            this.sct.end();
         }
 
-        if (this.wdId) {
+        if (this.wdId !== Constants.Uninitialized) {
             clearInterval(this.wdId);
-            this.wdId = undefined;
+            this.wdId = Constants.Uninitialized;
         }
     }
 
@@ -334,7 +343,7 @@ export class Client extends EventEmitter {
                 const message = Protocol.parsePublish(data);
                 this.emit('receive', message);
                 if (message.qos > 0) {
-                    setTimeout(() => { this.socket.write(Protocol.createPubAck(message.pid || 0)); }, 0);
+                    setTimeout(() => { this.sct.write(Protocol.createPubAck(message.pid || 0)); }, 0);
                 }
                 if (message.next) {
                     this.handleData(data.substr(message.next));
@@ -353,16 +362,16 @@ export class Client extends EventEmitter {
 
     /** Publish a message */
     public publish(topic: string, message: string, qos: number = Constants.DefaultQos, retained: boolean = false) {
-        this.socket.write(Protocol.createPublish(topic, message, qos, true));
+        this.sct.write(Protocol.createPublish(topic, message, qos, true));
     }
 
     /** Subscribe to topic */
     public subscribe(topic: string, qos: number = Constants.DefaultQos) {
-        this.socket.write(Protocol.createSubscribe(topic, qos));
+        this.sct.write(Protocol.createSubscribe(topic, qos));
     }
 
     private ping = () => {
-        this.socket.write(Protocol.createPingReq());
+        this.sct.write(Protocol.createPingReq());
         this.emit('debug', 'Sent: Ping request.');
     }
 }

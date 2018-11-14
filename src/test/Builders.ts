@@ -3,8 +3,7 @@
  */
 import { ConnectReturnCode } from '../module/ConnectReturnCode';
 import { ControlPacketType } from '../module/ControlPacketType';
-import { Socket } from '../module/Net';
-import { ClientTestSubclass, MockSocket } from './TestClasses';
+import { ClientTestSubclass, MockNet, MockSocket } from './TestClasses';
 
 export class ControlPacketBuilder {
     private controlPacketType: ControlPacketType;
@@ -31,21 +30,22 @@ export class ControlPacketBuilder {
 export class MqttClientTestSubclassBuilder {
     private client: ClientTestSubclass;
 
-    public whichJustSentAConnectPacketOn(socket: MockSocket = new MockSocket()) {
-        this.client = new ClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, socket);
+    public whichJustSentAConnectPacketOn(net: MockNet = new MockNet(new MockSocket())) {
+        this.client = new ClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, net);
         this.client.connect();
-        socket.connectionListener();
+        net.callback();
         this.client.clearEmittedEvents();
         return this;
     }
 
-    public whichIsConnectedOn(socket: MockSocket = new MockSocket()) {
-        this.whichJustSentAConnectPacketOn(socket);
+    public whichIsConnectedOn(net: MockNet = new MockNet(new MockSocket())) {
+        this.whichJustSentAConnectPacketOn(net);
 
         const connAckPacket = new ControlPacketBuilder(ControlPacketType.ConnAck)
             .withConnectReturnCode(ConnectReturnCode.Accepted)
             .build();
 
+        const socket = net.socket;
         socket.receivePackage(connAckPacket);
         socket.clear();
         this.client.clearEmittedEvents();
