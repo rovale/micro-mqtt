@@ -1,6 +1,7 @@
+// tslint:disable-next-line:no-reference
 /// <reference path='_common.ts'/>
-import ConnectionOptions from './ConnectionOptions';
 import ConnectFlags from './ConnectFlags';
+import ConnectionOptions from './ConnectionOptions';
 import ConnectReturnCode from './ConnectReturnCode';
 import ControlPacketType from './ControlPacketType';
 import Message from './Message';
@@ -21,18 +22,18 @@ const enum Constants {
  * The MQTT client.
  */
 export class Client {
-    public version = '0.0.17';
+    public version: string = '0.0.17';
+
+    public on: (event: string, listener: (arg: string | Message) => void) => void;
+    protected emit: (event: string, arg?: string | Message) => boolean;
 
     private opt: ConnectionOptions;
 
     private net: Net;
-    private sct: Socket;
+    private sct?: Socket;
 
-    protected emit: (event: string, arg?: string | Message) => boolean;
-    public on: (event: string, listener: (arg: string | Message) => void) => void;
-
-    private wdId: number = Constants.Uninitialized;
-    private piId: number = Constants.Uninitialized;
+    private wdId: number | NodeJS.Timeout = Constants.Uninitialized;
+    private piId: number | NodeJS.Timeout | undefined = Constants.Uninitialized;
 
     private wifi: Wifi;
     private connected: boolean = false;
@@ -51,8 +52,8 @@ export class Client {
         this.wifi = wifi;
     }
 
-    private static describe(code: ConnectReturnCode) {
-        let error = 'Connection refused, ';
+    private static describe(code: ConnectReturnCode) : string {
+        let error : string = 'Connection refused, ';
         switch (code) {
             case ConnectReturnCode.UnacceptableProtocolVersion:
                 error += 'unacceptable protocol version.';
@@ -70,12 +71,13 @@ export class Client {
                 error += 'not authorized.';
                 break;
             default:
-                error += 'unknown return code: ' + code + '.';
+                error += `unknown return code: ${code}.`;
         }
+
         return error;
     }
 
-    public connect() {
+    public connect() : void {
         this.emit('info', `Connecting to ${this.opt.host}:${this.opt.port}`);
 
         if (this.wdId === Constants.Uninitialized) {
@@ -97,18 +99,21 @@ export class Client {
 
                     this.connect();
                 }
-            }, Constants.WatchDogInterval * 1000);
+            },                      Constants.WatchDogInterval * 1000);
         }
 
         if (this.wifi.getStatus().station !== 'connected') {
             this.emit('error', 'No wifi connection.');
+
             return;
         }
 
         this.sct = this.net.connect({ host: this.opt.host, port: this.opt.port }, () => {
             this.emit('info', 'Network connection established.');
-            this.sct.write(Protocol.createConnect(this.opt));
-            this.sct.removeAllListeners('connect');
+            if (this.sct) {
+                this.sct.write(Protocol.createConnect(this.opt));
+                this.sct.removeAllListeners('connect');
+            }
         });
 
         this.sct.on('data', (data: string) => {
@@ -123,11 +128,11 @@ export class Client {
         });
     }
 
-    private handleData = (data: string) => {
+    private handleData = (data: string): void => {
         const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
         switch (controlPacketType) {
             case ControlPacketType.ConnAck:
-                const returnCode = data.charCodeAt(3);
+                const returnCode: number = data.charCodeAt(3);
                 if (returnCode === ConnectReturnCode.Accepted) {
                     this.emit('info', 'MQTT connection accepted.');
                     this.emit('connected');
