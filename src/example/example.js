@@ -1,17 +1,10 @@
 /**
  * Example usage of the MqttClient.
  */
-declare let global: any;
-
-/* tslint:disable:no-unused-variable */
-import { Client } from '../module/micro-mqtt';
-import Message from '../module/Message';
-
 function onInit() {
-    /* tslint:disable:variable-name */
-    const Client = require('micro-mqtt').Client;
-    /* tslint:enable:no-unused-variable variable-name */
-    const client: Client = new Client({
+    var Client = require('micro-mqtt').Client;
+
+    var client = new Client({
         host: '192.168.2.4',
         clientId: 'espruino',
         username: 'username', password: 'password',
@@ -20,28 +13,28 @@ function onInit() {
             message: 'offline',
             qos: 1,
             retain: true
-        }
-    });
+        },
+    }, require('net'), require('Wifi'));
 
     client.on('connected', () => {
         client.subscribe('rovale/#', 1);
         client.publish('rovale/espruino/status', 'online', 1, true);
     });
 
-    client.on('receive', (message: Message) => {
+    client.on('receive', (message) => {
         console.log('on receive');
         console.log(message);
     });
 
-    client.on('debug', (debug: string) => {
+    client.on('debug', (debug) => {
         console.log('[debug] ' + debug);
     });
 
-    client.on('info', (info: string) => {
+    client.on('info', (info) => {
         console.log('[info] ' + info);
     });
 
-    client.on('error', (error: string) => {
+    client.on('error', (error) => {
         console.log('[error] ' + error);
     });
 

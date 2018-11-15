@@ -6,53 +6,57 @@ import ControlPacketType from '../module/ControlPacketType';
 import { ClientTestSubclass, MockNet, MockSocket } from './TestClasses';
 
 export class MqttClientTestSubclassBuilder {
-    private client: ClientTestSubclass;
+    private client: ClientTestSubclass = new ClientTestSubclass({ host: 'some-host', clientId: 'some-client' });
 
-    public whichJustSentAConnectPacketOn(net: MockNet = new MockNet(new MockSocket())) {
+    public whichJustSentAConnectPacketOn(net: MockNet = new MockNet(new MockSocket())) : MqttClientTestSubclassBuilder {
         this.client = new ClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, net);
         this.client.connect();
         net.callback();
         this.client.clearEmittedEvents();
+
         return this;
     }
 
-    public whichIsConnectedOn(net: MockNet = new MockNet(new MockSocket())) {
+    public whichIsConnectedOn(net: MockNet = new MockNet(new MockSocket())): MqttClientTestSubclassBuilder {
         this.whichJustSentAConnectPacketOn(net);
 
-        const connAckPacket = new ControlPacketBuilder(ControlPacketType.ConnAck)
+        const connAckPacket: string = new ControlPacketBuilder(ControlPacketType.ConnAck)
             .withConnectReturnCode(ConnectReturnCode.Accepted)
             .build();
 
-        let socket = net.socket;
+        const socket: MockSocket = net.socket;
         socket.receivePackage(connAckPacket);
         socket.clear();
         this.client.clearEmittedEvents();
+
         return this;
     }
 
-    public build() {
+    public build(): ClientTestSubclass {
         return this.client;
     }
 }
 
 export class ControlPacketBuilder {
     private controlPacketType: ControlPacketType;
-    private connectReturnCode: ConnectReturnCode;
+    private connectReturnCode: ConnectReturnCode = ConnectReturnCode.Unknown;
 
     constructor(controlPacketType: ControlPacketType) {
         this.controlPacketType = controlPacketType;
     }
 
-    public withConnectReturnCode(connectReturnCode: ConnectReturnCode) {
+    public withConnectReturnCode(connectReturnCode: ConnectReturnCode) : ControlPacketBuilder {
         this.connectReturnCode = connectReturnCode;
+
         return this;
     }
 
-    public build() {
-        let result = String.fromCharCode(this.controlPacketType << 4);
+    public build(): string {
+        let result: string = String.fromCharCode(this.controlPacketType << 4);
         result += String.fromCharCode(0);
         result += String.fromCharCode(0);
         result += String.fromCharCode(this.connectReturnCode);
+
         return result;
     }
 }

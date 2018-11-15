@@ -3,6 +3,7 @@
  * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349256
  */
 const enum ConnectReturnCode {
+    Unknown = -1,
     Accepted = 0,
     UnacceptableProtocolVersion = 1,
     IdentifierRejected = 2,

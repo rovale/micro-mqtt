@@ -1,7 +1,7 @@
 /**
  * A message received in a Publish packet.
  */
-interface Message {
+interface IMessage {
     pid?: number;
     topic: string;
     content: string;
@@ -10,4 +10,4 @@ interface Message {
     next?: number;
 }
 
-export default Message;
+export default IMessage;

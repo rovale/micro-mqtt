@@ -5,8 +5,13 @@
     ],
     "rules": {
         "no-bitwise": false,
+        "no-default-export": false,
         "no-relative-imports": false,
         "no-require-imports": false,
-        "no-implicit-dependencies": [true, ["Wifi"]]        
+        "no-implicit-dependencies": [true, "dev", ["Wifi"]],        
+        "max-func-body-length": false,
+        "max-classes-per-file": false,        
+        "ordered-imports": false,
+        "completed-docs": false
     }
 }

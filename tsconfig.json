@@ -5,7 +5,6 @@
         "strict": true,
         "outDir": "./bin",
         "lib": [
-            "Wifi",
             "dom",
             "es2015"
         ]

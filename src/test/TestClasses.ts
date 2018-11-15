@@ -1,99 +1,104 @@
 /**
  * Test subclasses and mocks.
  */
+// tslint:disable-next-line:no-reference
 /// <reference path='_common.ts' />
+import IConnectionOptions from '../module/IConnectionOptions';
+import IMessage from '../module/IMessage';
 import { Client } from '../module/micro-mqtt';
-import ConnectionOptions from '../module/ConnectionOptions';
-import Message from '../module/Message';
-import { Net, NetConnectOptions, Socket, Wifi } from '../module/Net';
+import { INet, INetConnectOptions, ISocket, IWifi, IWifiStatus } from '../module/Net';
 
-interface EmittedEvent {
+export interface IEmittedEvent {
     event: string;
-    args: string | Message;
+    args?: string | IMessage;
 }
 
-class ConnectedWifi implements Wifi {
-    public getStatus() { return { station: 'connected' }; }
+class ConnectedWifi implements IWifi {
+    public getStatus(): IWifiStatus { return { station: 'connected' }; }
 }
 
-export class NotConnectedWifi implements Wifi {
-    public getStatus() { return { station: 'off' }; }
+export class NotConnectedWifi implements IWifi {
+    public getStatus(): IWifiStatus { return { station: 'off' }; }
 }
 
 export class ClientTestSubclass extends Client {
-    private emittedEvents: EmittedEvent[] = [];
+    private emittedEvents: IEmittedEvent[] = [];
 
-    constructor(options: ConnectionOptions, net?: Net, wifi: Wifi = new ConnectedWifi()) {
+    constructor(options: IConnectionOptions, net?: INet, wifi: IWifi = new ConnectedWifi()) {
         super(options, net, wifi);
-        this.emit = (event: string, args: string | Message) => {
+        this.emit = (event: string, args?: string | IMessage): boolean => {
             this.emittedEvents.push({ event: event, args: args });
+
             return true;
         };
     }
 
-    private shouldHaveEmitted(events: EmittedEvent[], text: string) {
+    public shouldHaveEmittedEvent(events: IEmittedEvent[], assert: (arg: string | IMessage | undefined) => Chai.Assertion): Chai.Assertion {
         events.should.have.lengthOf(1);
-        return events[0].args.should.equal(text);
-    }
 
-    public shouldHaveEmittedEvent(events: EmittedEvent[], assert: (arg: string | Message) => Chai.Assertion) {
-        events.should.have.lengthOf(1);
         return assert(events[0].args);
     }
 
-    public emittedDebugInfo() {
-        return this.emittedEvents.filter(e => e.event === 'debug');
+    public emittedDebugInfo(): IEmittedEvent[] {
+        return this.emittedEvents.filter((e: IEmittedEvent) => e.event === 'debug');
     }
 
-    public shouldHaveEmittedDebugInfo(debugInfo: string) {
+    public shouldHaveEmittedDebugInfo(debugInfo: string): Chai.Assertion {
         return this.shouldHaveEmitted(this.emittedDebugInfo(), debugInfo);
     }
 
-    public emittedInfo() {
-        return this.emittedEvents.filter(e => e.event === 'info');
+    public emittedInfo(): IEmittedEvent[] {
+        return this.emittedEvents.filter((e: IEmittedEvent) => e.event === 'info');
     }
 
-    public shouldHaveEmittedInfo(info: string) {
+    public shouldHaveEmittedInfo(info: string): Chai.Assertion {
         return this.shouldHaveEmitted(this.emittedInfo(), info);
     }
 
-    public emittedError() {
-        return this.emittedEvents.filter(e => e.event === 'error');
+    public emittedError(): IEmittedEvent[] {
+        return this.emittedEvents.filter((e: IEmittedEvent) => e.event === 'error');
     }
 
-    public shouldHaveEmittedError(error: string) {
+    public shouldHaveEmittedError(error: string): Chai.Assertion {
         return this.shouldHaveEmitted(this.emittedError(), error);
     }
 
-    public shouldNotEmitErrors() {
+    public shouldNotEmitErrors(): void {
         this.emittedError().should.deep.equal([]);
     }
 
-    public emittedConnected() {
-        return this.emittedEvents.filter(e => e.event === 'connected');
+    public emittedConnected(): IEmittedEvent[] {
+        return this.emittedEvents.filter((e: IEmittedEvent) => e.event === 'connected');
     }
 
-    public emittedReceive() {
-        return this.emittedEvents.filter(e => e.event === 'receive');
+    public emittedReceive(): IEmittedEvent[] {
+        return this.emittedEvents.filter((e: IEmittedEvent) => e.event === 'receive');
     }
 
-    public clearEmittedEvents() {
+    public clearEmittedEvents(): void {
         this.emittedEvents = [];
+    }
+
+    private shouldHaveEmitted(events: IEmittedEvent[], text: string): Chai.Assertion {
+        events.should.have.lengthOf(1);
+
+        return (events[0].args || '').should.equal(text);
     }
 }
 
-export class MockNet implements Net {
-    public connectIsCalled = false;
-    public connectIsCalledTwice = false;
-    public options: NetConnectOptions;
-    public callback: () => void;
+export class MockNet implements INet {
+    public connectIsCalled: boolean = false;
+    public connectIsCalledTwice: boolean = false;
+    public options?: INetConnectOptions;
     public socket: MockSocket;
 
     constructor(socket: MockSocket = new MockSocket()) {
         this.socket = socket;
     }
 
-    public connect(options: NetConnectOptions, callback: () => void) {
+    public callback: () => void = () => { /* empty */ };
+
+    public connect(options: INetConnectOptions, callback: () => void): ISocket {
         if (this.connectIsCalled) {
             this.connectIsCalledTwice = true;
         } else {
@@ -106,51 +111,51 @@ export class MockNet implements Net {
     }
 }
 
-interface EventSubscription {
+interface IEventSubscription {
     event: string;
     listener: Function;
 }
 
-export class MockSocket implements Socket {
+export class MockSocket implements ISocket {
     public sentPackages: string[] = [];
-    public eventSubscriptions: EventSubscription[] = [];
-    public ended = false;
+    public eventSubscriptions: IEventSubscription[] = [];
+    public ended: boolean = false;
 
-    public write(data: string) {
+    public write(data: string): void {
         this.sentPackages.push(data);
     }
 
-    public receivePackage(data: string) {
-        const listeners = this.eventSubscriptions.filter(s => s.event === 'data');
+    public receivePackage(data: string): void {
+        const listeners: IEventSubscription[] = this.eventSubscriptions.filter((s : IEventSubscription) => s.event === 'data');
         listeners.should.have.length.greaterThan(0);
-        listeners.forEach(s => s.listener(data));
+        listeners.forEach((s : IEventSubscription) => s.listener(data));
     }
 
-    public close() {
-        const listeners = this.eventSubscriptions.filter(s => s.event === 'close');
+    public close(): void {
+        const listeners: IEventSubscription[] = this.eventSubscriptions.filter((s : IEventSubscription) => s.event === 'close');
         listeners.should.have.length.greaterThan(0);
-        listeners.forEach(s => s.listener());
+        listeners.forEach((s : IEventSubscription) => s.listener());
     }
 
-    public emitError(code: number, message: string) {
-        const listeners = this.eventSubscriptions.filter(s => s.event === 'error');
+    public emitError(code: number, message: string): void {
+        const listeners: IEventSubscription[] = this.eventSubscriptions.filter((s : IEventSubscription) => s.event === 'error');
         listeners.should.have.length.greaterThan(0);
-        listeners.forEach(s => s.listener({ code: code, message: message }));
+        listeners.forEach((s : IEventSubscription) => s.listener({ code: code, message: message }));
     }
 
-    public end() {
+    public end(): void {
         this.ended = true;
     }
 
-    public on(event: string, listener: Function) {
+    public on(event: string, listener: Function): void {
         this.eventSubscriptions.push({ event: event, listener: listener });
     }
 
-    public removeAllListeners(event: string) {
-        this.eventSubscriptions = this.eventSubscriptions.filter(s => s.event !== event);
+    public removeAllListeners(event: string): void {
+        this.eventSubscriptions = this.eventSubscriptions.filter((s : IEventSubscription) => s.event !== event);
     }
 
-    public clear() {
+    public clear(): void {
         this.sentPackages = [];
     }
 }

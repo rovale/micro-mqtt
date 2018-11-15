@@ -1,22 +1,24 @@
-// tslint:disable-next-line:no-reference
-/// <reference path='_common.ts'/>
 import ConnectFlags from './ConnectFlags';
-import ConnectionOptions from './ConnectionOptions';
 import ConnectReturnCode from './ConnectReturnCode';
 import ControlPacketType from './ControlPacketType';
-import Message from './Message';
-import { Net, Socket, Wifi } from './Net';
+import IConnectionOptions from './IConnectionOptions';
+import IMessage from './IMessage';
+import { INet, ISocket, IWifi } from './Net';
 
 /**
  * Optimization, the TypeScript compiler replaces the constant enums.
  */
-const enum Constants {
+export const enum Constants {
     PingInterval = 40,
     WatchDogInterval = 5,
     DefaultPort = 1883,
     DefaultQos = 0,
-    Uninitialized = -123
+    Uninitialized = -123,
+    FixedPackedId = 1,
+    KeepAlive = 60
 }
+
+declare function setInterval(callback: () => void, ms: number): number;
 
 /**
  * The MQTT client.
@@ -24,25 +26,27 @@ const enum Constants {
 export class Client {
     public version: string = '0.0.17';
 
-    public on: (event: string, listener: (arg: string | Message) => void) => void;
-    protected emit: (event: string, arg?: string | Message) => boolean;
+    // @ts-ignore
+    public on: (event: string, listener: (arg: string | IMessage) => void) => void;
+     // @ts-ignore
+    protected emit: (event: string, arg?: string | IMessage) => boolean;
 
-    private opt: ConnectionOptions;
+    private opt: IConnectionOptions;
 
-    private net: Net;
-    private sct?: Socket;
+    private net: INet;
+    private sct?: ISocket;
 
-    private wdId: number | NodeJS.Timeout = Constants.Uninitialized;
-    private piId: number | NodeJS.Timeout | undefined = Constants.Uninitialized;
+    private wdId: number = Constants.Uninitialized;
+    private piId: number = Constants.Uninitialized;
 
-    private wifi: Wifi;
+    private wifi: IWifi;
     private connected: boolean = false;
 
-    constructor(opt: ConnectionOptions, net: Net = require('net'), wifi: Wifi = require('Wifi')) {
-        opt.port = opt.port || Constants.DefaultPort;
-        opt.clientId = opt.clientId || '';
+    constructor(opt: IConnectionOptions, net: INet, wifi: IWifi) {
+        opt.port = opt.port !== undefined ? opt.port : Constants.DefaultPort;
+        opt.clientId = opt.clientId;
 
-        if (opt.will) {
+        if (opt.will !== undefined) {
             opt.will.qos = opt.will.qos || Constants.DefaultQos;
             opt.will.retain = opt.will.retain || false;
         }
@@ -128,6 +132,20 @@ export class Client {
         });
     }
 
+    // Publish a message
+    public publish(topic: string, message: string, qos: number = Constants.DefaultQos, retained: boolean = false): void {
+        if (this.sct) {
+            this.sct.write(Protocol.createPublish(topic, message, qos, true));
+        }
+    }
+
+    // Subscribe to topic
+    public subscribe(topic: string, qos: number = Constants.DefaultQos): void {
+        if (this.sct) {
+            this.sct.write(Protocol.createSubscribe(topic, qos));
+        }
+    }
+
     private handleData = (data: string): void => {
         const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
         switch (controlPacketType) {
@@ -139,15 +157,18 @@ export class Client {
                     this.connected = true;
                     this.piId = setInterval(this.ping, Constants.PingInterval * 1000);
                 } else {
-                    const connectionError = Client.describe(returnCode);
+                    const connectionError: string = Client.describe(returnCode);
                     this.emit('error', connectionError);
                 }
                 break;
             case ControlPacketType.Publish:
-                const message = Protocol.parsePublish(data);
+                const message: IMessage = Protocol.parsePublish(data);
                 this.emit('receive', message);
                 if (message.qos > 0) {
-                    setTimeout(() => { this.sct.write(Protocol.createPubAck(message.pid || 0)); }, 0);
+                    setTimeout(() => {
+                        if (this.sct) {
+                            this.sct.write(Protocol.createPubAck(message.pid || 0)); }
+                        },     0);
                 }
                 if (message.next) {
                     this.handleData(data.substr(message.next));
@@ -160,23 +181,14 @@ export class Client {
                 break;
             default:
                 this.emit('error', `MQTT unexpected packet type: ${controlPacketType}.`);
-                break;
         }
     }
 
-    /** Publish a message */
-    public publish(topic: string, message: string, qos: number = Constants.DefaultQos, retained: boolean = false) {
-        this.sct.write(Protocol.createPublish(topic, message, qos, true));
-    }
-
-    /** Subscribe to topic */
-    public subscribe(topic: string, qos: number = Constants.DefaultQos) {
-        this.sct.write(Protocol.createSubscribe(topic, qos));
-    }
-
-    private ping = () => {
-        this.sct.write(Protocol.createPingReq());
-        this.emit('debug', 'Sent: Ping request.');
+    private ping = (): void => {
+        if (this.sct) {
+            this.sct.write(Protocol.createPingReq());
+            this.emit('debug', 'Sent: Ping request.');
+        }
     }
 }
 
@@ -184,25 +196,17 @@ export class Client {
  * The specifics of the MQTT protocol.
  */
 export module Protocol {
-    /**
-     * Optimization, the TypeScript compiler replaces the constant enums.
-     */
-    export const enum Constants {
-        // FIXME: The packet id is fixed.
-        FixedPackedId = 1,
-        KeepAlive = 60
-    }
-
-    const strChr = String.fromCharCode;
+    const strChr: (...codes: number[]) => string = String.fromCharCode;
 
     /**
      * Remaining Length
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718023
      */
-    export function remainingLength(length: number) {
+    export function encodeRemainingLength(remainingLength: number): number[] {
+        let length: number = remainingLength;
         const encBytes: number[] = [];
         do {
-            let encByte = length & 127;
+            let encByte: number = length & 127;
             length = length >> 7;
             // if there are more data to encode, set the top bit of this byte
             if (length > 0) {
@@ -210,6 +214,7 @@ export module Protocol {
             }
             encBytes.push(encByte);
         } while (length > 0);
+
         return encBytes;
     }
 
@@ -217,8 +222,8 @@ export module Protocol {
      * Connect flags
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349229
      */
-    function createConnectFlags(options: ConnectionOptions) {
-        let flags = 0;
+    function createConnectFlags(options: IConnectionOptions): number {
+        let flags: number = 0;
         flags |= (options.username) ? ConnectFlags.UserName : 0;
         flags |= (options.username && options.password) ? ConnectFlags.Password : 0;
         flags |= ConnectFlags.CleanSession;
@@ -232,8 +237,8 @@ export module Protocol {
         return flags;
     }
 
-    /** Returns the MSB and LSB. */
-    function getBytes(int16: number) {
+    // Returns the MSB and LSB.
+    function getBytes(int16: number): number[] {
         return [int16 >> 8, int16 & 255];
     }
 
@@ -241,7 +246,7 @@ export module Protocol {
      * Structure of UTF-8 encoded strings
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Figure_1.1_Structure
      */
-    function pack(s: string) {
+    function pack(s: string): string {
         return strChr(...getBytes(s.length)) + s;
     }
 
@@ -249,8 +254,8 @@ export module Protocol {
      * Structure of an MQTT Control Packet
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800392
      */
-    function createPacket(byte1: number, variable: string, payload: string = '') {
-        const byte2 = remainingLength(variable.length + payload.length);
+    function createPacket(byte1: number, variable: string, payload: string = ''): string {
+        const byte2: number[] = encodeRemainingLength(variable.length + payload.length);
 
         return strChr(byte1) +
             strChr(...byte2) +
@@ -262,16 +267,16 @@ export module Protocol {
      * CONNECT - Client requests a connection to a Server
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718028
      */
-    export function createConnect(options: ConnectionOptions) {
-        const byte1 = ControlPacketType.Connect << 4;
+    export function createConnect(options: IConnectionOptions): string {
+        const byte1: number = ControlPacketType.Connect << 4;
 
-        const protocolName = pack('MQTT');
-        const protocolLevel = strChr(4);
-        const flags = strChr(createConnectFlags(options));
+        const protocolName: string = pack('MQTT');
+        const protocolLevel: string = strChr(4);
+        const flags: string = strChr(createConnectFlags(options));
 
         const keepAlive: string = strChr(...getBytes(Constants.KeepAlive));
 
-        let payload = pack(options.clientId);
+        let payload: string = pack(options.clientId);
 
         if (options.will) {
             payload += pack(options.will.topic);
@@ -294,8 +299,8 @@ export module Protocol {
 
     /** PINGREQ - PING request
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800454
-    */
-    export function createPingReq() {
+     */
+    export function createPingReq(): string {
         return strChr(ControlPacketType.PingReq << 4, 0);
     }
 
@@ -303,30 +308,31 @@ export module Protocol {
      * PUBLISH - Publish message
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800410
      */
-    export function createPublish(topic: string, message: string, qos: number, retained: boolean) {
-        let byte1 = ControlPacketType.Publish << 4 | (qos << 1);
+    export function createPublish(topic: string, message: string, qos: number, retained: boolean): string {
+        let byte1: number = ControlPacketType.Publish << 4 | (qos << 1);
         byte1 |= (retained) ? 1 : 0;
 
-        const pid = strChr(...getBytes(Constants.FixedPackedId));
-        const variable = (qos === 0) ? pack(topic) : pack(topic) + pid;
+        const pid: string = strChr(...getBytes(Constants.FixedPackedId));
+        const variable: string = (qos === 0) ? pack(topic) : pack(topic) + pid;
+
         return createPacket(byte1, variable, message);
     }
 
-    export function parsePublish(data: string): Message {
-        const cmd = data.charCodeAt(0);
-        const qos = (cmd & 0b00000110) >> 1;
-        const remainingLength = data.charCodeAt(1);
-        const topicLength = data.charCodeAt(2) << 8 | data.charCodeAt(3);
-        let variableLength = topicLength;
+    export function parsePublish(data: string): IMessage {
+        const cmd: number = data.charCodeAt(0);
+        const qos: number = (cmd & 0b00000110) >> 1;
+        const remainingLength: number = data.charCodeAt(1);
+        const topicLength: number = data.charCodeAt(2) << 8 | data.charCodeAt(3);
+        let variableLength: number = topicLength;
         if (qos > 0) {
             variableLength += 2;
         }
 
-        const messageLength = (remainingLength - variableLength) - 2;
+        const messageLength: number = (remainingLength - variableLength) - 2;
 
-        let message: Message = {
+        const message: IMessage = {
             topic: data.substr(4, topicLength),
-            content: data.substr(4 + variableLength, messageLength),
+            content: data.substr(variableLength + 4, messageLength),
             qos: qos,
             retain: cmd & 1
         };
@@ -336,8 +342,8 @@ export module Protocol {
         }
 
         if (qos > 0) {
-            message.pid = data.charCodeAt(4 + variableLength - 2) << 8 |
-                data.charCodeAt(4 + variableLength - 1);
+            message.pid = data.charCodeAt(variableLength + 4 - 2) << 8 |
+                data.charCodeAt(variableLength + 4 - 1);
         }
 
         return message;
@@ -347,8 +353,9 @@ export module Protocol {
      * PUBACK - Publish acknowledgement
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800416
      */
-    export function createPubAck(pid: number) {
-        const byte1 = ControlPacketType.PubAck << 4;
+    export function createPubAck(pid: number): string {
+        const byte1: number = ControlPacketType.PubAck << 4;
+
         return createPacket(byte1, strChr(...getBytes(pid)));
     }
 
@@ -356,12 +363,13 @@ export module Protocol {
      * SUBSCRIBE - Subscribe to topics
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc384800436
      */
-    export function createSubscribe(topic: string, qos: number) {
-        const byte1 = ControlPacketType.Subscribe << 4 | 2;
-        const pid = strChr(...getBytes(Constants.FixedPackedId));
+    export function createSubscribe(topic: string, qos: number): string {
+        const byte1: number = ControlPacketType.Subscribe << 4 | 2;
+        const pid: string = strChr(...getBytes(Constants.FixedPackedId));
+
         return createPacket(byte1,
-            pid,
-            pack(topic) +
+                            pid,
+                            pack(topic) +
             strChr(qos));
     }
 }

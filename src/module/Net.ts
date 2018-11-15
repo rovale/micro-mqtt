@@ -1,26 +1,26 @@
 /**
  * Interfaces for net and socket.
  */
-export interface NetConnectOptions {
+export interface INetConnectOptions {
     host: string;
     port?: number;
 }
 
-export interface Socket {
-    write: (data: string) => void;
-    on: (event: string, listener: (args: string) => void) => void;
-    removeAllListeners: (event: string) => void;
-    end: () => void;
+export interface ISocket {
+    write(data: string): void;
+    on(event: string, listener: (args: string) => void): void;
+    removeAllListeners(event: string): void;
+    end(): void;
 }
 
-export interface Net {
-    connect: (options: NetConnectOptions, callback: (socket: Socket) => void) => Socket;
+export interface INet {
+    connect(options: INetConnectOptions, callback: () => void): ISocket;
 }
 
-interface WifiStatus {
+export interface IWifiStatus {
     station: string;
 }
 
-export interface Wifi {
-    getStatus: () => WifiStatus;
+export interface IWifi {
+    getStatus(): IWifiStatus;
 }

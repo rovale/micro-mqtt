@@ -1,33 +1,34 @@
 /**
  * Tests for the MQTT protocol.
  */
+// tslint:disable-next-line:no-reference
 /// <reference path='_common.ts' />
-import { Protocol } from '../module/micro-mqtt';
 import ConnectFlags from '../module/ConnectFlags';
-import Message from '../module/Message';
+import IMessage from '../module/IMessage';
+import { Protocol } from '../module/micro-mqtt';
 import { ConnectPacketVerifier, PublishPacketVerifier, SubscribePacketVerifier } from './ControlPacketVerifier';
 
 describe('The MQTT protocol', () => {
     context('When calculating the remaining length of a packet', () => {
 
         it('it should return 1 byte for the values 0 to 127.', () => {
-            Protocol.remainingLength(0).should.deep.equal([0]);
-            Protocol.remainingLength(127).should.deep.equal([127]);
+            Protocol.encodeRemainingLength(0).should.deep.equal([0]);
+            Protocol.encodeRemainingLength(127).should.deep.equal([127]);
         });
 
         it('it should return 2 bytes for the values 128 to 16383.', () => {
-            Protocol.remainingLength(128).should.deep.equal([128, 1]);
-            Protocol.remainingLength(16383).should.deep.equal([255, 127]);
+            Protocol.encodeRemainingLength(128).should.deep.equal([128, 1]);
+            Protocol.encodeRemainingLength(16383).should.deep.equal([255, 127]);
         });
 
         it('it should return 3 bytes for the values 16384 to 2097151.', () => {
-            Protocol.remainingLength(16384).should.deep.equal([128, 128, 1]);
-            Protocol.remainingLength(2097151).should.deep.equal([255, 255, 127]);
+            Protocol.encodeRemainingLength(16384).should.deep.equal([128, 128, 1]);
+            Protocol.encodeRemainingLength(2097151).should.deep.equal([255, 255, 127]);
         });
 
         it('it should return 4 bytes for the values 2097152 to 268435455.', () => {
-            Protocol.remainingLength(2097152).should.deep.equal([128, 128, 128, 1]);
-            Protocol.remainingLength(268435455).should.deep.equal([255, 255, 255, 127]);
+            Protocol.encodeRemainingLength(2097152).should.deep.equal([128, 128, 128, 1]);
+            Protocol.encodeRemainingLength(268435455).should.deep.equal([255, 255, 255, 127]);
         });
     });
 
@@ -287,12 +288,12 @@ describe('The MQTT protocol', () => {
     });
 
     context('When parsing a Publish packet', () => {
-        let actual: Message;
-        let expected: Message;
+        let actual: IMessage;
+        let expected: IMessage;
 
         context('with a topic, a message, and QoS 0', () => {
             beforeEach(() => {
-                const packet = Protocol.createPublish('some/topic', 'some-message', 0, false);
+                const packet: string = Protocol.createPublish('some/topic', 'some-message', 0, false);
                 actual = Protocol.parsePublish(packet);
             });
 
@@ -310,7 +311,7 @@ describe('The MQTT protocol', () => {
 
         context('with a topic, a message, and QoS 1', () => {
             beforeEach(() => {
-                const packet = Protocol.createPublish('some/topic', 'some-message', 1, false);
+                const packet: string = Protocol.createPublish('some/topic', 'some-message', 1, false);
                 actual = Protocol.parsePublish(packet);
             });
 
