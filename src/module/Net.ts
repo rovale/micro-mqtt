@@ -1,11 +1,26 @@
-import { EventEmitter } from 'events';
-
 /**
- * Interface for socket.
+ * Interfaces for net and socket.
  */
+export interface INetConnectOptions {
+    host: string;
+    port?: number;
+}
 
-export interface Socket extends EventEmitter {
-    write(data: Buffer) : void;
+export interface ISocket {
+    write(data: string): void;
+    on(event: string, listener: (args: string) => void): void;
+    removeAllListeners(event: string): void;
     end(): void;
-    connect(port: number, host: string, connectionListener?: Function) : Socket;
+}
+
+export interface INet {
+    connect(options: INetConnectOptions, callback: () => void): ISocket;
+}
+
+export interface IWifiStatus {
+    station: string;
+}
+
+export interface IWifi {
+    getStatus(): IWifiStatus;
 }

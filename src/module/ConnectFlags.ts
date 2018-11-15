@@ -2,7 +2,7 @@
  * Connect flags
  * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349229
  */
-export enum ConnectFlags {
+const enum ConnectFlags {
     UserName = 128,
     Password = 64,
     WillRetain = 32,
@@ -11,3 +11,5 @@ export enum ConnectFlags {
     Will = 4,
     CleanSession = 2
 }
+
+export default ConnectFlags;

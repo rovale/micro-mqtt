@@ -1,0 +1,1 @@
+This is the project directory for the Espruino Web IDE.

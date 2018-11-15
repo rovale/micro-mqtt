@@ -4,15 +4,14 @@
         {
             "name": "Tests",
             "type": "node",
-            "request": "launch",
             "program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
             "args": [
                 "--timeout=999999",
-                "${workspaceRoot}/bin/test/*.js"
+                "${workspaceRoot}/bin/*/*.js"
                 ],
             "cwd": "${workspaceRoot}",
             "sourceMaps": true,
-            "outFiles": [ "${workspaceRoot}/bin/module/*.js", "${workspaceRoot}/bin/test/*.js" ]
+            "outDir": "${workspaceRoot}/bin"
         }
     ]
 }

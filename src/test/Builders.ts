@@ -1,62 +1,62 @@
 /**
  * Builders.
  */
-import { ConnectReturnCode } from '../module/ConnectReturnCode';
-import { ControlPacketType } from '../module/ControlPacketType';
-import { ClientTestSubclass, MockSocket } from './TestClasses';
-import { Protocol } from '../module/micro-mqtt';
+import ConnectReturnCode from '../module/ConnectReturnCode';
+import ControlPacketType from '../module/ControlPacketType';
+import { ClientTestSubclass, MockNet, MockSocket } from './TestClasses';
 
 export class ControlPacketBuilder {
     private controlPacketType: ControlPacketType;
-    private connectReturnCode: ConnectReturnCode = ConnectReturnCode.Accepted;
+    private connectReturnCode: ConnectReturnCode = ConnectReturnCode.Unknown;
 
     constructor(controlPacketType: ControlPacketType) {
         this.controlPacketType = controlPacketType;
     }
 
-    public withConnectReturnCode(connectReturnCode: ConnectReturnCode) {
+    public withConnectReturnCode(connectReturnCode: ConnectReturnCode) : ControlPacketBuilder {
         this.connectReturnCode = connectReturnCode;
+
         return this;
     }
 
-    public build() {
-        let packet = String.fromCharCode(this.controlPacketType << 4);
-        packet += String.fromCharCode(0);
-        packet += String.fromCharCode(0);
-        packet += String.fromCharCode(this.connectReturnCode);
+    public build(): string {
+        let result: string = String.fromCharCode(this.controlPacketType << 4);
+        result += String.fromCharCode(0);
+        result += String.fromCharCode(0);
+        result += String.fromCharCode(this.connectReturnCode);
 
-        return Protocol.toBuffer(packet);
+        return result;
     }
 }
 
 export class MqttClientTestSubclassBuilder {
-    private client: ClientTestSubclass = new ClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, new MockSocket());
+    private client: ClientTestSubclass = new ClientTestSubclass({ host: 'some-host', clientId: 'some-client' });
 
-    public whichJustSentAConnectPacketOn(socket: MockSocket = new MockSocket()) {
-        this.client = new ClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, socket);
+    public whichJustSentAConnectPacketOn(net: MockNet = new MockNet(new MockSocket())) : MqttClientTestSubclassBuilder {
+        this.client = new ClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, net);
         this.client.connect();
-        socket.connectionListener();
+        net.callback();
         this.client.clearEmittedEvents();
+
         return this;
     }
 
-    public whichIsConnectedOn(socket: MockSocket = new MockSocket()) {
-        this.whichJustSentAConnectPacketOn(socket);
+    public whichIsConnectedOn(net: MockNet = new MockNet(new MockSocket())): MqttClientTestSubclassBuilder {
+        this.whichJustSentAConnectPacketOn(net);
 
-        const connAckPacket = new ControlPacketBuilder(ControlPacketType.ConnAck)
+        const connAckPacket: string = new ControlPacketBuilder(ControlPacketType.ConnAck)
             .withConnectReturnCode(ConnectReturnCode.Accepted)
             .build();
 
+        const socket: MockSocket = net.socket;
         socket.receivePackage(connAckPacket);
         socket.clear();
-        if (this.client) {
-            this.client.clearEmittedEvents();
-        }
+        this.client.clearEmittedEvents();
 
         return this;
     }
 
-    public build() {
+    public build(): ClientTestSubclass {
         return this.client;
     }
 }

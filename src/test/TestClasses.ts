@@ -2,134 +2,163 @@
  * Test subclasses and mocks.
  */
 // tslint:disable-next-line:no-reference
-/// <reference path='_common.ts'/>
+/// <reference path='_common.ts' />
+import IConnectionOptions from '../module/IConnectionOptions';
+import IMessage from '../module/IMessage';
 import { Client } from '../module/micro-mqtt';
-import { ConnectionOptions } from '../module/ConnectionOptions';
-import { Message } from '../module/Message';
-import { Socket } from '../module/Net';
-import { EventEmitter } from 'events';
+import { INet, INetConnectOptions, ISocket, IWifi, IWifiStatus } from '../module/Net';
 
-interface EmittedEvent {
+export interface IEmittedEvent {
     event: string;
-    args?: string | Message;
+    args?: string | IMessage;
 }
 
-export class ClientTestSubclass extends Client {
-    private emittedEvents: EmittedEvent[] = [];
-
-    constructor(options: ConnectionOptions, socket: Socket) {
-        super(options, socket);
-        this.emit = (event: string, args?: string | Message) => {
-            this.emittedEvents.push({ event: event, args: args });
-            return true;
-        };
-    }
-
-    private shouldHaveEmitted(events: EmittedEvent[], text: string) {
-        events.should.have.lengthOf(1);
-        return (events[0].args || '').should.equal(text);
-    }
-
-    public shouldHaveEmittedEvent(events: EmittedEvent[], assert: (arg: string | Message) => Chai.Assertion) {
-        events.should.have.lengthOf(1);
-        return assert(events[0].args || '');
-    }
-
-    public emittedDebugInfo() {
-        return this.emittedEvents.filter(e => e.event === 'debug');
-    }
-
-    public shouldHaveEmittedDebugInfo(debugInfo: string) {
-        return this.shouldHaveEmitted(this.emittedDebugInfo(), debugInfo);
-    }
-
-    public emittedInfo() {
-        return this.emittedEvents.filter(e => e.event === 'info');
-    }
-
-    public shouldHaveEmittedInfo(info: string) {
-        return this.shouldHaveEmitted(this.emittedInfo(), info);
-    }
-
-    public emittedError() {
-        return this.emittedEvents.filter(e => e.event === 'error');
-    }
-
-    public shouldHaveEmittedError(error: string) {
-        return this.shouldHaveEmitted(this.emittedError(), error);
-    }
-
-    public shouldNotEmitErrors() {
-        this.emittedError().should.deep.equal([]);
-    }
-
-    public emittedConnected() {
-        return this.emittedEvents.filter(e => e.event === 'connected');
-    }
-
-    public emittedReceive() {
-        return this.emittedEvents.filter(e => e.event === 'receive');
-    }
-
-    public clearEmittedEvents() {
-        this.emittedEvents = [];
-    }
+class ConnectedWifi implements IWifi {
+    public getStatus(): IWifiStatus { return { station: 'connected' }; }
 }
 
-export class MockSocket extends EventEmitter implements Socket  {
-    public sentPackages: Buffer[] = [];
-    public eventSubscriptions: EventSubscription[] = [];
+export class NotConnectedWifi implements IWifi {
+    public getStatus(): IWifiStatus { return { station: 'off' }; }
+}
+
+interface IEventSubscription {
+    event: string;
+    listener: Function;
+}
+
+export class MockSocket implements ISocket {
+    public sentPackages: string[] = [];
+    public eventSubscriptions: IEventSubscription[] = [];
     public ended: boolean = false;
 
-    public connectIsCalled: boolean = false;
-    public connectIsCalledTwice: boolean = false;
-
-    public host: string = 'some-host';
-    public port: number = 1883;
-
-    public connectionListener() {
-        this.emit('connect');
-    }
-
-    public write(data: Buffer) {
+    public write(data: string): void {
         this.sentPackages.push(data);
     }
 
-    public receivePackage(data: Buffer) {
-        this.emit('data', data);
+    public receivePackage(data: string): void {
+        const listeners: IEventSubscription[] = this.eventSubscriptions.filter((s : IEventSubscription) => s.event === 'data');
+        listeners.should.have.length.greaterThan(0);
+        // tslint:disable-next-line:no-unsafe-any
+        listeners.forEach((s : IEventSubscription) => s.listener(data));
     }
 
-    public close() {
-        this.emit('close');
+    public close(): void {
+        const listeners: IEventSubscription[] = this.eventSubscriptions.filter((s : IEventSubscription) => s.event === 'close');
+        listeners.should.have.length.greaterThan(0);
+        // tslint:disable-next-line:no-unsafe-any
+        listeners.forEach((s : IEventSubscription) => s.listener());
     }
 
-    public emitError(code: number, message: string) {
-        this.emit('error', { code: code, message: message });
+    public emitError(code: number, message: string): void {
+        const listeners: IEventSubscription[] = this.eventSubscriptions.filter((s : IEventSubscription) => s.event === 'error');
+        listeners.should.have.length.greaterThan(0);
+        // tslint:disable-next-line:no-unsafe-any
+        listeners.forEach((s : IEventSubscription) => s.listener({ code: code, message: message }));
     }
 
-    public end() {
+    public end(): void {
         this.ended = true;
     }
 
-    public clear() {
-        this.sentPackages = [];
+    public on(event: string, listener: Function): void {
+        this.eventSubscriptions.push({ event: event, listener: listener });
     }
 
-    public connect(port: number, host: string ) {
+    public removeAllListeners(event: string): void {
+        this.eventSubscriptions = this.eventSubscriptions.filter((s : IEventSubscription) => s.event !== event);
+    }
+
+    public clear(): void {
+        this.sentPackages = [];
+    }
+}
+
+export class MockNet implements INet {
+    public connectIsCalled: boolean = false;
+    public connectIsCalledTwice: boolean = false;
+    public options?: INetConnectOptions;
+    public socket: MockSocket;
+
+    constructor(socket: MockSocket = new MockSocket()) {
+        this.socket = socket;
+    }
+
+    public callback: () => void = () => { /* empty */ };
+
+    public connect(options: INetConnectOptions, callback: () => void): ISocket {
         if (this.connectIsCalled) {
             this.connectIsCalledTwice = true;
         } else {
             this.connectIsCalled = true;
         }
+        this.options = options;
+        this.callback = callback;
 
-        this.port = port;
-        this.host = host;
-
-        return this;
+        return this.socket;
     }
 }
 
-interface EventSubscription {
-    event: string;
-    listener: Function;
+export class ClientTestSubclass extends Client {
+    private emittedEvents: IEmittedEvent[] = [];
+
+    constructor(options: IConnectionOptions, net: INet = new MockNet(), wifi: IWifi = new ConnectedWifi()) {
+        super(options, net, wifi);
+        this.emit = (event: string, args?: string | IMessage): boolean => {
+            this.emittedEvents.push({ event: event, args: args });
+
+            return true;
+        };
+    }
+
+    public shouldHaveEmittedEvent(events: IEmittedEvent[], assert: (arg: string | IMessage | undefined) => Chai.Assertion): Chai.Assertion {
+        events.should.have.lengthOf(1);
+
+        return assert(events[0].args);
+    }
+
+    public emittedDebugInfo(): IEmittedEvent[] {
+        return this.emittedEvents.filter((e: IEmittedEvent) => e.event === 'debug');
+    }
+
+    public shouldHaveEmittedDebugInfo(debugInfo: string): Chai.Assertion {
+        return this.shouldHaveEmitted(this.emittedDebugInfo(), debugInfo);
+    }
+
+    public emittedInfo(): IEmittedEvent[] {
+        return this.emittedEvents.filter((e: IEmittedEvent) => e.event === 'info');
+    }
+
+    public shouldHaveEmittedInfo(info: string): Chai.Assertion {
+        return this.shouldHaveEmitted(this.emittedInfo(), info);
+    }
+
+    public emittedError(): IEmittedEvent[] {
+        return this.emittedEvents.filter((e: IEmittedEvent) => e.event === 'error');
+    }
+
+    public shouldHaveEmittedError(error: string): Chai.Assertion {
+        return this.shouldHaveEmitted(this.emittedError(), error);
+    }
+
+    public shouldNotEmitErrors(): void {
+        this.emittedError().should.deep.equal([]);
+    }
+
+    public emittedConnected(): IEmittedEvent[] {
+        return this.emittedEvents.filter((e: IEmittedEvent) => e.event === 'connected');
+    }
+
+    public emittedReceive(): IEmittedEvent[] {
+        return this.emittedEvents.filter((e: IEmittedEvent) => e.event === 'receive');
+    }
+
+    public clearEmittedEvents(): void {
+        this.emittedEvents = [];
+    }
+
+    private shouldHaveEmitted(events: IEmittedEvent[], text: string): Chai.Assertion {
+        events.should.have.lengthOf(1);
+
+        return (events[0].args || '').should.equal(text);
+    }
 }
