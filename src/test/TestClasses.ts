@@ -21,10 +21,87 @@ export class NotConnectedWifi implements IWifi {
     public getStatus(): IWifiStatus { return { station: 'off' }; }
 }
 
+interface IEventSubscription {
+    event: string;
+    listener: Function;
+}
+
+export class MockSocket implements ISocket {
+    public sentPackages: string[] = [];
+    public eventSubscriptions: IEventSubscription[] = [];
+    public ended: boolean = false;
+
+    public write(data: string): void {
+        this.sentPackages.push(data);
+    }
+
+    public receivePackage(data: string): void {
+        const listeners: IEventSubscription[] = this.eventSubscriptions.filter((s : IEventSubscription) => s.event === 'data');
+        listeners.should.have.length.greaterThan(0);
+        // tslint:disable-next-line:no-unsafe-any
+        listeners.forEach((s : IEventSubscription) => s.listener(data));
+    }
+
+    public close(): void {
+        const listeners: IEventSubscription[] = this.eventSubscriptions.filter((s : IEventSubscription) => s.event === 'close');
+        listeners.should.have.length.greaterThan(0);
+        // tslint:disable-next-line:no-unsafe-any
+        listeners.forEach((s : IEventSubscription) => s.listener());
+    }
+
+    public emitError(code: number, message: string): void {
+        const listeners: IEventSubscription[] = this.eventSubscriptions.filter((s : IEventSubscription) => s.event === 'error');
+        listeners.should.have.length.greaterThan(0);
+        // tslint:disable-next-line:no-unsafe-any
+        listeners.forEach((s : IEventSubscription) => s.listener({ code: code, message: message }));
+    }
+
+    public end(): void {
+        this.ended = true;
+    }
+
+    public on(event: string, listener: Function): void {
+        this.eventSubscriptions.push({ event: event, listener: listener });
+    }
+
+    public removeAllListeners(event: string): void {
+        this.eventSubscriptions = this.eventSubscriptions.filter((s : IEventSubscription) => s.event !== event);
+    }
+
+    public clear(): void {
+        this.sentPackages = [];
+    }
+}
+
+export class MockNet implements INet {
+    public connectIsCalled: boolean = false;
+    public connectIsCalledTwice: boolean = false;
+    public options?: INetConnectOptions;
+    public socket: MockSocket;
+
+    constructor(socket: MockSocket = new MockSocket()) {
+        this.socket = socket;
+    }
+
+    public callback: () => void = () => { /* empty */ };
+
+    public connect(options: INetConnectOptions, callback: () => void): ISocket {
+        if (this.connectIsCalled) {
+            this.connectIsCalledTwice = true;
+        } else {
+            this.connectIsCalled = true;
+        }
+        this.options = options;
+        this.callback = callback;
+
+        return this.socket;
+    }
+}
+
 export class ClientTestSubclass extends Client {
     private emittedEvents: IEmittedEvent[] = [];
 
-    constructor(options: IConnectionOptions, net?: INet, wifi: IWifi = new ConnectedWifi()) {
+    constructor(options: IConnectionOptions, net: INet = new MockNet(), wifi: IWifi = new ConnectedWifi()) {
         super(options, net, wifi);
         this.emit = (event: string, args?: string | IMessage): boolean => {
             this.emittedEvents.push({ event: event, args: args });
@@ -83,79 +160,5 @@ export class ClientTestSubclass extends Client {
         events.should.have.lengthOf(1);
 
         return (events[0].args || '').should.equal(text);
-    }
-}
-
-export class MockNet implements INet {
-    public connectIsCalled: boolean = false;
-    public connectIsCalledTwice: boolean = false;
-    public options?: INetConnectOptions;
-    public socket: MockSocket;
-
-    constructor(socket: MockSocket = new MockSocket()) {
-        this.socket = socket;
-    }
-
-    public callback: () => void = () => { /* empty */ };
-
-    public connect(options: INetConnectOptions, callback: () => void): ISocket {
-        if (this.connectIsCalled) {
-            this.connectIsCalledTwice = true;
-        } else {
-            this.connectIsCalled = true;
-        }
-        this.options = options;
-        this.callback = callback;
-
-        return this.socket;
-    }
-}
-
-interface IEventSubscription {
-    event: string;
-    listener: Function;
-}
-
-export class MockSocket implements ISocket {
-    public sentPackages: string[] = [];
-    public eventSubscriptions: IEventSubscription[] = [];
-    public ended: boolean = false;
-
-    public write(data: string): void {
-        this.sentPackages.push(data);
-    }
-
-    public receivePackage(data: string): void {
-        const listeners: IEventSubscription[] = this.eventSubscriptions.filter((s : IEventSubscription) => s.event === 'data');
-        listeners.should.have.length.greaterThan(0);
-        listeners.forEach((s : IEventSubscription) => s.listener(data));
-    }
-
-    public close(): void {
-        const listeners: IEventSubscription[] = this.eventSubscriptions.filter((s : IEventSubscription) => s.event === 'close');
-        listeners.should.have.length.greaterThan(0);
-        listeners.forEach((s : IEventSubscription) => s.listener());
-    }
-
-    public emitError(code: number, message: string): void {
-        const listeners: IEventSubscription[] = this.eventSubscriptions.filter((s : IEventSubscription) => s.event === 'error');
-        listeners.should.have.length.greaterThan(0);
-        listeners.forEach((s : IEventSubscription) => s.listener({ code: code, message: message }));
-    }
-
-    public end(): void {
-        this.ended = true;
-    }
-
-    public on(event: string, listener: Function): void {
-        this.eventSubscriptions.push({ event: event, listener: listener });
-    }
-
-    public removeAllListeners(event: string): void {
-        this.eventSubscriptions = this.eventSubscriptions.filter((s : IEventSubscription) => s.event !== event);
-    }
-
-    public clear(): void {
-        this.sentPackages = [];
     }
 }

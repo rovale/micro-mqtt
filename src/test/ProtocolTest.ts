@@ -106,7 +106,7 @@ describe('The MQTT protocol', () => {
         });
 
         context('specifying the Last Will Testament', () => {
-            context('With QoS 0, not retained', () => {
+            context('with QoS 0, not retained', () => {
                 beforeEach(() => {
                     packet = new ConnectPacketVerifier(Protocol.createConnect({
                         host: 'host',
@@ -130,7 +130,7 @@ describe('The MQTT protocol', () => {
                 });
             });
 
-            context('With QoS 1, not retained', () => {
+            context('with QoS 1, not retained', () => {
                 beforeEach(() => {
                     packet = new ConnectPacketVerifier(Protocol.createConnect({
                         host: 'host',
@@ -153,7 +153,7 @@ describe('The MQTT protocol', () => {
                 });
             });
 
-            context('With QoS 2, not retained', () => {
+            context('with QoS 2, not retained', () => {
                 beforeEach(() => {
                     packet = new ConnectPacketVerifier(Protocol.createConnect({
                         host: 'host',
@@ -176,7 +176,7 @@ describe('The MQTT protocol', () => {
                 });
             });
 
-            context('With QoS 0, retained', () => {
+            context('with QoS 0, retained', () => {
                 beforeEach(() => {
                     packet = new ConnectPacketVerifier(Protocol.createConnect({
                         host: 'host',

@@ -12,6 +12,7 @@
         "max-func-body-length": false,
         "max-classes-per-file": false,        
         "ordered-imports": false,
-        "completed-docs": false
+        "completed-docs": false,
+        "strict-boolean-expressions": false
     }
 }

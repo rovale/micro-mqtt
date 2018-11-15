@@ -1,3 +1,5 @@
+declare function setInterval(callback: () => void, ms: number): number;
+
 import ConnectFlags from './ConnectFlags';
 import ConnectReturnCode from './ConnectReturnCode';
 import ControlPacketType from './ControlPacketType';
@@ -16,180 +18,6 @@ export const enum Constants {
     Uninitialized = -123,
     FixedPackedId = 1,
     KeepAlive = 60
-}
-
-declare function setInterval(callback: () => void, ms: number): number;
-
-/**
- * The MQTT client.
- */
-export class Client {
-    public version: string = '0.0.17';
-
-    // @ts-ignore
-    public on: (event: string, listener: (arg: string | IMessage) => void) => void;
-     // @ts-ignore
-    protected emit: (event: string, arg?: string | IMessage) => boolean;
-
-    private opt: IConnectionOptions;
-
-    private net: INet;
-    private sct?: ISocket;
-
-    private wdId: number = Constants.Uninitialized;
-    private piId: number = Constants.Uninitialized;
-
-    private wifi: IWifi;
-    private connected: boolean = false;
-
-    constructor(opt: IConnectionOptions, net: INet, wifi: IWifi) {
-        opt.port = opt.port !== undefined ? opt.port : Constants.DefaultPort;
-        opt.clientId = opt.clientId;
-
-        if (opt.will !== undefined) {
-            opt.will.qos = opt.will.qos || Constants.DefaultQos;
-            opt.will.retain = opt.will.retain || false;
-        }
-
-        this.opt = opt;
-        this.net = net;
-        this.wifi = wifi;
-    }
-
-    private static describe(code: ConnectReturnCode) : string {
-        let error : string = 'Connection refused, ';
-        switch (code) {
-            case ConnectReturnCode.UnacceptableProtocolVersion:
-                error += 'unacceptable protocol version.';
-                break;
-            case ConnectReturnCode.IdentifierRejected:
-                error += 'identifier rejected.';
-                break;
-            case ConnectReturnCode.ServerUnavailable:
-                error += 'server unavailable.';
-                break;
-            case ConnectReturnCode.BadUserNameOrPassword:
-                error += 'bad user name or password.';
-                break;
-            case ConnectReturnCode.NotAuthorized:
-                error += 'not authorized.';
-                break;
-            default:
-                error += `unknown return code: ${code}.`;
-        }
-
-        return error;
-    }
-
-    public connect() : void {
-        this.emit('info', `Connecting to ${this.opt.host}:${this.opt.port}`);
-
-        if (this.wdId === Constants.Uninitialized) {
-            this.wdId = setInterval(() => {
-                if (!this.connected) {
-                    this.emit('error', 'No connection. Retrying.');
-
-                    if (this.piId !== Constants.Uninitialized) {
-                        clearInterval(this.piId);
-                        this.piId = Constants.Uninitialized;
-                    }
-
-                    if (this.sct) {
-                        this.sct.removeAllListeners('connect');
-                        this.sct.removeAllListeners('data');
-                        this.sct.removeAllListeners('close');
-                        this.sct.end();
-                    }
-
-                    this.connect();
-                }
-            },                      Constants.WatchDogInterval * 1000);
-        }
-
-        if (this.wifi.getStatus().station !== 'connected') {
-            this.emit('error', 'No wifi connection.');
-
-            return;
-        }
-
-        this.sct = this.net.connect({ host: this.opt.host, port: this.opt.port }, () => {
-            this.emit('info', 'Network connection established.');
-            if (this.sct) {
-                this.sct.write(Protocol.createConnect(this.opt));
-                this.sct.removeAllListeners('connect');
-            }
-        });
-
-        this.sct.on('data', (data: string) => {
-            const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
-            this.emit('debug', `Rcvd: ${controlPacketType}: '${data}'.`);
-            this.handleData(data);
-        });
-
-        this.sct.on('close', () => {
-            this.emit('error', 'Disconnected.');
-            this.connected = false;
-        });
-    }
-
-    // Publish a message
-    public publish(topic: string, message: string, qos: number = Constants.DefaultQos, retained: boolean = false): void {
-        if (this.sct) {
-            this.sct.write(Protocol.createPublish(topic, message, qos, true));
-        }
-    }
-
-    // Subscribe to topic
-    public subscribe(topic: string, qos: number = Constants.DefaultQos): void {
-        if (this.sct) {
-            this.sct.write(Protocol.createSubscribe(topic, qos));
-        }
-    }
-
-    private handleData = (data: string): void => {
-        const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
-        switch (controlPacketType) {
-            case ControlPacketType.ConnAck:
-                const returnCode: number = data.charCodeAt(3);
-                if (returnCode === ConnectReturnCode.Accepted) {
-                    this.emit('info', 'MQTT connection accepted.');
-                    this.emit('connected');
-                    this.connected = true;
-                    this.piId = setInterval(this.ping, Constants.PingInterval * 1000);
-                } else {
-                    const connectionError: string = Client.describe(returnCode);
-                    this.emit('error', connectionError);
-                }
-                break;
-            case ControlPacketType.Publish:
-                const message: IMessage = Protocol.parsePublish(data);
-                this.emit('receive', message);
-                if (message.qos > 0) {
-                    setTimeout(() => {
-                        if (this.sct) {
-                            this.sct.write(Protocol.createPubAck(message.pid || 0)); }
-                        },     0);
-                }
-                if (message.next) {
-                    this.handleData(data.substr(message.next));
-                }
-
-                break;
-            case ControlPacketType.PingResp:
-            case ControlPacketType.PubAck:
-            case ControlPacketType.SubAck:
-                break;
-            default:
-                this.emit('error', `MQTT unexpected packet type: ${controlPacketType}.`);
-        }
-    }
-
-    private ping = (): void => {
-        if (this.sct) {
-            this.sct.write(Protocol.createPingReq());
-            this.emit('debug', 'Sent: Ping request.');
-        }
-    }
 }
 
 /**
@@ -371,5 +199,177 @@ export module Protocol {
                             pid,
                             pack(topic) +
             strChr(qos));
+    }
+}
+
+/**
+ * The MQTT client.
+ */
+export class Client {
+    public version: string = '0.0.17';
+
+    // @ts-ignore
+    public on: (event: string, listener: (arg: string | IMessage) => void) => void;
+     // @ts-ignore
+    protected emit: (event: string, arg?: string | IMessage) => boolean;
+
+    private opt: IConnectionOptions;
+
+    private net: INet;
+    private sct?: ISocket;
+
+    private wdId: number = Constants.Uninitialized;
+    private piId: number = Constants.Uninitialized;
+
+    private wifi: IWifi;
+    private connected: boolean = false;
+
+    constructor(opt: IConnectionOptions, net: INet, wifi: IWifi) {
+        opt.port = opt.port !== undefined ? opt.port : Constants.DefaultPort;
+        opt.clientId = opt.clientId;
+
+        if (opt.will !== undefined) {
+            opt.will.qos = opt.will.qos || Constants.DefaultQos;
+            opt.will.retain = opt.will.retain || false;
+        }
+
+        this.opt = opt;
+        this.net = net;
+        this.wifi = wifi;
+    }
+
+    private static describe(code: ConnectReturnCode) : string {
+        let error : string = 'Connection refused, ';
+        switch (code) {
+            case ConnectReturnCode.UnacceptableProtocolVersion:
+                error += 'unacceptable protocol version.';
+                break;
+            case ConnectReturnCode.IdentifierRejected:
+                error += 'identifier rejected.';
+                break;
+            case ConnectReturnCode.ServerUnavailable:
+                error += 'server unavailable.';
+                break;
+            case ConnectReturnCode.BadUserNameOrPassword:
+                error += 'bad user name or password.';
+                break;
+            case ConnectReturnCode.NotAuthorized:
+                error += 'not authorized.';
+                break;
+            default:
+                error += `unknown return code: ${code}.`;
+        }
+
+        return error;
+    }
+
+    public connect() : void {
+        this.emit('info', `Connecting to ${this.opt.host}:${this.opt.port}`);
+
+        if (this.wdId === Constants.Uninitialized) {
+            this.wdId = setInterval(() => {
+                if (!this.connected) {
+                    this.emit('error', 'No connection. Retrying.');
+
+                    if (this.piId !== Constants.Uninitialized) {
+                        clearInterval(this.piId);
+                        this.piId = Constants.Uninitialized;
+                    }
+
+                    if (this.sct) {
+                        this.sct.removeAllListeners('connect');
+                        this.sct.removeAllListeners('data');
+                        this.sct.removeAllListeners('close');
+                        this.sct.end();
+                    }
+
+                    this.connect();
+                }
+            },                      Constants.WatchDogInterval * 1000);
+        }
+
+        if (this.wifi.getStatus().station !== 'connected') {
+            this.emit('error', 'No wifi connection.');
+
+            return;
+        }
+
+        this.sct = this.net.connect({ host: this.opt.host, port: this.opt.port }, () => {
+            this.emit('info', 'Network connection established.');
+            if (this.sct) {
+                this.sct.write(Protocol.createConnect(this.opt));
+                this.sct.removeAllListeners('connect');
+            }
+        });
+
+        this.sct.on('data', (data: string) => {
+            const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
+            this.emit('debug', `Rcvd: ${controlPacketType}: '${data}'.`);
+            this.handleData(data);
+        });
+
+        this.sct.on('close', () => {
+            this.emit('error', 'Disconnected.');
+            this.connected = false;
+        });
+    }
+
+    // Publish a message
+    public publish(topic: string, message: string, qos: number = Constants.DefaultQos, retained: boolean = false): void {
+        if (this.sct) {
+            this.sct.write(Protocol.createPublish(topic, message, qos, true));
+        }
+    }
+
+    // Subscribe to topic
+    public subscribe(topic: string, qos: number = Constants.DefaultQos): void {
+        if (this.sct) {
+            this.sct.write(Protocol.createSubscribe(topic, qos));
+        }
+    }
+
+    private handleData = (data: string): void => {
+        const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
+        switch (controlPacketType) {
+            case ControlPacketType.ConnAck:
+                const returnCode: number = data.charCodeAt(3);
+                if (returnCode === ConnectReturnCode.Accepted) {
+                    this.emit('info', 'MQTT connection accepted.');
+                    this.emit('connected');
+                    this.connected = true;
+                    this.piId = setInterval(this.ping, Constants.PingInterval * 1000);
+                } else {
+                    const connectionError: string = Client.describe(returnCode);
+                    this.emit('error', connectionError);
+                }
+                break;
+            case ControlPacketType.Publish:
+                const message: IMessage = Protocol.parsePublish(data);
+                this.emit('receive', message);
+                if (message.qos > 0) {
+                    setTimeout(() => {
+                        if (this.sct) {
+                            this.sct.write(Protocol.createPubAck(message.pid || 0)); }
+                        },     0);
+                }
+                if (message.next) {
+                    this.handleData(data.substr(message.next));
+                }
+
+                break;
+            case ControlPacketType.PingResp:
+            case ControlPacketType.PubAck:
+            case ControlPacketType.SubAck:
+                break;
+            default:
+                this.emit('error', `MQTT unexpected packet type: ${controlPacketType}.`);
+        }
+    }
+
+    private ping = (): void => {
+        if (this.sct) {
+            this.sct.write(Protocol.createPingReq());
+            this.emit('debug', 'Sent: Ping request.');
+        }
     }
 }

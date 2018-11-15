@@ -5,6 +5,30 @@ import ConnectReturnCode from '../module/ConnectReturnCode';
 import ControlPacketType from '../module/ControlPacketType';
 import { ClientTestSubclass, MockNet, MockSocket } from './TestClasses';
 
+export class ControlPacketBuilder {
+    private controlPacketType: ControlPacketType;
+    private connectReturnCode: ConnectReturnCode = ConnectReturnCode.Unknown;
+
+    constructor(controlPacketType: ControlPacketType) {
+        this.controlPacketType = controlPacketType;
+    }
+
+    public withConnectReturnCode(connectReturnCode: ConnectReturnCode) : ControlPacketBuilder {
+        this.connectReturnCode = connectReturnCode;
+
+        return this;
+    }
+
+    public build(): string {
+        let result: string = String.fromCharCode(this.controlPacketType << 4);
+        result += String.fromCharCode(0);
+        result += String.fromCharCode(0);
+        result += String.fromCharCode(this.connectReturnCode);
+
+        return result;
+    }
+}
+
 export class MqttClientTestSubclassBuilder {
     private client: ClientTestSubclass = new ClientTestSubclass({ host: 'some-host', clientId: 'some-client' });
 
@@ -34,29 +58,5 @@ export class MqttClientTestSubclassBuilder {
 
     public build(): ClientTestSubclass {
         return this.client;
-    }
-}
-
-export class ControlPacketBuilder {
-    private controlPacketType: ControlPacketType;
-    private connectReturnCode: ConnectReturnCode = ConnectReturnCode.Unknown;
-
-    constructor(controlPacketType: ControlPacketType) {
-        this.controlPacketType = controlPacketType;
-    }
-
-    public withConnectReturnCode(connectReturnCode: ConnectReturnCode) : ControlPacketBuilder {
-        this.connectReturnCode = connectReturnCode;
-
-        return this;
-    }
-
-    public build(): string {
-        let result: string = String.fromCharCode(this.controlPacketType << 4);
-        result += String.fromCharCode(0);
-        result += String.fromCharCode(0);
-        result += String.fromCharCode(this.connectReturnCode);
-
-        return result;
     }
 }
