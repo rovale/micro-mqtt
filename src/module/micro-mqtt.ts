@@ -224,7 +224,8 @@ export class Client {
     private wifi: IWifi;
     private connected: boolean = false;
 
-    constructor(opt: IConnectionOptions, net: INet, wifi: IWifi) {
+    // tslint:disable-next-line:no-unsafe-any
+    constructor(opt: IConnectionOptions, net: INet = require('net'), wifi: IWifi = require('Wifi')) {
         opt.port = opt.port || Constants.DefaultPort;
         opt.clientId = opt.clientId;
 
