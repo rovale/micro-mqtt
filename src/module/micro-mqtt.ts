@@ -225,10 +225,10 @@ export class Client {
     private connected: boolean = false;
 
     constructor(opt: IConnectionOptions, net: INet, wifi: IWifi) {
-        opt.port = opt.port !== undefined ? opt.port : Constants.DefaultPort;
+        opt.port = opt.port || Constants.DefaultPort;
         opt.clientId = opt.clientId;
 
-        if (opt.will !== undefined) {
+        if (opt.will) {
             opt.will.qos = opt.will.qos || Constants.DefaultQos;
             opt.will.retain = opt.will.retain || false;
         }
