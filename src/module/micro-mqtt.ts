@@ -5,7 +5,7 @@ import ConnectReturnCode from './ConnectReturnCode';
 import ControlPacketType from './ControlPacketType';
 import IConnectionOptions from './IConnectionOptions';
 import IMessage from './IMessage';
-import { INet, ISocket, IWifi } from './Net';
+import { INet, ISocket } from './Net';
 
 /**
  * Optimization, the TypeScript compiler replaces the constant enums.
@@ -221,11 +221,10 @@ export class Client {
     private wdId: number = Constants.Uninitialized;
     private piId: number = Constants.Uninitialized;
 
-    private wifi: IWifi;
     private connected: boolean = false;
 
     // tslint:disable-next-line:no-unsafe-any
-    constructor(opt: IConnectionOptions, net: INet = require('net'), wifi: IWifi = require('Wifi')) {
+    constructor(opt: IConnectionOptions, net: INet = require('net')) {
         opt.port = opt.port || Constants.DefaultPort;
         opt.clientId = opt.clientId;
 
@@ -236,7 +235,6 @@ export class Client {
 
         this.opt = opt;
         this.net = net;
-        this.wifi = wifi;
     }
 
     private static describe(code: ConnectReturnCode) : string {
@@ -297,16 +295,11 @@ export class Client {
             },                      Constants.WatchDogInterval * 1000);
         }
 
-        if (this.wifi.getStatus().station !== 'connected') {
-            this.emit('error', 'No wifi connection.');
-
-            return;
-        }
-
         this.sct = this.net.connect({ host: this.opt.host, port: this.opt.port }, () => {
             this.emit('info', 'Network connection established.');
             if (this.sct) {
-                this.sct.write(Protocol.createConnect(this.opt));
+                this.onConnect();
+                this.write(Protocol.createConnect(this.opt));
                 this.sct.removeAllListeners('connect');
             }
         });
@@ -325,15 +318,21 @@ export class Client {
 
     // Publish a message
     public publish(topic: string, message: string, qos: number = Constants.DefaultQos, retained: boolean = false): void {
-        if (this.sct) {
-            this.sct.write(Protocol.createPublish(topic, message, qos, retained));
-        }
+        this.write(Protocol.createPublish(topic, message, qos, retained));
     }
 
     // Subscribe to topic
     public subscribe(topic: string, qos: number = Constants.DefaultQos): void {
+        this.write(Protocol.createSubscribe(topic, qos));
+    }
+
+    // tslint:disable-next-line:no-empty
+    private onConnect() : void {
+    }
+
+    private write(data: string) : void {
         if (this.sct) {
-            this.sct.write(Protocol.createSubscribe(topic, qos));
+            this.sct.write(data);
         }
     }
 
@@ -357,9 +356,8 @@ export class Client {
                 this.emit('receive', message);
                 if (message.qos > 0) {
                     setTimeout(() => {
-                        if (this.sct) {
-                            this.sct.write(Protocol.createPubAck(message.pid || 0)); }
-                        },     0);
+                        this.write(Protocol.createPubAck(message.pid || 0));
+                    },         0);
                 }
                 if (message.next) {
                     this.handleData(data.substr(message.next));
@@ -376,9 +374,7 @@ export class Client {
     }
 
     private ping = (): void => {
-        if (this.sct) {
-            this.sct.write(Protocol.createPingReq());
-            this.emit('debug', 'Sent: Ping request.');
-        }
+        this.write(Protocol.createPingReq());
+        this.emit('debug', 'Sent: Ping request.');
     }
 }
