@@ -19,6 +19,10 @@ describe('The MQTT client', () => {
     let subject: ClientTestSubclass;
     let socket: MockSocket;
 
+    afterEach(() => {
+        subject.disconnect();
+    });
+
     describe('When establishing a network connection', () => {
         let net: MockNet;
 
@@ -28,10 +32,6 @@ describe('The MQTT client', () => {
                 net.connectIsCalled.should.equal(false, 'did not expect the client to connect to the network yet');
                 subject = new ClientTestSubclass({ host: 'some-host', port: 1234, clientId: 'some-clientId' }, net);
                 subject.connect();
-            });
-
-            afterEach(() => {
-                subject.disconnect();
             });
 
             it('it should emit information about this action.', () => {
