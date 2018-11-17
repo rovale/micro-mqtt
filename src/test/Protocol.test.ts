@@ -1,15 +1,15 @@
 /**
  * Tests for the MQTT protocol.
  */
-// tslint:disable-next-line:no-reference
-/// <reference path='_common.ts' />
+// tslint:disable-next-line:no-import-side-effect no-submodule-imports
+import 'chai/register-should';
 import ConnectFlags from '../module/ConnectFlags';
 import IMessage from '../module/IMessage';
 import { Protocol } from '../module/micro-mqtt';
 import { ConnectPacketVerifier, PublishPacketVerifier, SubscribePacketVerifier } from './ControlPacketVerifier';
 
 describe('The MQTT protocol', () => {
-    context('When calculating the remaining length of a packet', () => {
+    describe('When calculating the remaining length of a packet', () => {
 
         it('it should return 1 byte for the values 0 to 127.', () => {
             Protocol.encodeRemainingLength(0).should.deep.equal([0]);
@@ -32,10 +32,10 @@ describe('The MQTT protocol', () => {
         });
     });
 
-    context('When creating a Connect packet', () => {
+    describe('When creating a Connect packet', () => {
         let packet: ConnectPacketVerifier;
 
-        context('without username and password', () => {
+        describe('without username and password', () => {
             beforeEach(() => {
                 packet = new ConnectPacketVerifier(Protocol.createConnect({
                     host: 'some-host',
@@ -68,7 +68,7 @@ describe('The MQTT protocol', () => {
             });
         });
 
-        context('with only a username', () => {
+        describe('with only a username', () => {
             beforeEach(() => {
                 packet = new ConnectPacketVerifier(Protocol.createConnect({
                     host: 'host',
@@ -86,7 +86,7 @@ describe('The MQTT protocol', () => {
             });
         });
 
-        context('with both username and password', () => {
+        describe('with both username and password', () => {
             beforeEach(() => {
                 packet = new ConnectPacketVerifier(Protocol.createConnect({
                     host: 'host',
@@ -105,8 +105,8 @@ describe('The MQTT protocol', () => {
             });
         });
 
-        context('specifying the Last Will Testament', () => {
-            context('with QoS 0, not retained', () => {
+        describe('specifying the Last Will Testament', () => {
+            describe('with QoS 0, not retained', () => {
                 beforeEach(() => {
                     packet = new ConnectPacketVerifier(Protocol.createConnect({
                         host: 'host',
@@ -130,7 +130,7 @@ describe('The MQTT protocol', () => {
                 });
             });
 
-            context('with QoS 1, not retained', () => {
+            describe('with QoS 1, not retained', () => {
                 beforeEach(() => {
                     packet = new ConnectPacketVerifier(Protocol.createConnect({
                         host: 'host',
@@ -153,7 +153,7 @@ describe('The MQTT protocol', () => {
                 });
             });
 
-            context('with QoS 2, not retained', () => {
+            describe('with QoS 2, not retained', () => {
                 beforeEach(() => {
                     packet = new ConnectPacketVerifier(Protocol.createConnect({
                         host: 'host',
@@ -176,7 +176,7 @@ describe('The MQTT protocol', () => {
                 });
             });
 
-            context('with QoS 0, retained', () => {
+            describe('with QoS 0, retained', () => {
                 beforeEach(() => {
                     packet = new ConnectPacketVerifier(Protocol.createConnect({
                         host: 'host',
@@ -201,10 +201,10 @@ describe('The MQTT protocol', () => {
         });
     });
 
-    context('When creating a Publish packet', () => {
+    describe('When creating a Publish packet', () => {
         let packet: PublishPacketVerifier;
 
-        context('with QoS 0', () => {
+        describe('with QoS 0', () => {
             beforeEach(() => {
                 packet = new PublishPacketVerifier(Protocol.createPublish('some/topic', 'some-message', 0, false));
             });
@@ -230,7 +230,7 @@ describe('The MQTT protocol', () => {
             });
         });
 
-        context('with QoS 1', () => {
+        describe('with QoS 1', () => {
             beforeEach(() => {
                 packet = new PublishPacketVerifier(Protocol.createPublish('some/topic', 'some-message', 1, false));
             });
@@ -260,7 +260,7 @@ describe('The MQTT protocol', () => {
             });
         });
 
-        context('with QoS 0, retained', () => {
+        describe('with QoS 0, retained', () => {
             beforeEach(() => {
                 packet = new PublishPacketVerifier(Protocol.createPublish('some/topic', 'some-message', 0, true));
             });
@@ -287,11 +287,11 @@ describe('The MQTT protocol', () => {
         });
     });
 
-    context('When parsing a Publish packet', () => {
+    describe('When parsing a Publish packet', () => {
         let actual: IMessage;
         let expected: IMessage;
 
-        context('with a topic, a message, and QoS 0', () => {
+        describe('with a topic, a message, and QoS 0', () => {
             beforeEach(() => {
                 const packet: string = Protocol.createPublish('some/topic', 'some-message', 0, false);
                 actual = Protocol.parsePublish(packet);
@@ -309,7 +309,7 @@ describe('The MQTT protocol', () => {
             });
         });
 
-        context('with a topic, a message, and QoS 1', () => {
+        describe('with a topic, a message, and QoS 1', () => {
             beforeEach(() => {
                 const packet: string = Protocol.createPublish('some/topic', 'some-message', 1, false);
                 actual = Protocol.parsePublish(packet);
@@ -329,10 +329,10 @@ describe('The MQTT protocol', () => {
         });
     });
 
-    context('When creating a Subscribe packet', () => {
+    describe('When creating a Subscribe packet', () => {
         let packet: SubscribePacketVerifier;
 
-        context('with QoS 0', () => {
+        describe('with QoS 0', () => {
             beforeEach(() => {
                 packet = new SubscribePacketVerifier(Protocol.createSubscribe('some/topic', 0));
             });
@@ -354,7 +354,7 @@ describe('The MQTT protocol', () => {
             });
         });
 
-        context('with QoS 1', () => {
+        describe('with QoS 1', () => {
             beforeEach(() => {
                 packet = new SubscribePacketVerifier(Protocol.createSubscribe('some/topic', 1));
             });

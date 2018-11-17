@@ -1,8 +1,6 @@
 /**
  * Test subclasses and mocks.
  */
-// tslint:disable-next-line:no-reference
-/// <reference path='_common.ts' />
 import IConnectionOptions from '../module/IConnectionOptions';
 import IMessage from '../module/IMessage';
 import { Client } from '../module/micro-mqtt';
