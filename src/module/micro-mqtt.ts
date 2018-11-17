@@ -264,6 +264,25 @@ export class Client {
         return error;
     }
 
+    public disconnect() : void {
+        if (this.wdId !== Constants.Uninitialized) {
+            clearInterval(this.wdId);
+            this.wdId = Constants.Uninitialized;
+        }
+
+        if (this.piId !== Constants.Uninitialized) {
+            clearInterval(this.piId);
+            this.piId = Constants.Uninitialized;
+        }
+
+        if (this.sct) {
+            this.sct.removeAllListeners('connect');
+            this.sct.removeAllListeners('data');
+            this.sct.removeAllListeners('close');
+            this.sct.end();
+        }
+}
+
     public connect() : void {
         this.emit('info', `Connecting to ${this.opt.host}:${this.opt.port}`);
 
@@ -272,18 +291,7 @@ export class Client {
                 if (!this.connected) {
                     this.emit('error', 'No connection. Retrying.');
 
-                    if (this.piId !== Constants.Uninitialized) {
-                        clearInterval(this.piId);
-                        this.piId = Constants.Uninitialized;
-                    }
-
-                    if (this.sct) {
-                        this.sct.removeAllListeners('connect');
-                        this.sct.removeAllListeners('data');
-                        this.sct.removeAllListeners('close');
-                        this.sct.end();
-                    }
-
+                    this.disconnect();
                     this.connect();
                 }
             },                      Constants.WatchDogInterval * 1000);

@@ -1,8 +1,8 @@
 /**
  * Tests for the MQTT client.
  */
-// tslint:disable-next-line:no-reference
-/// <reference path='_common.ts' />
+// tslint:disable-next-line:no-import-side-effect no-submodule-imports
+import 'chai/register-should';
 import { SinonFakeTimers, useFakeTimers } from 'sinon';
 import ConnectFlags from '../module/ConnectFlags';
 import ConnectReturnCode from '../module/ConnectReturnCode';
@@ -19,10 +19,14 @@ describe('The MQTT client', () => {
     let subject: ClientTestSubclass;
     let socket: MockSocket;
 
-    context('When establishing a network connection', () => {
+    afterEach(() => {
+        subject.disconnect();
+    });
+
+    describe('When establishing a network connection', () => {
         let net: MockNet;
 
-        context('to a specific host and port', () => {
+        describe('to a specific host and port', () => {
             beforeEach(() => {
                 net = new MockNet();
                 net.connectIsCalled.should.equal(false, 'did not expect the client to connect to the network yet');
@@ -43,7 +47,7 @@ describe('The MQTT client', () => {
             });
         });
 
-        context('without specifying the port', () => {
+        describe('without specifying the port', () => {
             beforeEach(() => {
                 net = new MockNet();
                 subject = new ClientTestSubclass({ host: 'some-host', clientId: 'some-clientId' }, net);
@@ -57,7 +61,7 @@ describe('The MQTT client', () => {
         });
     });
 
-    context('When the network connection is not established within 5 seconds', () => {
+    describe('When the network connection is not established within 5 seconds', () => {
         let net: MockNet;
         let clock: SinonFakeTimers;
 
@@ -90,7 +94,7 @@ describe('The MQTT client', () => {
         });
     });
 
-    context('When there is no wifi connection', () => {
+    describe('When there is no wifi connection', () => {
         let net: MockNet;
 
         beforeEach(() => {
@@ -110,7 +114,7 @@ describe('The MQTT client', () => {
         });
     });
 
-    context('When the network connection is established', () => {
+    describe('When the network connection is established', () => {
         let net: MockNet;
 
         beforeEach(() => {
@@ -139,7 +143,7 @@ describe('The MQTT client', () => {
         });
     });
 
-    context('When receiving an unexpected packet', () => {
+    describe('When receiving an unexpected packet', () => {
         beforeEach(() => {
             socket = new MockSocket();
 
@@ -161,7 +165,7 @@ describe('The MQTT client', () => {
         });
     });
 
-    context('When not receiving a ConnAck packet within 5 seconds', () => {
+    describe('When not receiving a ConnAck packet within 5 seconds', () => {
         let clock: SinonFakeTimers;
         let net: MockNet;
 
@@ -187,7 +191,7 @@ describe('The MQTT client', () => {
         });
     });
 
-    context('When receiving a ConnAck packet', () => {
+    describe('When receiving a ConnAck packet', () => {
         beforeEach(() => {
             socket = new MockSocket();
 
@@ -196,7 +200,7 @@ describe('The MQTT client', () => {
                 .build();
         });
 
-        context('with ConnectReturnCode UnacceptableProtocolVersion', () => {
+        describe('with ConnectReturnCode UnacceptableProtocolVersion', () => {
             beforeEach(() => {
                 const connAckPacket: string = new ControlPacketBuilder(ControlPacketType.ConnAck)
                     .withConnectReturnCode(ConnectReturnCode.UnacceptableProtocolVersion)
@@ -210,7 +214,7 @@ describe('The MQTT client', () => {
             });
         });
 
-        context('with ConnectReturnCode IdentifierRejected', () => {
+        describe('with ConnectReturnCode IdentifierRejected', () => {
             beforeEach(() => {
                 const connAckPacket: string = new ControlPacketBuilder(ControlPacketType.ConnAck)
                     .withConnectReturnCode(ConnectReturnCode.IdentifierRejected)
@@ -224,7 +228,7 @@ describe('The MQTT client', () => {
             });
         });
 
-        context('with ConnectReturnCode ServerUnavailable', () => {
+        describe('with ConnectReturnCode ServerUnavailable', () => {
             beforeEach(() => {
                 const connAckPacket: string = new ControlPacketBuilder(ControlPacketType.ConnAck)
                     .withConnectReturnCode(ConnectReturnCode.ServerUnavailable)
@@ -238,7 +242,7 @@ describe('The MQTT client', () => {
             });
         });
 
-        context('with ConnectReturnCode BadUserNameOrPassword', () => {
+        describe('with ConnectReturnCode BadUserNameOrPassword', () => {
             beforeEach(() => {
                 const connAckPacket: string = new ControlPacketBuilder(ControlPacketType.ConnAck)
                     .withConnectReturnCode(ConnectReturnCode.BadUserNameOrPassword)
@@ -252,7 +256,7 @@ describe('The MQTT client', () => {
             });
         });
 
-        context('with ConnectReturnCode NotAuthorized', () => {
+        describe('with ConnectReturnCode NotAuthorized', () => {
             beforeEach(() => {
                 const connAckPacket: string = new ControlPacketBuilder(ControlPacketType.ConnAck)
                     .withConnectReturnCode(ConnectReturnCode.NotAuthorized)
@@ -266,7 +270,7 @@ describe('The MQTT client', () => {
             });
         });
 
-        context('with an unknown return code', () => {
+        describe('with an unknown return code', () => {
             beforeEach(() => {
                 const connAckPacket: string = new ControlPacketBuilder(ControlPacketType.ConnAck)
                     .withConnectReturnCode(<ConnectReturnCode>111)
@@ -280,7 +284,7 @@ describe('The MQTT client', () => {
             });
         });
 
-        context('with ConnectReturnCode Accepted', () => {
+        describe('with ConnectReturnCode Accepted', () => {
             let clock: SinonFakeTimers;
 
             beforeEach(() => {
@@ -335,8 +339,8 @@ describe('The MQTT client', () => {
         });
     });
 
-    context('When receiving a Publish packet', () => {
-        context('With QoS 0', () => {
+    describe('When receiving a Publish packet', () => {
+        describe('With QoS 0', () => {
             beforeEach(() => {
                 socket = new MockSocket();
 
@@ -356,7 +360,7 @@ describe('The MQTT client', () => {
             });
         });
 
-        context('With QoS 1', () => {
+        describe('With QoS 1', () => {
             let clock: SinonFakeTimers;
 
             beforeEach(() => {
@@ -393,7 +397,7 @@ describe('The MQTT client', () => {
         });
     });
 
-    context('When receiving a PingResp packet', () => {
+    describe('When receiving a PingResp packet', () => {
         beforeEach(() => {
             socket = new MockSocket();
 
@@ -409,7 +413,7 @@ describe('The MQTT client', () => {
         });
     });
 
-    context('When receiving a PubAck packet', () => {
+    describe('When receiving a PubAck packet', () => {
         beforeEach(() => {
             socket = new MockSocket();
 
@@ -425,7 +429,7 @@ describe('The MQTT client', () => {
         });
     });
 
-    context('When receiving a SubAck packet', () => {
+    describe('When receiving a SubAck packet', () => {
         beforeEach(() => {
             socket = new MockSocket();
 
@@ -441,7 +445,7 @@ describe('The MQTT client', () => {
         });
     });
 
-    context('When subscribing to a topic', () => {
+    describe('When subscribing to a topic', () => {
         beforeEach(() => {
             socket = new MockSocket();
 
@@ -450,7 +454,7 @@ describe('The MQTT client', () => {
                 .build();
         });
 
-        context('without specifying the QoS', () => {
+        describe('without specifying the QoS', () => {
             beforeEach(() => {
                 subject.subscribe('some/topic');
             });
@@ -462,7 +466,7 @@ describe('The MQTT client', () => {
             });
         });
 
-        context('specifying the QoS 1', () => {
+        describe('specifying the QoS 1', () => {
             beforeEach(() => {
                 subject.subscribe('some/topic', 1);
             });
@@ -475,7 +479,7 @@ describe('The MQTT client', () => {
         });
     });
 
-    context('When publishing a message', () => {
+    describe('When publishing a message', () => {
         beforeEach(() => {
             socket = new MockSocket();
 
@@ -486,7 +490,7 @@ describe('The MQTT client', () => {
             subject.publish('some/topic', 'some-message');
         });
 
-        context('without specifying the QoS', () => {
+        describe('without specifying the QoS', () => {
             beforeEach(() => {
                 socket = new MockSocket();
 
@@ -504,7 +508,7 @@ describe('The MQTT client', () => {
             });
         });
 
-        context('with QoS 1.', () => {
+        describe('with QoS 1.', () => {
             beforeEach(() => {
                 socket = new MockSocket();
 
@@ -522,7 +526,7 @@ describe('The MQTT client', () => {
             });
         });
 
-        context('with QoS 1, retained.', () => {
+        describe('with QoS 1, retained.', () => {
             beforeEach(() => {
                 socket = new MockSocket();
 
@@ -542,7 +546,7 @@ describe('The MQTT client', () => {
         });
     });
 
-    context('When the network connection is lost', () => {
+    describe('When the network connection is lost', () => {
         let clock: SinonFakeTimers;
         let net: MockNet;
 
@@ -583,7 +587,7 @@ describe('The MQTT client', () => {
         });
     });
 
-    context('When receiving two Publish packets at once', () => {
+    describe('When receiving two Publish packets at once', () => {
         beforeEach(() => {
             socket = new MockSocket();
 

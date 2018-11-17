@@ -6,7 +6,7 @@ import ControlPacketType from '../module/ControlPacketType';
 import { ClientTestSubclass, MockNet, MockSocket } from './TestClasses';
 
 export class ControlPacketBuilder {
-    private controlPacketType: ControlPacketType;
+    private controlPacketType: number;
     private connectReturnCode: ConnectReturnCode = ConnectReturnCode.Unknown;
 
     constructor(controlPacketType: ControlPacketType) {
