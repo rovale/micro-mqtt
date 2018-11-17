@@ -31,7 +31,7 @@ describe('The MQTT client', () => {
             });
 
             afterEach(() => {
-                subject.closeHandle();
+                subject.disconnect();
             });
 
             it('it should emit information about this action.', () => {
