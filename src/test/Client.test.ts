@@ -30,6 +30,10 @@ describe('The MQTT client', () => {
                 subject.connect();
             });
 
+            afterEach(() => {
+                subject.closeHandle();
+            });
+
             it('it should emit information about this action.', () => {
                 subject.shouldHaveEmittedInfo('Connecting to some-host:1234');
             });

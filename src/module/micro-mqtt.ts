@@ -264,6 +264,13 @@ export class Client {
         return error;
     }
 
+    public closeHandle() : void {
+        if (this.wdId !== Constants.Uninitialized) {
+            clearInterval(this.wdId);
+            this.wdId = Constants.Uninitialized;
+        }
+    }
+
     public connect() : void {
         this.emit('info', `Connecting to ${this.opt.host}:${this.opt.port}`);
 
