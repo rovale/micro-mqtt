@@ -10,7 +10,7 @@
     "tslint": "tslint --project tsconfig.json ./src/**/*.ts",
     "compile": "tsc --pretty",
     "?test": "Run TSLint, compile TypeScript, run unit tests, and create coverage reports.",
-    "test": "jest --verbose --coverage",
+    "test": "jest --verbose --coverage --detectOpenHandles",
     "?test:watch": "Watch for changed compiled TypeScript files and perform unit tests. Press Ctrl-Shift-B in VSCode to compile TypeScript.",
     "test:watch": "jest --watch",
     "?deploy": "Runs all tests and copies the micro-mqtt.js module to the Espruino Web IDE project.",
