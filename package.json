@@ -1,7 +1,7 @@
 {
   "name": "micro-mqtt",
-  "version": "0.0.16",
-  "description": "An MQTT client for Espruino.",
+  "version": "0.0.20",
+  "description": "A lightweight MQTT client",
   "main": "./modules/micro-mqtt.ts",
   "scripts": {
     "info": "npm-scripts-info",
