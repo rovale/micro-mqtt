@@ -524,6 +524,7 @@ describe('The MQTT client', () => {
                 socket.sentPackages.should.have.lengthOf(1);
                 const packet: PublishPacketVerifier = new PublishPacketVerifier(socket.sentPackages[0]);
                 packet.shouldHaveQoS1();
+                packet.shouldNotBeRetained();
             });
         });
 
