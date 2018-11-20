@@ -36,7 +36,7 @@
     "@types/chai": "4.1.7",
     "@types/jest": "^23.3.9",
     "@types/node": "10.12.9",
-    "@types/sinon": "5.0.6",
+    "@types/sinon": "5.0.7",
     "chai": "4.2.0",
     "coveralls": "3.0.2",
     "jest": "^23.6.0",
