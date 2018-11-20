@@ -297,7 +297,7 @@ var Client = /** @class */ (function () {
         if (qos === void 0) { qos = 0 /* DefaultQos */; }
         if (retained === void 0) { retained = false; }
         if (this.sct) {
-            this.sct.write(Protocol.createPublish(topic, message, qos, true));
+            this.sct.write(Protocol.createPublish(topic, message, qos, retained));
         }
     };
     // Subscribe to topic

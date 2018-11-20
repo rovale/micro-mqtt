@@ -326,7 +326,7 @@ export class Client {
     // Publish a message
     public publish(topic: string, message: string, qos: number = Constants.DefaultQos, retained: boolean = false): void {
         if (this.sct) {
-            this.sct.write(Protocol.createPublish(topic, message, qos, true));
+            this.sct.write(Protocol.createPublish(topic, message, qos, retained));
         }
     }
 

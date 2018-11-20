@@ -505,6 +505,7 @@ describe('The MQTT client', () => {
                 socket.sentPackages.should.have.lengthOf(1);
                 const packet: PublishPacketVerifier = new PublishPacketVerifier(socket.sentPackages[0]);
                 packet.shouldHaveQoS0();
+                packet.shouldNotBeRetained();
             });
         });
 
@@ -523,6 +524,7 @@ describe('The MQTT client', () => {
                 socket.sentPackages.should.have.lengthOf(1);
                 const packet: PublishPacketVerifier = new PublishPacketVerifier(socket.sentPackages[0]);
                 packet.shouldHaveQoS1();
+                packet.shouldNotBeRetained();
             });
         });
 
@@ -542,6 +544,25 @@ describe('The MQTT client', () => {
                 const packet: PublishPacketVerifier = new PublishPacketVerifier(socket.sentPackages[0]);
                 packet.shouldHaveQoS1();
                 packet.shouldBeRetained();
+            });
+        });
+
+        describe('with QoS 1, not retained.', () => {
+            beforeEach(() => {
+                socket = new MockSocket();
+
+                subject = new MqttClientTestSubclassBuilder()
+                    .whichIsConnectedOn(new MockNet(socket))
+                    .build();
+
+                subject.publish('some/topic', 'some-message', 1, false);
+            });
+
+            it('it should send a Publish packet with QoS 1, not retained.', () => {
+                socket.sentPackages.should.have.lengthOf(1);
+                const packet: PublishPacketVerifier = new PublishPacketVerifier(socket.sentPackages[0]);
+                packet.shouldHaveQoS1();
+                packet.shouldNotBeRetained();
             });
         });
     });
