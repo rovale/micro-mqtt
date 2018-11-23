@@ -142,6 +142,10 @@ export class ClientTestSubclass extends Client {
         return this.emittedEvents.filter((e: IEmittedEvent) => e.event === 'connected');
     }
 
+    public emittedDisconnected(): IEmittedEvent[] {
+        return this.emittedEvents.filter((e: IEmittedEvent) => e.event === 'disconnected');
+    }
+
     public emittedReceive(): IEmittedEvent[] {
         return this.emittedEvents.filter((e: IEmittedEvent) => e.event === 'receive');
     }

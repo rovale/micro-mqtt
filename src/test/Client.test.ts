@@ -87,6 +87,12 @@ describe('The MQTT client', () => {
             subject.shouldHaveEmittedError('No connection. Retrying.');
         });
 
+        it('it should emit the \'disconnected\' event.', () => {
+            clock.tick(5000);
+            const event: IEmittedEvent[] = subject.emittedDisconnected();
+            event.should.have.lengthOf(1);
+        });
+
         it('it should try it again.', () => {
             net.connectIsCalledTwice.should.equal(false, 'because it is the first attempt.');
             clock.tick(5000);
@@ -568,8 +574,9 @@ describe('The MQTT client', () => {
             clock.restore();
         });
 
-        it('it should emit an error.', () => {
-            subject.shouldHaveEmittedError('Disconnected.');
+        it('it should emit the \'disconnected\' event.', () => {
+            const event: IEmittedEvent[] = subject.emittedDisconnected();
+            event.should.have.lengthOf(1);
         });
 
         it('it should not send PingReq packets anymore.', () => {

@@ -259,6 +259,7 @@ var Client = /** @class */ (function () {
         if (this.wdId === -123 /* Uninitialized */) {
             this.wdId = setInterval(function () {
                 if (!_this.connected) {
+                    _this.emit('disconnected');
                     _this.emit('error', 'No connection. Retrying.');
                     _this.disconnect();
                     _this.connect();
@@ -279,7 +280,7 @@ var Client = /** @class */ (function () {
             _this.handleData(data);
         });
         this.sct.on('close', function () {
-            _this.emit('error', 'Disconnected.');
+            _this.emit('disconnected');
             _this.connected = false;
         });
     };

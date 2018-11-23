@@ -287,6 +287,7 @@ export class Client {
         if (this.wdId === Constants.Uninitialized) {
             this.wdId = setInterval(() => {
                 if (!this.connected) {
+                    this.emit('disconnected');
                     this.emit('error', 'No connection. Retrying.');
 
                     this.disconnect();
@@ -311,7 +312,7 @@ export class Client {
         });
 
         this.sct.on('close', () => {
-            this.emit('error', 'Disconnected.');
+            this.emit('disconnected');
             this.connected = false;
         });
     }
