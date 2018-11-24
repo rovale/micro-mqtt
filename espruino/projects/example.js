@@ -13,7 +13,7 @@ function start() {
   
     const mqttClient = new MqttClient(
       {
-        host: "test.mosquitto.org",
+        host: "iot.eclipse.org",
         clientId: id,
         username: null,
         password: null,
@@ -29,6 +29,8 @@ function start() {
   
     const led = D16;
     const ledOn = false;
+
+    let interval1 = -1;
   
     const connect = () => {
       const connection = wifi.getDetails();
@@ -60,24 +62,49 @@ function start() {
       mqttClient.disconnect();
       connect();
     });
+
+    const sendTelemery = () => {
+      const telemetry = {
+        freeMemory: process.memory().free,
+        rssi: wifi.getDetails().rssi
+      };
+
+      mqttClient.publish(`rovale/micro-mqtt/${id}/telemetry`,
+        JSON.stringify(telemetry), 1);
+    };
   
     mqttClient.on("connected", () => {
       digitalWrite(led, !ledOn);
       mqttClient.subscribe(`rovale/micro-mqtt/${id}/command`, 1);
       mqttClient.publish(`rovale/micro-mqtt/${id}/status`, "online", 1, true);
+
+      const details = {
+        name: "Some thing",
+        network: ssid,
+        ip: wifi.getIP().ip
+      };
+
+      mqttClient.publish(`rovale/micro-mqtt/${id}/details`, JSON.stringify(details), 1, true);
+
+      interval1 = setInterval(() => sendTelemery(), 30 * 1000);
+      sendTelemery();
     });
   
     mqttClient.on("disconnected", () => {
       digitalWrite(led, ledOn);
+
+      if (interval1 != -1) {
+        clearInterval(interval1);
+      }
     });
   
     mqttClient.on("receive", message => {
       print("[Mqtt] [Info] Incoming message:", message);
     });
   
-    mqttClient.on("debug", debug => {
-      print("[Mqtt] [Debug]", debug);
-    });
+    // mqttClient.on("debug", debug => {
+    //   print("[Mqtt] [Debug]", debug);
+    // });
   
     mqttClient.on("info", info => {
       print("[Mqtt] [Info]", info);
