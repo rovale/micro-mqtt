@@ -6,20 +6,18 @@ function start() {
   const net = require('net');
   const MqttClient = require('micro-mqtt').Client;
 
-  const ssid = 'myssid';
-  const wifiPassword = 'mypassword';
+  const settings = require('common').settings;
 
-  const topic = 'rovale/micro-mqtt/';
   const id = getSerial().replace('-', '').toUpperCase();
 
   const mqttClient = new MqttClient(
     {
-      host: 'iot.eclipse.org',
+      host: settings.mqttHost,
       clientId: id,
-      username: null,
-      password: null,
+      username: settings.mqttUsername,
+      password: settings.mqttPassword,
       will: {
-        topic: `${topic}${id}/status`,
+        topic: `${settings.topic}${id}/status`,
         message: 'offline',
         qos: 1,
         retain: true
@@ -45,13 +43,13 @@ function start() {
 
   const connect = () => {
     const connection = wifi.getDetails();
-    if (connection.status === 'connected' && connection.ssid === ssid) {
+    if (connection.status === 'connected' && connection.ssid === settings.ssid) {
       onWifiConnected();
       return;
     }
 
     onWifiConnecting();
-    wifi.connect(ssid, { password: wifiPassword });
+    wifi.connect(settings.ssid, { password: settings.wifiPassword });
   };
 
   wifi.on('connected', () => {
@@ -70,22 +68,22 @@ function start() {
       rssi: wifi.getDetails().rssi
     };
 
-    mqttClient.publish(`${topic}${id}/telemetry`, JSON.stringify(telemetry), 1);
+    mqttClient.publish(`${settings.topic}${id}/telemetry`, JSON.stringify(telemetry), 1);
   };
 
   mqttClient.on('connected', () => {
     digitalWrite(led, !ledOn);
-    mqttClient.subscribe(`${topic}${id}/command`, 1);
-    mqttClient.publish(`${topic}${id}/status`, 'online', 1, true);
+    mqttClient.subscribe(`${settings.topic}${id}/command`, 1);
+    mqttClient.publish(`${settings.topic}${id}/status`, 'online', 1, true);
 
     const details = {
       name: 'Some thing',
-      network: ssid,
+      network: settings.ssid,
       ip: wifi.getIP().ip
     };
 
     mqttClient.publish(
-      `${topic}${id}/details`,
+      `${settings.topic}${id}/details`,
       JSON.stringify(details),
       1,
       true

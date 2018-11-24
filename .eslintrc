@@ -11,6 +11,7 @@
         "jest/globals": true
     },
     "rules": {
+        "prefer-destructuring": "off",
         "comma-dangle": "off",
         "no-undef": "off",
         "no-restricted-globals": "off",
