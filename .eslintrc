@@ -1,0 +1,21 @@
+{
+    "parser": "babel-eslint",
+
+    "extends": ["airbnb"],
+
+    "globals": {
+        "window": true,
+        "document": true,
+        "CustomEvent": true,
+        "KeyboardEvent": true,
+        "jest/globals": true
+    },
+    "rules": {
+        "comma-dangle": "off",
+        "no-undef": "off",
+        "no-restricted-globals": "off",
+        "import/no-unresolved": "off",
+        "linebreak-style": "off",
+        "global-require": "off"
+    }
+}
