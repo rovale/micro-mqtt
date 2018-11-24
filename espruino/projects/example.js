@@ -29,13 +29,14 @@ function start() {
   );
 
   const led = D16;
-  const ledOn = false;
+  const ledOnValue = false;
 
-  let interval1 = -1;
+  let telemetryInterval = -1;
+  let blinkInterval = -1;
 
   const onWifiConnecting = () => {
     print('[Wifi] [Info] Connecting...');
-    digitalWrite(led, ledOn);
+    digitalWrite(led, ledOnValue);
   };
 
   const onWifiConnected = () => {
@@ -73,8 +74,22 @@ function start() {
     mqttClient.publish(getTopic('telemetry'), JSON.stringify(telemetry), 1);
   };
 
+  const blinkOn = () => {
+    if (blinkInterval === -1) {
+      blinkInterval = setInterval(() => digitalWrite(led, !digitalRead(led)), 500);
+    }
+  };
+
+  const blinkOff = () => {
+    if (blinkInterval !== -1) {
+      clearInterval(blinkInterval);
+      digitalWrite(led, !ledOnValue);
+      blinkInterval = -1;
+    }
+  };
+
   mqttClient.on('connected', () => {
-    digitalWrite(led, !ledOn);
+    digitalWrite(led, !ledOnValue);
     mqttClient.subscribe(getTopic('command'), 1);
     mqttClient.publish(getTopic('status'), 'online', 1, true);
 
@@ -91,20 +106,24 @@ function start() {
       true
     );
 
-    interval1 = setInterval(() => sendTelemery(), 30 * 1000);
+    telemetryInterval = setInterval(() => sendTelemery(), 30 * 1000);
     sendTelemery();
   });
 
   mqttClient.on('disconnected', () => {
-    digitalWrite(led, ledOn);
+    digitalWrite(led, ledOnValue);
 
-    if (interval1 !== -1) {
-      clearInterval(interval1);
+    if (telemetryInterval !== -1) {
+      clearInterval(telemetryInterval);
     }
   });
 
   mqttClient.on('receive', (message) => {
     print('[Mqtt] [Info] Incoming message:', message);
+    const command = JSON.parse(message.content);
+
+    if (command.name === 'blinkOn') blinkOn();
+    if (command.name === 'blinkOff') blinkOff();
   });
 
   // mqttClient.on("debug", debug => {
