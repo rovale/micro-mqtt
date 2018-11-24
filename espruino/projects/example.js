@@ -10,6 +10,8 @@ function start() {
 
   const id = getSerial().replace('-', '').toUpperCase();
 
+  const getTopic = subject => `${settings.topic}${id}/${subject}`;
+
   const mqttClient = new MqttClient(
     {
       host: settings.mqttHost,
@@ -17,7 +19,7 @@ function start() {
       username: settings.mqttUsername,
       password: settings.mqttPassword,
       will: {
-        topic: `${settings.topic}${id}/status`,
+        topic: getTopic('status'),
         message: 'offline',
         qos: 1,
         retain: true
@@ -68,13 +70,13 @@ function start() {
       rssi: wifi.getDetails().rssi
     };
 
-    mqttClient.publish(`${settings.topic}${id}/telemetry`, JSON.stringify(telemetry), 1);
+    mqttClient.publish(getTopic('telemetry'), JSON.stringify(telemetry), 1);
   };
 
   mqttClient.on('connected', () => {
     digitalWrite(led, !ledOn);
-    mqttClient.subscribe(`${settings.topic}${id}/command`, 1);
-    mqttClient.publish(`${settings.topic}${id}/status`, 'online', 1, true);
+    mqttClient.subscribe(getTopic('command'), 1);
+    mqttClient.publish(getTopic('status'), 'online', 1, true);
 
     const details = {
       name: 'Some thing',
@@ -83,7 +85,7 @@ function start() {
     };
 
     mqttClient.publish(
-      `${settings.topic}${id}/details`,
+      getTopic('details'),
       JSON.stringify(details),
       1,
       true
