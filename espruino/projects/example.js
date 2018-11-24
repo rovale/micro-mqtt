@@ -9,6 +9,7 @@ function start() {
     const ssid = "myssid";
     const wifiPassword = "mypassword";
   
+    const topic = "rovale/micro-mqtt/";
     const id = getSerial().replace("-", "").toUpperCase();
   
     const mqttClient = new MqttClient(
@@ -18,7 +19,7 @@ function start() {
         username: null,
         password: null,
         will: {
-          topic: `rovale/micro-mqtt/${id}/status`,
+          topic: `${topic}${id}/status`,
           message: "offline",
           qos: 1,
           retain: true
@@ -69,14 +70,14 @@ function start() {
         rssi: wifi.getDetails().rssi
       };
 
-      mqttClient.publish(`rovale/micro-mqtt/${id}/telemetry`,
+      mqttClient.publish(`${topic}${id}/telemetry`,
         JSON.stringify(telemetry), 1);
     };
   
     mqttClient.on("connected", () => {
       digitalWrite(led, !ledOn);
-      mqttClient.subscribe(`rovale/micro-mqtt/${id}/command`, 1);
-      mqttClient.publish(`rovale/micro-mqtt/${id}/status`, "online", 1, true);
+      mqttClient.subscribe(`${topic}${id}/command`, 1);
+      mqttClient.publish(`${topic}${id}/status`, "online", 1, true);
 
       const details = {
         name: "Some thing",
@@ -84,7 +85,7 @@ function start() {
         ip: wifi.getIP().ip
       };
 
-      mqttClient.publish(`rovale/micro-mqtt/${id}/details`, JSON.stringify(details), 1, true);
+      mqttClient.publish(`${topic}${id}/details`, JSON.stringify(details), 1, true);
 
       interval1 = setInterval(() => sendTelemery(), 30 * 1000);
       sendTelemery();
