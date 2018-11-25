@@ -16,11 +16,3 @@ export interface ISocket {
 export interface INet {
     connect(options: INetConnectOptions, callback: () => void): ISocket;
 }
-
-export interface IWifiStatus {
-    station: string;
-}
-
-export interface IWifi {
-    getStatus(): IWifiStatus;
-}

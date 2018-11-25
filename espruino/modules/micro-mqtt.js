@@ -158,9 +158,8 @@ var Protocol;
  */
 var Client = /** @class */ (function () {
     // tslint:disable-next-line:no-unsafe-any
-    function Client(opt, net, wifi) {
+    function Client(opt, net) {
         if (net === void 0) { net = require('net'); }
-        if (wifi === void 0) { wifi = require('Wifi'); }
         var _this = this;
         this.version = '0.0.17';
         this.wdId = -123 /* Uninitialized */;
@@ -187,9 +186,7 @@ var Client = /** @class */ (function () {
                     _this.emit('receive', message_1);
                     if (message_1.qos > 0) {
                         setTimeout(function () {
-                            if (_this.sct) {
-                                _this.sct.write(Protocol.createPubAck(message_1.pid || 0));
-                            }
+                            _this.write(Protocol.createPubAck(message_1.pid || 0));
                         }, 0);
                     }
                     if (message_1.next) {
@@ -205,10 +202,8 @@ var Client = /** @class */ (function () {
             }
         };
         this.ping = function () {
-            if (_this.sct) {
-                _this.sct.write(Protocol.createPingReq());
-                _this.emit('debug', 'Sent: Ping request.');
-            }
+            _this.write(Protocol.createPingReq());
+            _this.emit('debug', 'Sent: Ping request.');
         };
         opt.port = opt.port || 1883 /* DefaultPort */;
         opt.clientId = opt.clientId;
@@ -218,7 +213,6 @@ var Client = /** @class */ (function () {
         }
         this.opt = opt;
         this.net = net;
-        this.wifi = wifi;
     }
     Client.describe = function (code) {
         var error = 'Connection refused, ';
@@ -265,20 +259,18 @@ var Client = /** @class */ (function () {
         if (this.wdId === -123 /* Uninitialized */) {
             this.wdId = setInterval(function () {
                 if (!_this.connected) {
+                    _this.emit('disconnected');
                     _this.emit('error', 'No connection. Retrying.');
                     _this.disconnect();
                     _this.connect();
                 }
             }, 5 /* WatchDogInterval */ * 1000);
         }
-        if (this.wifi.getStatus().station !== 'connected') {
-            this.emit('error', 'No wifi connection.');
-            return;
-        }
         this.sct = this.net.connect({ host: this.opt.host, port: this.opt.port }, function () {
             _this.emit('info', 'Network connection established.');
             if (_this.sct) {
-                _this.sct.write(Protocol.createConnect(_this.opt));
+                _this.onConnect();
+                _this.write(Protocol.createConnect(_this.opt));
                 _this.sct.removeAllListeners('connect');
             }
         });
@@ -288,7 +280,7 @@ var Client = /** @class */ (function () {
             _this.handleData(data);
         });
         this.sct.on('close', function () {
-            _this.emit('error', 'Disconnected.');
+            _this.emit('disconnected');
             _this.connected = false;
         });
     };
@@ -296,15 +288,19 @@ var Client = /** @class */ (function () {
     Client.prototype.publish = function (topic, message, qos, retained) {
         if (qos === void 0) { qos = 0 /* DefaultQos */; }
         if (retained === void 0) { retained = false; }
-        if (this.sct) {
-            this.sct.write(Protocol.createPublish(topic, message, qos, retained));
-        }
+        this.write(Protocol.createPublish(topic, message, qos, retained));
     };
     // Subscribe to topic
     Client.prototype.subscribe = function (topic, qos) {
         if (qos === void 0) { qos = 0 /* DefaultQos */; }
+        this.write(Protocol.createSubscribe(topic, qos));
+    };
+    // tslint:disable-next-line:no-empty
+    Client.prototype.onConnect = function () {
+    };
+    Client.prototype.write = function (data) {
         if (this.sct) {
-            this.sct.write(Protocol.createSubscribe(topic, qos));
+            this.sct.write(data);
         }
     };
     return Client;

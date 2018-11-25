@@ -4,19 +4,11 @@
 import IConnectionOptions from '../module/IConnectionOptions';
 import IMessage from '../module/IMessage';
 import { Client } from '../module/micro-mqtt';
-import { INet, INetConnectOptions, ISocket, IWifi, IWifiStatus } from '../module/Net';
+import { INet, INetConnectOptions, ISocket } from '../module/Net';
 
 export interface IEmittedEvent {
     event: string;
     args?: string | IMessage;
-}
-
-class ConnectedWifi implements IWifi {
-    public getStatus(): IWifiStatus { return { station: 'connected' }; }
-}
-
-export class NotConnectedWifi implements IWifi {
-    public getStatus(): IWifiStatus { return { station: 'off' }; }
 }
 
 interface IEventSubscription {
@@ -28,6 +20,10 @@ export class MockSocket implements ISocket {
     public sentPackages: string[] = [];
     public eventSubscriptions: IEventSubscription[] = [];
     public ended: boolean = false;
+
+    // tslint:disable-next-line:no-empty
+    public setEncoding(encoding: string): void {
+    }
 
     public write(data: string): void {
         this.sentPackages.push(data);
@@ -99,8 +95,8 @@ export class MockNet implements INet {
 export class ClientTestSubclass extends Client {
     private emittedEvents: IEmittedEvent[] = [];
 
-    constructor(options: IConnectionOptions, net: INet = new MockNet(), wifi: IWifi = new ConnectedWifi()) {
-        super(options, net, wifi);
+    constructor(options: IConnectionOptions, net: INet = new MockNet()) {
+        super(options, net);
         this.emit = (event: string, args?: string | IMessage): boolean => {
             this.emittedEvents.push({ event: event, args: args });
 
@@ -144,6 +140,10 @@ export class ClientTestSubclass extends Client {
 
     public emittedConnected(): IEmittedEvent[] {
         return this.emittedEvents.filter((e: IEmittedEvent) => e.event === 'connected');
+    }
+
+    public emittedDisconnected(): IEmittedEvent[] {
+        return this.emittedEvents.filter((e: IEmittedEvent) => e.event === 'disconnected');
     }
 
     public emittedReceive(): IEmittedEvent[] {

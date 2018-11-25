@@ -1,17 +1,18 @@
 {
     "version": "0.2.0",
     "configurations": [
-        {
-            "name": "Tests",
-            "type": "node",
-            "program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
-            "args": [
-                "--timeout=999999",
-                "${workspaceRoot}/bin/*/*.js"
-                ],
-            "cwd": "${workspaceRoot}",
-            "sourceMaps": true,
-            "outDir": "${workspaceRoot}/bin"
-        }
+      {
+        "name": "Debug Jest Tests",
+        "type": "node",
+        "request": "launch",
+        "runtimeArgs": [
+          "--inspect-brk",
+          "${workspaceRoot}/node_modules/jest/bin/jest.js",
+          "--runInBand"
+        ],
+        "console": "integratedTerminal",
+        "internalConsoleOptions": "neverOpen",
+        "port": 9229
+      }
     ]
-}
+  }

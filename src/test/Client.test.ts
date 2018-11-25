@@ -10,7 +10,7 @@ import ControlPacketType from '../module/ControlPacketType';
 import IMessage from '../module/IMessage';
 import { INetConnectOptions } from '../module/Net';
 import { ControlPacketBuilder, MqttClientTestSubclassBuilder } from './Builders';
-import { ClientTestSubclass, MockNet, MockSocket, NotConnectedWifi, IEmittedEvent} from './TestClasses';
+import { ClientTestSubclass, MockNet, MockSocket, IEmittedEvent} from './TestClasses';
 import { ConnectPacketVerifier, GenericControlPacketVerifier, PubAckPacketVerifier,
     PublishPacketVerifier, SubscribePacketVerifier} from './ControlPacketVerifier';
 import { Constants, Protocol } from '../module/micro-mqtt';
@@ -87,30 +87,16 @@ describe('The MQTT client', () => {
             subject.shouldHaveEmittedError('No connection. Retrying.');
         });
 
+        it('it should emit the \'disconnected\' event.', () => {
+            clock.tick(5000);
+            const event: IEmittedEvent[] = subject.emittedDisconnected();
+            event.should.have.lengthOf(1);
+        });
+
         it('it should try it again.', () => {
             net.connectIsCalledTwice.should.equal(false, 'because it is the first attempt.');
             clock.tick(5000);
             net.connectIsCalledTwice.should.equal(true, 'because it should try it again.');
-        });
-    });
-
-    describe('When there is no wifi connection', () => {
-        let net: MockNet;
-
-        beforeEach(() => {
-            net = new MockNet();
-            subject = new ClientTestSubclass({ host: 'some-host', clientId: 'some-client' }, net, new NotConnectedWifi());
-
-            socket = new MockSocket();
-            subject.connect();
-        });
-
-        it('it should emit an error.', () => {
-            subject.shouldHaveEmittedError('No wifi connection.');
-        });
-
-        it('it should try it again.', () => {
-            net.connectIsCalled.should.equal(false, 'because it should not try to connect.');
         });
     });
 
@@ -588,8 +574,9 @@ describe('The MQTT client', () => {
             clock.restore();
         });
 
-        it('it should emit an error.', () => {
-            subject.shouldHaveEmittedError('Disconnected.');
+        it('it should emit the \'disconnected\' event.', () => {
+            const event: IEmittedEvent[] = subject.emittedDisconnected();
+            event.should.have.lengthOf(1);
         });
 
         it('it should not send PingReq packets anymore.', () => {
