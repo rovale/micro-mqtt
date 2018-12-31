@@ -34,7 +34,7 @@
   "homepage": "https://github.com/rovale/micro-mqtt#readme",
   "devDependencies": {
     "@types/chai": "4.1.7",
-    "@types/jest": "^23.3.9",
+    "@types/jest": "^23.3.11",
     "@types/node": "10.12.13",
     "@types/sinon": "5.0.7",
     "babel-eslint": "^10.0.1",
