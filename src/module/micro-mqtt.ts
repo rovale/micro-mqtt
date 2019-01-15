@@ -27,7 +27,7 @@ export module Protocol {
     const strChr: (...codes: number[]) => string = String.fromCharCode;
 
     /**
-     * Remaining Length
+     * Encode remaining length
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718023
      */
     export function encodeRemainingLength(remainingLength: number): number[] {
@@ -149,8 +149,24 @@ export module Protocol {
     export function parsePublish(data: string): IMessage {
         const cmd: number = data.charCodeAt(0);
         const qos: number = (cmd & 0b00000110) >> 1;
-        const remainingLength: number = data.charCodeAt(1);
-        const topicLength: number = data.charCodeAt(2) << 8 | data.charCodeAt(3);
+
+        /**
+         * Decode remaining length
+         * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718023
+         */
+        let multiplier: number = 1;
+        let remainingLength: number = 0;
+        let index: number = 0;
+        let encodedByte: number;
+        do {
+            index = index + 1;
+            encodedByte = data.charCodeAt(index);
+            remainingLength += (encodedByte & 127) * multiplier;
+            multiplier *= 128;
+        }
+        while ((encodedByte & 128) !== 0);
+
+        const topicLength: number = data.charCodeAt(index + 1) << 8 | data.charCodeAt(index + 2);
         let variableLength: number = topicLength;
         if (qos > 0) {
             variableLength += 2;
@@ -159,8 +175,8 @@ export module Protocol {
         const messageLength: number = (remainingLength - variableLength) - 2;
 
         const message: IMessage = {
-            topic: data.substr(4, topicLength),
-            content: data.substr(variableLength + 4, messageLength),
+            topic: data.substr(index + 3, topicLength),
+            content: data.substr(index + variableLength + 3, messageLength),
             qos: qos,
             retain: cmd & 1
         };
@@ -170,8 +186,8 @@ export module Protocol {
         }
 
         if (qos > 0) {
-            message.pid = data.charCodeAt(variableLength + 4 - 2) << 8 |
-                data.charCodeAt(variableLength + 4 - 1);
+            message.pid = data.charCodeAt(index + variableLength + 3 - 2) << 8 |
+                data.charCodeAt(index + variableLength + 3 - 1);
         }
 
         return message;
@@ -206,7 +222,7 @@ export module Protocol {
  * The MQTT client.
  */
 export class Client {
-    public version: string = '0.0.17';
+    public version: string = '1.0.0';
 
     // @ts-ignore
     public on: (event: string, listener: (arg: string | IMessage) => void) => void;
@@ -306,8 +322,6 @@ export class Client {
         });
 
         this.sct.on('data', (data: string) => {
-            const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
-            this.emit('debug', `Rcvd: ${controlPacketType}: '${data}'.`);
             this.handleData(data);
         });
 
@@ -339,6 +353,8 @@ export class Client {
 
     private handleData = (data: string): void => {
         const controlPacketType: ControlPacketType = data.charCodeAt(0) >> 4;
+        this.emit('debug', `Rcvd: ${controlPacketType}: '${data}'.`);
+
         switch (controlPacketType) {
             case ControlPacketType.ConnAck:
                 const returnCode: number = data.charCodeAt(3);

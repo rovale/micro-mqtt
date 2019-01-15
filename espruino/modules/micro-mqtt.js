@@ -7,7 +7,7 @@ var Protocol;
 (function (Protocol) {
     var strChr = String.fromCharCode;
     /**
-     * Remaining Length
+     * Encode remaining length
      * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718023
      */
     function encodeRemainingLength(remainingLength) {
@@ -109,16 +109,29 @@ var Protocol;
     function parsePublish(data) {
         var cmd = data.charCodeAt(0);
         var qos = (cmd & 6) >> 1;
-        var remainingLength = data.charCodeAt(1);
-        var topicLength = data.charCodeAt(2) << 8 | data.charCodeAt(3);
+        /**
+         * Decode remaining length
+         * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718023
+         */
+        var multiplier = 1;
+        var remainingLength = 0;
+        var index = 0;
+        var encodedByte;
+        do {
+            index = index + 1;
+            encodedByte = data.charCodeAt(index);
+            remainingLength += (encodedByte & 127) * multiplier;
+            multiplier *= 128;
+        } while ((encodedByte & 128) !== 0);
+        var topicLength = data.charCodeAt(index + 1) << 8 | data.charCodeAt(index + 2);
         var variableLength = topicLength;
         if (qos > 0) {
             variableLength += 2;
         }
         var messageLength = (remainingLength - variableLength) - 2;
         var message = {
-            topic: data.substr(4, topicLength),
-            content: data.substr(variableLength + 4, messageLength),
+            topic: data.substr(index + 3, topicLength),
+            content: data.substr(index + variableLength + 3, messageLength),
             qos: qos,
             retain: cmd & 1
         };
@@ -126,8 +139,8 @@ var Protocol;
             message.next = remainingLength + 2;
         }
         if (qos > 0) {
-            message.pid = data.charCodeAt(variableLength + 4 - 2) << 8 |
-                data.charCodeAt(variableLength + 4 - 1);
+            message.pid = data.charCodeAt(index + variableLength + 3 - 2) << 8 |
+                data.charCodeAt(index + variableLength + 3 - 1);
         }
         return message;
     }
@@ -161,12 +174,13 @@ var Client = /** @class */ (function () {
     function Client(opt, net) {
         if (net === void 0) { net = require('net'); }
         var _this = this;
-        this.version = '0.0.17';
+        this.version = '1.0.0';
         this.wdId = -123 /* Uninitialized */;
         this.piId = -123 /* Uninitialized */;
         this.connected = false;
         this.handleData = function (data) {
             var controlPacketType = data.charCodeAt(0) >> 4;
+            _this.emit('debug', "Rcvd: " + controlPacketType + ": '" + data + "'.");
             switch (controlPacketType) {
                 case 2 /* ConnAck */:
                     var returnCode = data.charCodeAt(3);
@@ -275,8 +289,6 @@ var Client = /** @class */ (function () {
             }
         });
         this.sct.on('data', function (data) {
-            var controlPacketType = data.charCodeAt(0) >> 4;
-            _this.emit('debug', "Rcvd: " + controlPacketType + ": '" + data + "'.");
             _this.handleData(data);
         });
         this.sct.on('close', function () {
