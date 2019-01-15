@@ -4,6 +4,7 @@
         "node_modules/tslint-microsoft-contrib"
     ],
     "rules": {
+        "linebreak-style": false,
         "no-bitwise": false,
         "no-default-export": false,
         "no-relative-imports": false,

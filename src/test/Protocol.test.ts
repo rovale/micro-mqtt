@@ -309,6 +309,31 @@ describe('The MQTT protocol', () => {
             });
         });
 
+        describe('with a topic, a large message, and QoS 0', () => {
+            const message: string =
+                'some very very very very very very very ' +
+                'some very very very very very very very ' +
+                'some very very very very very very very ' +
+                'some very very very very very very very ' +
+                'some very very very very very very very ' +
+                'some very very very very very very very ' +
+                'some very very very very very very very ' +
+                'some very very very very very very very ' +
+                'large message';
+
+            beforeEach(() => {
+                const packet: string = Protocol.createPublish('some/topic',
+                                                              message,
+                                                              0, false);
+                actual = Protocol.parsePublish(packet);
+            });
+
+            it('it should return the expected message.', () => {
+                actual.topic.should.equal('some/topic');
+                actual.content.should.equal(message);
+            });
+        });
+
         describe('with a topic, a message, and QoS 1', () => {
             beforeEach(() => {
                 const packet: string = Protocol.createPublish('some/topic', 'some-message', 1, false);
