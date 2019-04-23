@@ -126,10 +126,10 @@
   resolved "https://registry.yarnpkg.com/@types/jest/-/jest-24.0.0.tgz#848492026c327b3548d92be0352a545c36a21e8a"
   integrity sha512-kOafJnUTnMd7/OfEO/x3I47EHswNjn+dbz9qk3mtonr1RvKT+1FGVxnxAx08I9K8Tl7j9hpoJRE7OCf+t10fng==
 
-"@types/node@11.13.3":
-  version "11.13.3"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-11.13.3.tgz#dbc789a46f82d96d3ac86dd10b84f86bab111d22"
-  integrity sha512-OgizLUF0unveHVSI74hyX1J5vQeteANZX+Gqc5qr6fR7JVFYBmzJmcxAncBl8H9Cwz2Zks2dx4uQc7g77iUcWQ==
+"@types/node@11.13.5":
+  version "11.13.5"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-11.13.5.tgz#266564afa8a6a09dc778dfacc703ed3f09c80516"
+  integrity sha512-/OMMBnjVtDuwX1tg2pkYVSqRIDSmNTnvVvmvP/2xiMAAWf4a5+JozrApCrO4WCAILmXVxfNoQ3E+0HJbNpFVGg==
 
 "@types/sinon@7.0.6":
   version "7.0.6"
