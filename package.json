@@ -35,7 +35,7 @@
   "devDependencies": {
     "@types/chai": "4.1.7",
     "@types/jest": "^24.0.0",
-    "@types/node": "11.13.5",
+    "@types/node": "11.13.8",
     "@types/sinon": "7.0.6",
     "babel-eslint": "^10.0.1",
     "chai": "4.2.0",
