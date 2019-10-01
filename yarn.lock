@@ -131,10 +131,10 @@
   resolved "https://registry.yarnpkg.com/@types/node/-/node-11.13.8.tgz#e5d71173c95533be9842b2c798978f095f912aab"
   integrity sha512-szA3x/3miL90ZJxUCzx9haNbK5/zmPieGraZEe4WI+3srN0eGLiT22NXeMHmyhNEopn+IrxqMc7wdVwvPl8meg==
 
-"@types/sinon@7.0.6":
-  version "7.0.6"
-  resolved "https://registry.yarnpkg.com/@types/sinon/-/sinon-7.0.6.tgz#dbe6c059dd4e2fd2b8e8fc3ed051d4706c84c63e"
-  integrity sha512-ldQl2p7kyCXHhr//5sQCu9jWgSiDbYuCD5dUp53r/z8T8jmgKpANpy4vqjbdho9P2ldFaQC/gpW31hch+oQ0IQ==
+"@types/sinon@7.5.0":
+  version "7.5.0"
+  resolved "https://registry.yarnpkg.com/@types/sinon/-/sinon-7.5.0.tgz#f5a10c27175465a0b001b68d8b9f761582967cc6"
+  integrity sha512-NyzhuSBy97B/zE58cDw4NyGvByQbAHNP9069KVSgnXt/sc0T6MFRh0InKAeBVHJWdSXG1S3+PxgVIgKo9mTHbw==
 
 abab@^2.0.0:
   version "2.0.0"
